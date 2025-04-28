@@ -31,7 +31,7 @@ This guide will help you set up a Ryzen AI laptop as a GitHub self-hosted runner
     - When you get to the “connect to network” screen, say you don’t have internet.
     - This will allow you to create an offline account for the computer.
 - Install the following software:
-    - The latest RyzenAI driver, which is currently [RyzenAI 1.3 GA](https://ryzenai.docs.amd.com/en/latest/inst.html#install-npu-drivers)
+    - The latest RyzenAI driver ONLY (do not install RyzenAI Software), which is [available here](https://ryzenai.docs.amd.com/en/latest/inst.html#install-npu-drivers)
     - [VS Code](https://code.visualstudio.com/Download)
     - [git](https://git-scm.com/downloads/win)
     - [ollama](https://ollama.com/download)
@@ -65,13 +65,13 @@ These steps will use GitHub Actions to run automated setup and validation for yo
 
 1. Go to the [lemonade NPU test action](https://github.com/aigdat/genai/actions/workflows/test_npu.yml) and click "run workflow".
     - Select `stx-test` as the nimbys group
-    - Check the box for "Install miniconda"
+    - Check the box for "Install miniforge"
     - Click `Run workflow`
 1. The workflow should appear at the top of the queue. Click to open it, then click into "make-npu-oga-lemonade".
     - Expand the `Set up job` section and make sure `Runner name:` refers to your new runner. Otherwise, the job may have gone to someone else's runner in the test group. You can re-queue the workflow until it lands on your runner.
     - Wait for the workflow to finish successfully.
 1. In a powershell admin terminal, run `Stop-Service "actions.runner.*"` and then `Start-Service "actions.runner.*"`. If you don't do this, the runner wont be able to find Conda.
-1. Repeat step 1, except do **not** check the box for "Install miniconda". Wait for it to finish successfully. Congrats, your new runner is working!
+1. Repeat step 1, except do **not** check the box for "Install miniforge". Wait for it to finish successfully. Congrats, your new runner is working!
 1. Go to the [Stx Runner Group](https://github.com/organizations/aigdat/settings/actions/runner-groups/3), click your new runner, and click the gear icon to change labels. Uncheck `stx-test` and check `stx`. If this machine is also outside the AMD network please also check `@home`.
 1. Done!
 
