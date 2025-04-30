@@ -464,7 +464,7 @@ Section "-Install Main Components" SEC01
 
     ; Pack GAIA into the installer
     ; Exclude hidden files (like .git, .gitignore) and the installation folder itself
-    File /r /x installer /x .* /x ..\*.pyc ..\*.* download_lfs_file.py npu_driver_utils.py amd_install_kipudrv.bat install.bat launch_gaia.bat
+    File /r /x installer /x .* /x ..\*.pyc ..\*.* download_lfs_file.py npu_driver_utils.py amd_install_kipudrv.bat install.bat launch_gaia.bat installer_utils.py
     DetailPrint "- Packaged GAIA repo"
 
     ; Create bin directory and move launch script there
@@ -542,6 +542,16 @@ Section "-Install Main Components" SEC01
       ${EndIf}
       Quit
     ${EndIf}
+
+    ; Install required packaging module
+    DetailPrint "- Installing packaging module..."
+    nsExec::ExecToStack '"$INSTDIR\python\python.exe" -m pip install packaging'
+    Pop $6  ; Return value
+    Pop $7  ; Command output
+    DetailPrint "- Packaging installation result:"
+    DetailPrint "  Return code: $6"
+    DetailPrint "  Output: $7"
+
     DetailPrint "- Python setup completed successfully"
 
     ; Continue with mode-specific setup
@@ -557,7 +567,7 @@ Section "-Install Main Components" SEC01
       DetailPrint "------------"
 
       ; Check if lemonade is available by trying to run it
-      nsExec::ExecToStack 'lemonade --version'
+      nsExec::ExecToStack 'cmd.exe /c "lemonade-server --version"'
       Pop $2  ; Return value
       Pop $3  ; Command output
       DetailPrint "- Checked if lemonade is available (return code: $2)"
@@ -571,8 +581,33 @@ Section "-Install Main Components" SEC01
           GoTo skip_lemonade
         ${EndIf}
       ${Else}
-        DetailPrint "- Lemonade is already installed"
-        GoTo create_env
+        DetailPrint "- Lemonade is installed, checking version compatibility..."
+        
+        DetailPrint "- Checking Lemonade version compatibility:"
+        DetailPrint "- Expected version: ${LEMONADE_VERSION}"
+        DetailPrint "- Actual version: $3"
+
+        ; Call installer_utils.py to check version compatibility
+        DetailPrint "- Running version check command..."
+        nsExec::ExecToStack 'cmd /c ""$INSTDIR\python\python.exe" "$INSTDIR\installer_utils.py" "${LEMONADE_VERSION}" "$3""'
+        Pop $4  ; Return value
+        Pop $5  ; Command output
+        
+        DetailPrint "- Version check result:"
+        DetailPrint "- Return code: $4"
+        DetailPrint "- Output: $5"
+        
+        ${If} $4 == "0"
+          DetailPrint "- Lemonade version is compatible"
+          GoTo create_env
+        ${Else}
+          DetailPrint "- Lemonade version is not compatible"
+          ${IfNot} ${Silent}
+            MessageBox MB_YESNO "Your $3 and is not compatible with the required version ${LEMONADE_VERSION}.$\n$\nWould you like to update Lemonade now?" IDYES install_lemonade IDNO skip_lemonade
+          ${Else}
+            GoTo skip_lemonade
+          ${EndIf}
+        ${EndIf}
       ${EndIf}
 
     install_lemonade:
