@@ -50,6 +50,7 @@ setup(
         "torchaudio",
         "pyside6",
         "ollama",
+        "onnxconverter-common",
     ],
     extras_require={
         "dml": [

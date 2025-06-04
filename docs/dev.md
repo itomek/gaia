@@ -67,7 +67,7 @@ GAIA supports two modes:
 1. Clone GAIA repo: `git clone https://github.com/aigdat/gaia.git`
 1. Open a powershell prompt and go to the GAIA root: `cd ./gaia`
 1. Create and activate a conda environment:
-    1. `conda create -n gaiaenv python=3.10`
+    1. `conda create -n gaiaenv python=3.10 -y`
     1. `conda activate gaiaenv`
 1. Install GAIA dependencies:
     1. *(Hybrid only)* Recommended mode for Ryzen AI systems:
