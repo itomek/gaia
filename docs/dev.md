@@ -22,7 +22,7 @@
 
 # Introduction
 
-GAIA is an open-source framework that runs generative AI applications on AMD hardware. GAIA uses the [ONNX Runtime GenAI (aka OGA)](https://github.com/microsoft/onnxruntime-genai/tree/main?tab=readme-ov-file) backend via [Lemonade](https://github.com/onnx/turnkeyml/blob/main/docs/lemonade/getting_started.md) web serve tool for running Large Language Models (LLMs).
+GAIA is an open-source framework that runs generative AI applications on AMD hardware. GAIA uses the [ONNX Runtime GenAI (aka OGA)](https://github.com/microsoft/onnxruntime-genai/tree/main?tab=readme-ov-file) backend via [Lemonade Server](https://lemonade-server.ai/) tool for running Large Language Models (LLMs).
 
 GAIA supports two modes:
 - **Hybrid Mode**: Utilizes both NPU and iGPU on Ryzen AI systems for optimal performance

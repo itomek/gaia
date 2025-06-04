@@ -9,7 +9,7 @@
 !define /ifndef RYZENAI_FOLDER "ryzen_ai_13_ga"
 !define /ifndef NPU_DRIVER_ZIP "NPU_RAI1.3.zip"
 !define /ifndef NPU_DRIVER_VERSION "32.0.203.251"
-!define /ifndef LEMONADE_VERSION "v6.2.0"
+!define /ifndef LEMONADE_VERSION "v7.0.2"
 !define /ifndef RAUX_VERSION "v0.6.5+raux.0.1.0"
 !define /ifndef RAUX_PRODUCT_NAME "AMD GAIA UI [beta]"
 !define /ifndef RAUX_PROJECT_NAME "RAUX"
@@ -619,7 +619,7 @@ Section "-Install Main Components" SEC01
       download_lemonade:
         DetailPrint "- Downloading Lemonade installer..."
         ; Use nsExec::ExecToStack to capture the output and error code
-        nsExec::ExecToStack 'curl -L -f -v --retry 3 --retry-delay 2 -o "$TEMP\Lemonade_Server_Installer.exe" "https://github.com/onnx/turnkeyml/releases/download/${LEMONADE_VERSION}/Lemonade_Server_Installer.exe"'
+        nsExec::ExecToStack 'curl -L -f -v --retry 3 --retry-delay 2 -o "$TEMP\Lemonade_Server_Installer.exe" "https://github.com/lemonade-sdk/lemonade/releases/download/${LEMONADE_VERSION}/Lemonade_Server_Installer.exe"'
         Pop $0  ; Return value
         Pop $1  ; Command output
         DetailPrint "- Curl return code: $0"
@@ -631,7 +631,7 @@ Section "-Install Main Components" SEC01
       lemonade_download_failed:
         DetailPrint "- Failed to download Lemonade installer"
         ${IfNot} ${Silent}
-          MessageBox MB_OK "Failed to download Lemonade installer. Please install Lemonade manually from https://github.com/onnx/turnkeyml/releases after installation completes."
+          MessageBox MB_OK "Failed to download Lemonade installer. Please install Lemonade manually from https://github.com/lemonade-sdk/lemonade/releases after installation completes."
         ${EndIf}
         GoTo skip_lemonade
 
@@ -648,7 +648,7 @@ Section "-Install Main Components" SEC01
           DetailPrint "- Lemonade installation failed with error code: $2"
           DetailPrint "- Please install Lemonade manually after GAIA installation"
           ${IfNot} ${Silent}
-            MessageBox MB_OK "Lemonade installation failed. Please install Lemonade manually from https://github.com/onnx/turnkeyml/releases and try again.$\n$\nError code: $2"
+            MessageBox MB_OK "Lemonade installation failed. Please install Lemonade manually from https://github.com/lemonade-sdk/lemonade/releases and try again.$\n$\nError code: $2"
           ${EndIf}
           GoTo exit_installer
         ${EndIf}

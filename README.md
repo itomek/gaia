@@ -135,7 +135,7 @@ To quickly get started with GAIA via the command line, you can use the GAIA CLI 
 
 ## Building from Source
 
-To get started building from source, please follow the latest instructions [here](./docs/dev.md). These instructions will setup the [Onnx Runtime GenAI](https://github.com/microsoft/onnxruntime-genai) through the [Lemonade Web Server](https://github.com/onnx/turnkeyml/blob/main/docs/lemonade/getting_started.md) tool targeting the Ryzen AI SoC.
+To get started building from source, please follow the latest instructions [here](./docs/dev.md). These instructions will setup the [Onnx Runtime GenAI](https://github.com/microsoft/onnxruntime-genai) through the [Lemonade Server](https://lemonade-server.ai/) tool targeting the Ryzen AI SoC.
 
 ⚠️ **NOTE**: You may need to install Ollama from [here](https://ollama.com/download) if you plan to use GAIA in Generic mode and run models with the Ollama backend.
 
