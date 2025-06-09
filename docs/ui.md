@@ -1,6 +1,8 @@
 # GAIA UI Documentation
 
 ## Table of Contents
+- [GAIA UI Documentation](#gaia-ui-documentation)
+  - [Table of Contents](#table-of-contents)
 - [UI Overview](#ui-overview)
 - [Qt Interface](#qt-interface)
   - [Prerequisites](#prerequisites)
@@ -11,6 +13,8 @@
   - [Compiling Changes](#compiling-changes)
   - [Troubleshooting](#troubleshooting)
 - [RAUX Interface](#raux-interface)
+  - [New in GAIA BETA (RAUX)](#new-in-gaia-beta-raux)
+- [License](#license)
 
 # UI Overview
 
@@ -93,11 +97,16 @@ After making changes, you need to compile the updated files:
 
 # RAUX Interface
 
-RAUX is a modern web-based interface for GAIA, built as a fork of Open-WebUI. It provides an extensible, feature-rich, and user-friendly self-hosted AI platform. It is currently in beta and is being actively integrated with new features and improvements rolling out regularly. While it offers a modern web-based experience, please note that it's still under development and some features may be experimental.
+- **GAIA BETA (also referred to as RAUX for RyzenAI User Experience)** is a modern web-based interface for GAIA, built as a fork from [Open-WebUI](https://github.com/open-webui/open-webui). It provides an extensible, feature-rich, and user-friendly self-hosted AI platform. GAIA BETA is currently in beta and is being actively integrated with new features and improvements rolling out regularly. While it offers a modern web-based experience, please note that it's still under development and some features may be experimental.
 
-> **Note:** RAUX is pre-wired to work with Lemonade as a stepping stone; full GAIA integration will be available in a future release.
+> **Important:** You must manually start Lemonade (the backend server) before launching GAIA BETA. GAIA BETA will not function correctly unless Lemonade is running first.
 
-For more information about RAUX, including setup instructions and feature documentation, please refer to the [RAUX GitHub repository README](https://github.com/aigdat/raux/blob/main/README.md).
+## New in GAIA BETA (RAUX)
+- Improved error handling and progress reporting via inter-process communication (IPC) between the main and renderer processes.
+- Unified GAIA BETA branding and updated messaging throughout the installer and UI.
+- For technical details on the integration, IPC, and installer, see [CLAUDE.md](../CLAUDE.md).
+
+For more information about GAIA BETA (RAUX), including setup instructions and feature documentation, please refer to the [RAUX GitHub repository README](https://github.com/aigdat/raux/blob/main/README.md).
 
 # License
 
