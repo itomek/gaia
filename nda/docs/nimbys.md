@@ -34,7 +34,6 @@ This guide will help you set up a Ryzen AI laptop as a GitHub self-hosted runner
     - The latest RyzenAI driver ONLY (do not install RyzenAI Software), which is [available here](https://ryzenai.docs.amd.com/en/latest/inst.html#install-npu-drivers)
     - [VS Code](https://code.visualstudio.com/Download)
     - [git](https://git-scm.com/downloads/win)
-    - [ollama](https://ollama.com/download)
 - If your laptop has an Nvidia GPU, you must disable it in device manager
 - Open a PowerShell script in admin mode, and run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned`
 - Go into Windows settings:

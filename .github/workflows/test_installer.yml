@@ -1,7 +1,7 @@
 # Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
-name: GAIA Hybrid Installer Test
+name: GAIA Installer Test
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
   build-installer:
     uses: ./.github/workflows/build_installer.yml
 
-  gaia-hybrid-installer-test:
+  gaia-installer-test:
     runs-on: windows-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     needs: build-installer
@@ -59,22 +59,10 @@ jobs:
             Write-Host "Hash verification successful: The downloaded installer matches the built installer."
           }
 
-      - name: Test installer with Hybrid mode
+      - name: Test installer
         run: |
           cd installer
-          .\RunInstaller.ps1 -MODE HYBRID -INSTALL_PATH "${{ env.GAIA_INSTALL_PATH }}"
+          .\RunInstaller.ps1 -INSTALL_PATH "${{ env.GAIA_INSTALL_PATH }}"
           if ($LASTEXITCODE -ne 0) {
             throw "Installer failed with exit code $LASTEXITCODE"
           }
-
-      # - name: Ensure GAIA can open properly
-      #   timeout-minutes: 15
-      #   env:
-      #     HUGGINGFACE_ACCESS_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
-      #   uses: ./.github/actions/ui-testing
-      #   with:
-      #     huggingface_access_token: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
-      #     install_from_source: "false"
-      #     gaia_mode: HYBRID
-      #     username: runneradmin
-      #     install_dir: "${{ env.GAIA_FULL_PATH }}"
