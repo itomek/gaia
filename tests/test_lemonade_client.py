@@ -176,9 +176,15 @@ class TestLemonadeClientMock(unittest.TestCase):
             # Restore original log level
             logger.setLevel(original_level)
 
+    @patch("gaia.llm.lemonade_client.LemonadeClient.list_models")
     @patch("gaia.llm.lemonade_client.LemonadeClient.load_model")
-    def test_factory_auto_load_model(self, mock_load):
+    def test_factory_auto_load_model(self, mock_load, mock_list_models):
         """Test auto_load functionality in factory function."""
+        # Mock list_models to return a model list
+        mock_list_models.return_value = {
+            "data": [{"id": TEST_MODEL, "object": "model"}]
+        }
+
         # With auto_load=True - success case
         mock_load.return_value = {"status": "ok", "model": TEST_MODEL}
         client = create_lemonade_client(model=TEST_MODEL, auto_load=True, verbose=False)
@@ -187,16 +193,34 @@ class TestLemonadeClientMock(unittest.TestCase):
         args, kwargs = mock_load.call_args
         self.assertEqual(args[0], TEST_MODEL)  # First arg should be model
         self.assertEqual(kwargs.get("timeout", None), 60)  # Should have timeout=60
+        # list_models should also be called when auto_pull=True (default)
+        mock_list_models.assert_called_once()
 
-        # With auto_load=False - should not call load_model
+        # With auto_load=False - should not call load_model or list_models
         mock_load.reset_mock()
+        mock_list_models.reset_mock()
         client = create_lemonade_client(
             model=TEST_MODEL, auto_load=False, verbose=False
         )
         mock_load.assert_not_called()
+        mock_list_models.assert_not_called()
+
+        # Test with auto_pull=False - should not call list_models
+        mock_load.reset_mock()
+        mock_list_models.reset_mock()
+        mock_load.return_value = {"status": "ok", "model": TEST_MODEL}
+        client = create_lemonade_client(
+            model=TEST_MODEL, auto_load=True, auto_pull=False, verbose=False
+        )
+        mock_load.assert_called_once()
+        mock_list_models.assert_not_called()
 
         # Error case 1: Generic loading error
         mock_load.reset_mock()
+        mock_list_models.reset_mock()
+        mock_list_models.return_value = {
+            "data": [{"id": TEST_MODEL, "object": "model"}]
+        }
         mock_load.side_effect = LemonadeClientError(
             f"Failed to load model {TEST_MODEL}: Model loading failed"
         )
@@ -219,6 +243,10 @@ class TestLemonadeClientMock(unittest.TestCase):
 
         # Error case 2: 404 model not found error
         mock_load.reset_mock()
+        mock_list_models.reset_mock()
+        mock_list_models.return_value = {
+            "data": [{"id": TEST_MODEL, "object": "model"}]
+        }
         mock_load.side_effect = LemonadeClientError(
             'Request failed with status 404: {"detail":"model not found"}'
         )
