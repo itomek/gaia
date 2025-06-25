@@ -12,6 +12,9 @@
 !define /ifndef PYTHON_EMBED_URL "https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-amd64.zip"
 !define /ifndef GET_PIP_URL "https://bootstrap.pypa.io/get-pip.py"
 
+; Request user rights only (no admin)
+RequestExecutionLevel user
+
 ; Command line usage:
 ;  gaia-windows-setup.exe [/S] [/D=<installation directory>]
 ;    /S - Silent install with no user interface
@@ -387,8 +390,8 @@ Section "-Install Main Components" SEC01
       DetailPrint "- Lemonade -"
       DetailPrint "------------"
 
-      ; Check if lemonade is available by trying to run it
-      nsExec::ExecToStack 'cmd.exe /c "lemonade-server --version"'
+      ; First check if lemonade is available by trying to run it
+      nsExec::ExecToStack 'cmd /c "lemonade-server --version 2>&1"'
       Pop $2  ; Return value
       Pop $3  ; Command output
       DetailPrint "- Checked if lemonade is available (return code: $2)"
@@ -402,30 +405,49 @@ Section "-Install Main Components" SEC01
           GoTo skip_lemonade
         ${EndIf}
       ${Else}
+        ; Lemonade is installed, now check version compatibility using Python script
         DetailPrint "- Lemonade is installed, checking version compatibility..."
-
-        DetailPrint "- Checking Lemonade version compatibility:"
         DetailPrint "- Expected version: ${LEMONADE_VERSION}"
-        DetailPrint "- Actual version: $3"
 
         ; Call installer_utils.py to check version compatibility
+        ; Python script returns exit code 0 if is_compatible=True, 1 if is_compatible=False
         DetailPrint "- Running version check command..."
-        DetailPrint "- Command: python installer_utils.py ${LEMONADE_VERSION} '$3'"
-        nsExec::ExecToStack 'cmd /c ""$INSTDIR\python\python.exe" "$INSTDIR\installer_utils.py" "${LEMONADE_VERSION}" "$3""'
-        Pop $4  ; Return value
+        nsExec::ExecToStack 'cmd /c ""$INSTDIR\python\python.exe" "$INSTDIR\installer_utils.py" "${LEMONADE_VERSION}""'
+        Pop $4  ; Return value (0 if compatible, 1 if not compatible)
         Pop $5  ; Command output
 
         DetailPrint "- Version check result:"
         DetailPrint "- Return code: $4"
         DetailPrint "- Output: $5"
 
+        ; Use the is_compatible boolean value returned via exit code
         ${If} $4 == "0"
-          DetailPrint "- Lemonade version is compatible"
+          DetailPrint "- Lemonade version is compatible (is_compatible=True)"
           GoTo create_env
         ${Else}
-          DetailPrint "- Lemonade version is not compatible"
+          DetailPrint "- Lemonade version is not compatible (is_compatible=False)"
+
+          ; Extract the detected version from the Python script output
+          ${StrLoc} $6 "$5" "VERSION:" ">"
+          ${If} $6 != ""
+            ; Calculate the position after "VERSION:" (8 characters)
+            IntOp $6 $6 + 8
+            StrCpy $7 "$5" "" $6  ; Extract everything after "VERSION:"
+
+            ; Find the end of the line to get only the version part
+            ${StrLoc} $8 "$7" "$\r" ">"
+            ${If} $8 == ""
+              ${StrLoc} $8 "$7" "$\n" ">"
+            ${EndIf}
+            ${If} $8 != ""
+              StrCpy $7 "$7" $8 0  ; Get only the version part before newline
+            ${EndIf}
+          ${Else}
+            StrCpy $7 "unknown"  ; Fallback if we can't parse the version
+          ${EndIf}
+
           ${IfNot} ${Silent}
-            MessageBox MB_YESNO "Your 'Running: lemonade-server --version' $3 is not compatible with the required version ${LEMONADE_VERSION}.$\n$\nWould you like to update Lemonade now?" IDYES install_lemonade IDNO skip_lemonade
+            MessageBox MB_YESNO "Your Lemonade version $7 is not compatible with the required version ${LEMONADE_VERSION}.$\n$\nWould you like to update Lemonade now?" IDYES install_lemonade IDNO skip_lemonade
           ${Else}
             GoTo skip_lemonade
           ${EndIf}
@@ -460,16 +482,54 @@ Section "-Install Main Components" SEC01
         DetailPrint "- Download successful ($TEMP\Lemonade_Server_Installer.exe), installing Lemonade..."
         ExecWait '"$TEMP\Lemonade_Server_Installer.exe" /Extras=hybrid' $2
 
-        ${If} $2 == 0
-          DetailPrint "- Lemonade installation successful"
+        DetailPrint "- Lemonade installer finished with exit code: $2"
+
+        ; Verify that lemonade was actually installed with the correct version
+        DetailPrint "- Verifying Lemonade installation and version..."
+        DetailPrint "- Expected version after installation: ${LEMONADE_VERSION}"
+
+        ; Use our Python script to verify the correct version was installed
+        nsExec::ExecToStack 'cmd /c ""$INSTDIR\python\python.exe" "$INSTDIR\installer_utils.py" "${LEMONADE_VERSION}""'
+        Pop $3  ; Return value (0 if compatible, 1 if not compatible)
+        Pop $4  ; Command output
+
+        DetailPrint "- Post-installation version check result:"
+        DetailPrint "- Return code: $3"
+        DetailPrint "- Output: $4"
+
+        ${If} $3 == "0"
+          DetailPrint "- Lemonade installation verification successful - correct version installed"
           ${IfNot} ${Silent}
             MessageBox MB_OK "Lemonade has been successfully installed."
           ${EndIf}
         ${Else}
-          DetailPrint "- Lemonade installation failed with error code: $2"
-          DetailPrint "- Please install Lemonade manually after GAIA installation"
-          ${IfNot} ${Silent}
-            MessageBox MB_OK "Lemonade installation failed. Please install Lemonade manually from https://github.com/lemonade-sdk/lemonade/releases and try again.$\n$\nError code: $2"
+          DetailPrint "- Lemonade installation verification failed - wrong version or installation blocked"
+
+          ; Extract the detected version from the Python script output if available
+          ${StrLoc} $5 "$4" "VERSION:" ">"
+          ${If} $5 != ""
+            ; Calculate the position after "VERSION:" (8 characters)
+            IntOp $5 $5 + 8
+            StrCpy $6 "$4" "" $5  ; Extract everything after "VERSION:"
+
+            ; Find the end of the line to get only the version part
+            ${StrLoc} $7 "$6" "$\r" ">"
+            ${If} $7 == ""
+              ${StrLoc} $7 "$6" "$\n" ">"
+            ${EndIf}
+            ${If} $7 != ""
+              StrCpy $6 "$6" $7 0  ; Get only the version part before newline
+            ${EndIf}
+
+            DetailPrint "- Detected version after installation: $6"
+            ${IfNot} ${Silent}
+              MessageBox MB_OK "Lemonade installation failed. Expected version ${LEMONADE_VERSION} but found version $6. The installer may have been blocked by security software. Please install Lemonade manually from https://lemonade-server.ai and ensure it's not quarantined.$\n$\nInstaller exit code: $2"
+            ${EndIf}
+          ${Else}
+            DetailPrint "- Could not detect lemonade version after installation"
+            ${IfNot} ${Silent}
+              MessageBox MB_OK "Lemonade installation failed or was blocked by security software. Please install Lemonade manually from https://lemonade-server.ai and ensure it's not quarantined.$\n$\nInstaller exit code: $2$\nVerification failed with code: $3"
+            ${EndIf}
           ${EndIf}
           GoTo exit_installer
         ${EndIf}
