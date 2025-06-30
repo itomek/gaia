@@ -3,7 +3,6 @@
 ; GAIA Installer Script
 
 ; Define command line parameters
-!define /ifndef LEMONADE_VERSION "8.0.1"
 !define /ifndef RAUX_VERSION "v0.6.5+raux.0.2.1"
 !define /ifndef RAUX_PRODUCT_NAME "GAIA BETA"
 !define /ifndef RAUX_PRODUCT_SQUIRREL_NAME "GaiaUI"

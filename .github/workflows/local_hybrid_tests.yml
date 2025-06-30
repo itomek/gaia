@@ -9,6 +9,7 @@ on:
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
   workflow_dispatch:
 
 env:
@@ -91,7 +92,10 @@ jobs:
             }
           }
 
-      - name: Run installer
+      - name: Install Lemonade Server
+        uses: ./.github/actions/install-lemonade
+
+      - name: Run GAIA Installer
         run: |
           cd installer
           Write-Host "Running installer..."

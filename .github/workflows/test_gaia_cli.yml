@@ -12,6 +12,7 @@ on:
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -41,6 +42,9 @@ jobs:
 
           Write-Host "Step 3: Create the environment at system level"
           & "$condaPath\Scripts\conda.exe" create -n gaiaenv python=3.10 -y
+
+      - name: Install Lemonade Server
+        uses: ./.github/actions/install-lemonade
 
       - name: Install GAIA dependencies
         run: |
