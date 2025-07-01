@@ -4,9 +4,9 @@
 
 ; Define command line parameters
 !define /ifndef RAUX_VERSION "v0.6.5+raux.0.2.2"
-!define /ifndef RAUX_PRODUCT_NAME "GAIA BETA"
-!define /ifndef RAUX_PRODUCT_SQUIRREL_NAME "GaiaUI"
-!define /ifndef RAUX_PRODUCT_SQUIRREL_PATH "$LOCALAPPDATA\GaiaUI"
+!define /ifndef RAUX_PRODUCT_NAME "GAIA UI"
+!define /ifndef RAUX_PRODUCT_SQUIRREL_NAME "GaiaUi"
+!define /ifndef RAUX_PRODUCT_SQUIRREL_PATH "$LOCALAPPDATA\GaiaUi"
 !define /ifndef PYTHON_VERSION "3.10.9"
 !define /ifndef PYTHON_EMBED_URL "https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-embed-amd64.zip"
 !define /ifndef GET_PIP_URL "https://bootstrap.pypa.io/get-pip.py"
@@ -605,13 +605,13 @@ Section "-Install Main Components" SEC01
       # Create shortcuts only in non-silent mode
       ${IfNot} ${Silent}
         ; Create shortcuts using launch_gaia.bat
-        CreateShortcut "$DESKTOP\GAIA-CLI.lnk" "$INSTDIR\bin\launch_gaia.bat" "--cli" "$INSTDIR\src\gaia\img\gaia.ico"
+        CreateShortcut "$DESKTOP\GAIA CLI.lnk" "$INSTDIR\bin\launch_gaia.bat" "--cli" "$INSTDIR\src\gaia\img\gaia.ico"
       ${EndIf}
 SectionEnd
 
 Function RunGAIACLI
   ${IfNot} ${Silent}
-    ExecShell "open" "$DESKTOP\GAIA-CLI.lnk"
+    ExecShell "open" "$DESKTOP\GAIA CLI.lnk"
   ${EndIf}
 FunctionEnd
 
