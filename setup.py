@@ -64,6 +64,7 @@ setup(
         ],
         "eval" : [
             "anthropic",
+            "bs4",
         ],
         "talk":[
             "pyaudio",

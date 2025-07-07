@@ -734,6 +734,88 @@ def main():
         "--port", type=int, required=True, help="Port number to kill process on"
     )
 
+    # Add groundtruth generation subparser
+    gt_parser = subparsers.add_parser(
+        "groundtruth",
+        help="Generate ground truth data for RAG evaluation",
+        parents=[parent_parser],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Process a single file
+  gaia-cli groundtruth -f ./data/html/blender/introduction.html
+
+  # Process all HTML files in a directory
+  gaia-cli groundtruth -d ./data/html/blender
+
+  # Process with custom output directory
+  gaia-cli groundtruth -f ./data/html/intro.html -o ./output/gt
+
+  # Process with custom file pattern
+  gaia-cli groundtruth -d ./data -p "*.pdf" -o ./output/gt
+
+  # Use custom Claude model
+  gaia-cli groundtruth -f ./data/doc.html -m claude-3-opus-20240229
+
+  # Generate 10 Q&A pairs per document
+  gaia-cli groundtruth -d ./data/html/blender --num-samples 10
+        """,
+    )
+
+    # Input source (mutually exclusive)
+    gt_input_group = gt_parser.add_mutually_exclusive_group(required=True)
+    gt_input_group.add_argument(
+        "-f", "--file", type=str, help="Path to a single document file to process"
+    )
+    gt_input_group.add_argument(
+        "-d", "--directory", type=str, help="Directory containing documents to process"
+    )
+
+    # Optional arguments for groundtruth
+    gt_parser.add_argument(
+        "-o",
+        "--output-dir",
+        type=str,
+        default="./output/groundtruth",
+        help="Output directory for generated ground truth files (default: ./output/groundtruth)",
+    )
+    gt_parser.add_argument(
+        "-p",
+        "--pattern",
+        type=str,
+        default="*.html",
+        help="File pattern to match when processing directory (default: *.html)",
+    )
+    gt_parser.add_argument(
+        "-m",
+        "--model",
+        type=str,
+        default="claude-sonnet-4-20250514",
+        help="Claude model to use (default: claude-sonnet-4-20250514)",
+    )
+    gt_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=4096,
+        help="Maximum tokens for Claude responses (default: 4096)",
+    )
+    gt_parser.add_argument(
+        "--no-save-text",
+        action="store_true",
+        help="Don't save extracted text for HTML files",
+    )
+    gt_parser.add_argument(
+        "--custom-prompt",
+        type=str,
+        help="Path to a file containing a custom prompt for Claude",
+    )
+    gt_parser.add_argument(
+        "--num-samples",
+        type=int,
+        default=5,
+        help="Number of Q&A pairs to generate per document (default: 5)",
+    )
+
     args = parser.parse_args()
 
     # Check if action is specified
@@ -892,6 +974,89 @@ Let me know your answer!
         log.info(f"Attempting to kill process on port {args.port}")
         result = kill_process_by_port(args.port)
         print(result)
+        return
+
+    # Handle groundtruth generation
+    if args.action == "groundtruth":
+        log.info("Starting ground truth generation")
+        try:
+            from gaia.eval.groundtruth import GroundTruthGenerator
+        except ImportError as e:
+            log.error(f"Failed to import GroundTruthGenerator: {e}")
+            print(
+                "Error: Failed to import groundtruth module. Please ensure all dependencies are installed."
+            )
+            return
+
+        # Initialize generator
+        try:
+            generator = GroundTruthGenerator(
+                model=args.model, max_tokens=args.max_tokens
+            )
+        except Exception as e:
+            log.error(f"Error initializing generator: {e}")
+            print(f"Error initializing generator: {e}")
+            return
+
+        # Load custom prompt if provided
+        custom_prompt = None
+        if args.custom_prompt:
+            try:
+                with open(args.custom_prompt, "r", encoding="utf-8") as f:
+                    custom_prompt = f.read().strip()
+                print(f"Using custom prompt from: {args.custom_prompt}")
+            except Exception as e:
+                log.error(f"Error loading custom prompt: {e}")
+                print(f"Error loading custom prompt: {e}")
+                return
+
+        save_text = not args.no_save_text
+
+        try:
+            if args.file:
+                # Process single file
+                print(f"Processing single file: {args.file}")
+                result = generator.generate(
+                    file_path=args.file,
+                    prompt=custom_prompt,
+                    save_text=save_text,
+                    output_dir=args.output_dir,
+                    num_samples=args.num_samples,
+                )
+                print("✓ Successfully generated ground truth data")
+                print(f"  Output: {args.output_dir}")
+                print(f"  Token count: {result['metadata']['token_count']}")
+                print(f"  QA pairs: {len(result['analysis']['qa_pairs'])}")
+
+            elif args.directory:
+                # Process directory
+                print(f"Processing directory: {args.directory}")
+                print(f"File pattern: {args.pattern}")
+                results = generator.generate_batch(
+                    input_dir=args.directory,
+                    file_pattern=args.pattern,
+                    prompt=custom_prompt,
+                    save_text=save_text,
+                    output_dir=args.output_dir,
+                    num_samples=args.num_samples,
+                )
+
+                if results:
+                    total_pairs = sum(len(r["analysis"]["qa_pairs"]) for r in results)
+                    total_tokens = sum(r["metadata"]["token_count"] for r in results)
+                    print(f"✓ Successfully processed {len(results)} files")
+                    print(f"  Output: {args.output_dir}")
+                    print(f"  Total QA pairs: {total_pairs}")
+                    print(f"  Total tokens: {total_tokens}")
+                else:
+                    print("No files were processed successfully")
+                    return
+
+        except Exception as e:
+            log.error(f"Error during groundtruth processing: {e}")
+            print(f"Error during processing: {e}")
+            return
+
         return
 
     # Log error for unknown action
