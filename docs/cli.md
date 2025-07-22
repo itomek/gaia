@@ -80,6 +80,7 @@ gaia-cli --help
 - **`prompt`**: Send a single message to an agent and get a response
 - **`chat`**: Start an interactive text chat session with message history
 - **`talk`**: Start a voice-based conversation session
+- **`blender`**: Create and modify 3D scenes using the Blender agent
 - **`stats`**: View model performance statistics from the most recent run
 - **`test`**: Run various audio/speech tests for development and troubleshooting
 - **`youtube`**: YouTube utilities for transcript downloading
@@ -193,6 +194,87 @@ gaia-cli talk [OPTIONS]
 - `--whisper-model-size`: Size of the Whisper model [tiny, base, small, medium, large] (default: base)
 
 For detailed voice interaction instructions, see the [Voice Interaction Guide](./talk.md).
+
+## Blender Command
+
+Create and modify 3D scenes using the Blender agent:
+
+```bash
+gaia-cli blender [OPTIONS]
+```
+
+**Available options:**
+- `--model`: Model ID to use (default: "Llama-3.2-3B-Instruct-Hybrid")
+- `--example`: Run a specific example (1-6), if not specified run interactive mode
+- `--steps`: Maximum number of steps per query (default: 5)
+- `--output-dir`: Directory to save output files (default: "output")
+- `--stream`: Enable streaming mode for LLM responses
+- `--stats`: Display performance statistics (default: True)
+- `--query`: Custom query to run instead of examples
+- `--interactive`: Enable interactive mode to continuously input queries
+- `--debug-prompts`: Enable debug prompts (default: False)
+- `--print-result`: Print results to console (default: False)
+- `--mcp-port`: Port for the Blender MCP server (default: 9876)
+
+**Available examples:**
+1. **Clearing the scene** - Remove all objects from the scene
+2. **Creating a basic cube** - Create a red cube at the center
+3. **Creating a sphere with specific properties** - Blue sphere with custom position and scale
+4. **Creating multiple objects** - Green cube and red sphere arrangement
+5. **Creating and modifying objects** - Create and then modify a blue cylinder
+
+**Examples:**
+```bash
+# Run all Blender examples in sequence
+gaia-cli blender
+
+# Run a specific example
+gaia-cli blender --example 2
+
+# Interactive Blender mode for custom 3D scene creation
+gaia-cli blender --interactive
+
+# Custom query to create specific 3D objects
+gaia-cli blender --query "Create a red cube and blue sphere arranged in a line"
+
+# Custom query with advanced scene setup
+gaia-cli blender --query "Clear the scene, then create a green cylinder at (0,0,0) and a yellow cone 3 units above it"
+
+# Enable debug mode with custom output directory
+gaia-cli blender --interactive --debug-prompts --output-dir ./blender_results
+
+# Use different model with streaming enabled
+gaia-cli blender --model "custom-model" --stream --query "Create a complex 3D scene with multiple colored objects"
+
+# Use custom MCP port
+gaia-cli blender --mcp-port 9877 --query "Create a red cube"
+```
+
+**Blender Agent Capabilities:**
+- **Scene Management**: Clear scenes, get scene information
+- **Object Creation**: Create cubes, spheres, cylinders, cones, and torus objects
+- **Material Assignment**: Set RGBA colors and materials for objects
+- **Object Modification**: Modify position, rotation, and scale of existing objects
+- **Interactive Planning**: Multi-step scene creation with automatic planning
+
+**Requirements:**
+- **Blender agent dependencies**: Must be installed for the command to be available
+- **Lemonade server**: Must be running for AI processing (same as other CLI commands)
+- **Blender MCP server**: Must be running for 3D scene communication
+
+**MCP Server Setup:**
+1. Open Blender (version 4.3+ recommended)
+2. Go to `Edit > Preferences > Add-ons`
+3. Click the down arrow button, then `Install...`
+4. Navigate to: `src/gaia/mcp/blender_mcp_server.py`
+5. Install and enable the `Simple Blender MCP` add-on
+6. Open the 3D viewport sidebar (press `N` key if not visible)
+7. Find the `Blender MCP` panel in the sidebar
+8. Set port to `9876` and click `Start Server` (use `--mcp-port` to customize)
+
+For detailed setup instructions with screenshots, see: `workshop/blender.ipynb`
+
+**Note**: If either server is not running, you'll receive clear error messages with setup instructions.
 
 ## Stats Command
 

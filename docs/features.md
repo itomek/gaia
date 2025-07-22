@@ -26,7 +26,30 @@ gaia-cli llm "Write a short poem" --no-stream
 
 ## Blender Agent
 
-The Blender agent provides specialized functionality for 3D content creation and workflow automation. For more details, see the Blender agent documentation.
+The Blender agent provides specialized functionality for 3D content creation and workflow automation. It is now fully integrated into the CLI for easy access:
+
+```bash
+# Run all Blender examples
+gaia-cli blender
+
+# Interactive 3D scene creation
+gaia-cli blender --interactive
+
+# Create specific objects with custom queries
+gaia-cli blender --query "Create a red cube and blue sphere"
+
+# Run a specific example
+gaia-cli blender --example 2
+```
+
+**Key capabilities:**
+- **Scene Management**: Clear scenes and get scene information
+- **Object Creation**: Create cubes, spheres, cylinders, cones, and torus objects
+- **Material Assignment**: Set RGBA colors and materials for objects
+- **Object Modification**: Modify position, rotation, and scale of existing objects
+- **Interactive Planning**: Multi-step scene creation with automatic planning
+
+**Requirements:** In addition to the Lemonade server, the Blender agent requires a Blender MCP server to be running. See the [CLI documentation](./cli.md#blender-command) for complete setup instructions.
 
 ## Supported LLMs
 

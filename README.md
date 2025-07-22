@@ -174,12 +174,21 @@ gaia-cli prompt "What's the weather?" --stats
 gaia-cli talk  # Start voice-based conversation
 ```
 
+**3D Scene Creation with Blender Agent**:
+```bash
+gaia-cli blender                                    # Run all Blender examples
+gaia-cli blender --interactive                      # Interactive 3D scene creation
+gaia-cli blender --query "Create a red cube and blue sphere"  # Custom 3D scene query
+gaia-cli blender --example 2                        # Run specific example
+```
+
 ### Available Commands
 
 - `llm` - Direct LLM queries (requires Lemonade server)
 - `prompt` - Send single message to an agent
 - `chat` - Interactive text conversation
 - `talk` - Voice-based conversation
+- `blender` - Create and modify 3D scenes using the Blender agent
 - `stats` - View performance statistics
 - `groundtruth` - Generate evaluation data with Claude
 - `test` - Run audio/speech tests
@@ -187,6 +196,8 @@ gaia-cli talk  # Start voice-based conversation
 - `kill` - Kill processes on specific ports
 
 **Note**: Most commands require the Lemonade server to be running. Start it by double-clicking the desktop shortcut or running `lemonade-server serve`.
+
+**Blender Command**: The `blender` command additionally requires a Blender MCP server. See [CLI documentation](docs/cli.md#blender-command) for setup instructions.
 
 For comprehensive information and examples, please refer to the [gaia-cli documentation](docs/cli.md).
 

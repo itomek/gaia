@@ -10,15 +10,18 @@ import queue
 import logging
 import subprocess
 from pathlib import Path
+import os
 
-import requests
 import aiohttp
 from aiohttp import ClientTimeout
+import requests
 
 from gaia.logger import get_logger
 from gaia.audio.audio_client import AudioClient
-
 from gaia.version import version
+from gaia.agents.Blender.agent import BlenderAgent
+from gaia.mcp.blender_mcp_client import MCPClient
+from gaia.llm.lemonade_client import LemonadeClient, LemonadeClientError
 
 # Set debug level for the logger
 logging.getLogger("gaia").setLevel(logging.INFO)
@@ -30,20 +33,29 @@ sys.path.append(str(parent_dir))
 
 
 def check_lemonade_health(host="127.0.0.1", port=8000):
-    """Check if Lemonade server is running and healthy."""
+    """Check if Lemonade server is running and healthy using LemonadeClient."""
     log = get_logger(__name__)
-    url = f"http://{host}:{port}/health"
 
     try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            log.debug("Lemonade server is healthy")
+        # Create a LemonadeClient instance for health checking
+        client = LemonadeClient(host=host, port=port, verbose=False, keep_alive=True)
+
+        # Perform health check
+        health_result = client.health_check()
+
+        # Check if the response indicates the server is healthy
+        if health_result.get("status") == "ok":
+            log.debug(f"Lemonade server is healthy at {host}:{port}")
             return True
         else:
-            log.warning(f"Lemonade server returned status code: {response.status_code}")
+            log.debug(f"Lemonade server health check returned: {health_result}")
             return False
-    except requests.RequestException as e:
-        log.debug(f"Failed to connect to Lemonade server: {str(e)}")
+
+    except LemonadeClientError as e:
+        log.debug(f"Lemonade health check failed: {str(e)}")
+        return False
+    except Exception as e:
+        log.debug(f"Unexpected error during Lemonade health check: {str(e)}")
         return False
 
 
@@ -57,7 +69,65 @@ def print_lemonade_error():
     print("  • Double-clicking the desktop shortcut, or", file=sys.stderr)
     print("  • Running: lemonade-server serve", file=sys.stderr)
     print("", file=sys.stderr)
+    print(
+        "The server should be accessible at http://127.0.0.1:8000/api/v1/health",
+        file=sys.stderr,
+    )
     print("Then try your command again.", file=sys.stderr)
+
+
+def check_mcp_health(host="127.0.0.1", port=9876):
+    """Check if Blender MCP server is running and accessible."""
+    log = get_logger(__name__)
+
+    try:
+        import socket
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(3)
+        result = sock.connect_ex((host, port))
+        sock.close()
+
+        if result == 0:
+            log.debug("Blender MCP server is accessible")
+            return True
+        else:
+            log.debug(f"Failed to connect to Blender MCP server on {host}:{port}")
+            return False
+    except Exception as e:
+        log.debug(f"Error checking MCP server: {str(e)}")
+        return False
+
+
+def print_mcp_error():
+    """Print informative error message when Blender MCP server is not running."""
+    print(
+        "❌ Error: Blender MCP server is not running or not accessible.",
+        file=sys.stderr,
+    )
+    print("", file=sys.stderr)
+    print("To set up the Blender MCP server:", file=sys.stderr)
+    print("", file=sys.stderr)
+    print("1. Open Blender (version 4.3 or newer recommended)", file=sys.stderr)
+    print("2. Go to Edit > Preferences > Add-ons", file=sys.stderr)
+    print("3. Click the down arrow button, then 'Install...'", file=sys.stderr)
+    print(
+        "4. Navigate to: <GAIA_REPO>/src/gaia/mcp/blender_mcp_server.py",
+        file=sys.stderr,
+    )
+    print("5. Install and enable the 'Simple Blender MCP' add-on", file=sys.stderr)
+    print(
+        "6. Open the 3D viewport sidebar (press 'N' key if not visible)",
+        file=sys.stderr,
+    )
+    print("7. Find the 'Blender MCP' panel in the sidebar", file=sys.stderr)
+    print("8. Set port to 9876 and click 'Start Server'", file=sys.stderr)
+    print("", file=sys.stderr)
+    print(
+        "For detailed setup instructions, see: workshop/blender.ipynb", file=sys.stderr
+    )
+    print("", file=sys.stderr)
+    print("Then try your Blender command again.", file=sys.stderr)
 
 
 class GaiaCliClient:
@@ -406,6 +476,68 @@ def main():
         default="base",
         choices=["tiny", "base", "small", "medium", "large"],
         help="Size of the Whisper model to use (default: base)",
+    )
+
+    # Add Blender agent command
+    blender_parser = subparsers.add_parser(
+        "blender",
+        help="Blender 3D scene creation and modification",
+        parents=[parent_parser],
+    )
+    blender_parser.add_argument(
+        "--model",
+        default="Llama-3.2-3B-Instruct-Hybrid",
+        help="Model ID to use (default: Llama-3.2-3B-Instruct-Hybrid)",
+    )
+    blender_parser.add_argument(
+        "--example",
+        type=int,
+        choices=range(1, 7),
+        help="Run a specific example (1-6), if not specified run interactive mode",
+    )
+    blender_parser.add_argument(
+        "--steps", type=int, default=5, help="Maximum number of steps per query"
+    )
+    blender_parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="output",
+        help="Directory to save output files",
+    )
+    blender_parser.add_argument(
+        "--stream", action="store_true", help="Enable streaming mode for LLM responses"
+    )
+    blender_parser.add_argument(
+        "--stats",
+        action="store_true",
+        default=True,
+        help="Display performance statistics",
+    )
+    blender_parser.add_argument(
+        "--query", type=str, help="Custom query to run instead of examples"
+    )
+    blender_parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Enable interactive mode to continuously input queries",
+    )
+    blender_parser.add_argument(
+        "--debug-prompts",
+        action="store_true",
+        default=False,
+        help="Enable debug prompts",
+    )
+    blender_parser.add_argument(
+        "--print-result",
+        action="store_true",
+        default=False,
+        help="Print results to console",
+    )
+    blender_parser.add_argument(
+        "--mcp-port",
+        type=int,
+        default=9876,
+        help="Port for the Blender MCP server (default: 9876)",
     )
 
     stats_parser = subparsers.add_parser(
@@ -806,8 +938,6 @@ Examples:
 
             # Clean up temp file if using summary_only
             if args.summary_only and output_path is None:
-                import os
-
                 try:
                     os.remove("temp_report.md")
                 except OSError:
@@ -909,7 +1039,7 @@ Let me know your answer!
                     while time.time() - start_time < args.recording_duration:
                         try:
                             text = transcription_queue.get_nowait()
-                            print(f"\n✅ Transcribed: {text}")
+                            print(f"\nTranscribed: {text}")
                         except queue.Empty:
                             time.sleep(0.1)
                             remaining = args.recording_duration - int(
@@ -937,14 +1067,14 @@ Let me know your answer!
 
     # Handle utility functions
     if args.action == "youtube":
-        if args.download_youtube_transcript:
-            log.info(f"Downloading transcript from {args.download_youtube_transcript}")
+        if args.download_transcript:
+            log.info(f"Downloading transcript from {args.download_transcript}")
             from llama_index.readers.youtube_transcript import YoutubeTranscriptReader
 
             doc = YoutubeTranscriptReader().load_data(
-                ytlinks=[args.download_youtube_transcript]
+                ytlinks=[args.download_transcript]
             )
-            output_path = args.output_transcript_path or "transcript.txt"
+            output_path = args.output_path or "transcript.txt"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(doc[0].text)
             print(f"✅ Transcript downloaded to: {output_path}")
@@ -1043,205 +1173,6 @@ Let me know your answer!
                 )
                 print("✅ Successfully generated ground truth data")
                 print(f"  Output: {args.output_dir}")
-                print(f"  Token count: {result['metadata']['token_count']}")
-                print(f"  QA pairs: {len(result['analysis']['qa_pairs'])}")
-
-            elif args.directory:
-                # Process directory
-                print(f"Processing directory: {args.directory}")
-                print(f"File pattern: {args.pattern}")
-                results = generator.generate_batch(
-                    input_dir=args.directory,
-                    file_pattern=args.pattern,
-                    prompt=custom_prompt,
-                    save_text=save_text,
-                    output_dir=args.output_dir,
-                    num_samples=args.num_samples,
-                )
-
-                if results:
-                    total_pairs = sum(len(r["analysis"]["qa_pairs"]) for r in results)
-                    total_tokens = sum(r["metadata"]["token_count"] for r in results)
-                    print(f"✅ Successfully processed {len(results)} files")
-                    print(f"  Output: {args.output_dir}")
-                    print(f"  Total QA pairs: {total_pairs}")
-                    print(f"  Total tokens: {total_tokens}")
-                else:
-                    print("❌ No files were processed successfully")
-                    return
-
-        except Exception as e:
-            log.error(f"Error during groundtruth processing: {e}")
-            print(f"❌ Error during processing: {e}")
-            return
-
-        return
-
-    # Handle groundtruth generation
-    if args.action == "groundtruth":
-        log.info("Starting ground truth generation")
-        try:
-            from gaia.eval.groundtruth import GroundTruthGenerator
-        except ImportError as e:
-            log.error(f"Failed to import GroundTruthGenerator: {e}")
-            print(
-                "Error: Failed to import groundtruth module. Please ensure all dependencies are installed."
-            )
-            return
-
-        # Initialize generator
-        try:
-            generator = GroundTruthGenerator(
-                model=args.model, max_tokens=args.max_tokens
-            )
-        except Exception as e:
-            log.error(f"Error initializing generator: {e}")
-            print(f"Error initializing generator: {e}")
-            return
-
-        # Load custom prompt if provided
-        custom_prompt = None
-        if args.custom_prompt:
-            try:
-                with open(args.custom_prompt, "r", encoding="utf-8") as f:
-                    custom_prompt = f.read().strip()
-                print(f"Using custom prompt from: {args.custom_prompt}")
-            except Exception as e:
-                log.error(f"Error loading custom prompt: {e}")
-                print(f"Error loading custom prompt: {e}")
-                return
-
-        save_text = not args.no_save_text
-
-        try:
-            if args.file:
-                # Process single file
-                print(f"Processing single file: {args.file}")
-                result = generator.generate(
-                    file_path=args.file,
-                    prompt=custom_prompt,
-                    save_text=save_text,
-                    output_dir=args.output_dir,
-                    num_samples=args.num_samples,
-                )
-                print("✓ Successfully generated ground truth data")
-                print(f"  Output: {args.output_dir}")
-                print(f"  Token count: {result['metadata']['token_count']}")
-                print(f"  QA pairs: {len(result['analysis']['qa_pairs'])}")
-
-            elif args.directory:
-                # Process directory
-                print(f"Processing directory: {args.directory}")
-                print(f"File pattern: {args.pattern}")
-                results = generator.generate_batch(
-                    input_dir=args.directory,
-                    file_pattern=args.pattern,
-                    prompt=custom_prompt,
-                    save_text=save_text,
-                    output_dir=args.output_dir,
-                    num_samples=args.num_samples,
-                )
-
-                if results:
-                    total_pairs = sum(len(r["analysis"]["qa_pairs"]) for r in results)
-                    total_tokens = sum(r["metadata"]["token_count"] for r in results)
-                    print(f"✓ Successfully processed {len(results)} files")
-                    print(f"  Output: {args.output_dir}")
-                    print(f"  Total QA pairs: {total_pairs}")
-                    print(f"  Total tokens: {total_tokens}")
-                else:
-                    print("No files were processed successfully")
-                    return
-
-        except Exception as e:
-            log.error(f"Error during groundtruth processing: {e}")
-            print(f"Error during processing: {e}")
-            return
-
-        return
-
-    # Handle template creation
-    if args.action == "create-template":
-        log.info("Creating template results file")
-        try:
-            from gaia.eval.eval import RagEvaluator
-        except ImportError as e:
-            log.error(f"Failed to import RagEvaluator: {e}")
-            print(
-                "Error: Failed to import eval module. Please ensure all dependencies are installed."
-            )
-            return
-
-        try:
-            evaluator = RagEvaluator()
-            template_path = evaluator.create_template(
-                groundtruth_file=args.groundtruth_file,
-                output_dir=args.output_dir,
-                similarity_threshold=args.threshold,
-            )
-            print("✓ Successfully created template file")
-            print(f"  Template: {template_path}")
-            print(
-                "  Instructions: Fill in the 'response' fields with your RAG system outputs"
-            )
-            print("  Then run: gaia-cli eval <template_file> to evaluate performance")
-
-        except Exception as e:
-            log.error(f"Error creating template: {e}")
-            print(f"Error creating template: {e}")
-            return
-
-        return
-
-    # Handle groundtruth generation
-    if args.action == "groundtruth":
-        log.info("Starting ground truth generation")
-        try:
-            from gaia.eval.groundtruth import GroundTruthGenerator
-        except ImportError as e:
-            log.error(f"Failed to import GroundTruthGenerator: {e}")
-            print(
-                "Error: Failed to import groundtruth module. Please ensure all dependencies are installed."
-            )
-            return
-
-        # Initialize generator
-        try:
-            generator = GroundTruthGenerator(
-                model=args.model, max_tokens=args.max_tokens
-            )
-        except Exception as e:
-            log.error(f"Error initializing generator: {e}")
-            print(f"Error initializing generator: {e}")
-            return
-
-        # Load custom prompt if provided
-        custom_prompt = None
-        if args.custom_prompt:
-            try:
-                with open(args.custom_prompt, "r", encoding="utf-8") as f:
-                    custom_prompt = f.read().strip()
-                print(f"Using custom prompt from: {args.custom_prompt}")
-            except Exception as e:
-                log.error(f"Error loading custom prompt: {e}")
-                print(f"Error loading custom prompt: {e}")
-                return
-
-        save_text = not args.no_save_text
-
-        try:
-            if args.file:
-                # Process single file
-                print(f"Processing single file: {args.file}")
-                result = generator.generate(
-                    file_path=args.file,
-                    prompt=custom_prompt,
-                    save_text=save_text,
-                    output_dir=args.output_dir,
-                    num_samples=args.num_samples,
-                )
-                print("✓ Successfully generated ground truth data")
-                print(f"  Output: {args.output_dir}")
                 usage = result["metadata"]["usage"]
                 cost = result["metadata"]["cost"]
                 print(
@@ -1312,7 +1243,7 @@ Let me know your answer!
 
         except Exception as e:
             log.error(f"Error during groundtruth processing: {e}")
-            print(f"Error during processing: {e}")
+            print(f"❌ Error during processing: {e}")
             return
 
         return
@@ -1325,7 +1256,7 @@ Let me know your answer!
         except ImportError as e:
             log.error(f"Failed to import RagEvaluator: {e}")
             print(
-                "Error: Failed to import eval module. Please ensure all dependencies are installed."
+                "❌ Error: Failed to import eval module. Please ensure all dependencies are installed."
             )
             return
 
@@ -1336,7 +1267,7 @@ Let me know your answer!
                 output_dir=args.output_dir,
                 similarity_threshold=args.threshold,
             )
-            print("✓ Successfully created template file")
+            print("✅ Successfully created template file")
             print(f"  Template: {template_path}")
             print(
                 "  Instructions: Fill in the 'response' fields with your RAG system outputs"
@@ -1347,7 +1278,7 @@ Let me know your answer!
 
         except Exception as e:
             log.error(f"Error creating template: {e}")
-            print(f"Error creating template: {e}")
+            print(f"❌ Error creating template: {e}")
             return
 
         return
@@ -1360,7 +1291,7 @@ Let me know your answer!
         except ImportError as e:
             log.error(f"Failed to import RagEvaluator: {e}")
             print(
-                "Error: Failed to import eval module. Please ensure all dependencies are installed."
+                "❌ Error: Failed to import eval module. Please ensure all dependencies are installed."
             )
             return
 
@@ -1374,7 +1305,7 @@ Let me know your answer!
                 results_path=args.results_file, output_dir=output_dir
             )
 
-            print("✓ Successfully evaluated RAG system")
+            print("✅ Successfully evaluated RAG system")
 
             # Display summary information
             overall_rating = evaluation_data.get("overall_rating", {})
@@ -1398,10 +1329,20 @@ Let me know your answer!
 
         except Exception as e:
             log.error(f"Error evaluating RAG system: {e}")
-            print(f"Error evaluating RAG system: {e}")
+            print(f"❌ Error evaluating RAG system: {e}")
             return
 
         return
+
+    # Handle Blender command
+    if args.action == "blender":
+        handle_blender_command(args)
+        return
+
+    # Log error for unknown action
+    log.error(f"Unknown action specified: {args.action}")
+    parser.print_help()
+    return
 
 
 def kill_process_by_port(port):
@@ -1443,6 +1384,169 @@ def kill_process_by_port(port):
             "success": False,
             "message": f"Error killing process on port {port}: {str(e)}",
         }
+
+
+def wait_for_user():
+    """Wait for user to press Enter before continuing."""
+    input("Press Enter to continue to the next example...")
+
+
+def run_blender_examples(agent, selected_example=None, print_result=True):
+    """
+    Run the Blender agent example demonstrations.
+
+    Args:
+        agent: The BlenderAgent instance
+        selected_example: Optional example number to run specifically
+        print_result: Whether to print the result
+    """
+    console = agent.console
+
+    examples = {
+        1: {
+            "name": "Clearing the scene",
+            "description": "This example demonstrates how to clear all objects from a scene.",
+            "query": "Clear the scene to start fresh",
+        },
+        2: {
+            "name": "Creating a basic cube",
+            "description": "This example creates a red cube at the center of the scene.",
+            "query": "Create a red cube at the center of the scene and make sure it has a red material",
+        },
+        3: {
+            "name": "Creating a sphere with specific properties",
+            "description": "This example creates a blue sphere with specific parameters.",
+            "query": "Create a blue sphere at position (3, 0, 0) and set its scale to (2, 2, 2)",
+        },
+        4: {
+            "name": "Creating multiple objects",
+            "description": "This example creates multiple objects with specific arrangements.",
+            "query": "Create a green cube at (0, 0, 0) and a red sphere 3 units above it",
+        },
+        5: {
+            "name": "Creating and modifying objects",
+            "description": "This example creates objects and then modifies them.",
+            "query": "Create a blue cylinder, then make it taller and move it up 2 units",
+        },
+    }
+
+    # If a specific example is requested, run only that one
+    if selected_example and selected_example in examples:
+        example = examples[selected_example]
+        console.print_header(f"=== Example {selected_example}: {example['name']} ===")
+        console.print_header(example["description"])
+        agent.process_query(example["query"])
+        agent.display_result(print_result=print_result)
+        return
+
+    # Run all examples in sequence
+    for idx, example in examples.items():
+        console.print_header(f"=== Example {idx}: {example['name']} ===")
+        console.print_header(example["description"])
+        agent.process_query(example["query"], output_to_file=True)
+        agent.display_result(print_result=print_result)
+
+        # Wait for user input between examples, except the last one
+        if idx < len(examples):
+            wait_for_user()
+
+
+def run_blender_interactive_mode(agent, print_result=True):
+    """
+    Run the Blender Agent in interactive mode where the user can continuously input queries.
+
+    Args:
+        agent: The BlenderAgent instance
+        print_result: Whether to print the result
+    """
+    console = agent.console
+    console.print_header("=== Blender Interactive Mode ===")
+    console.print_header(
+        "Enter your 3D scene queries. Type 'exit', 'quit', or 'q' to exit."
+    )
+
+    while True:
+        try:
+            query = input("\nEnter Blender query: ")
+            if query.lower() in ["exit", "quit", "q"]:
+                console.print_header("Exiting Blender interactive mode.")
+                break
+
+            if query.strip():  # Process only non-empty queries
+                agent.process_query(query)
+                agent.display_result(print_result=print_result)
+
+        except KeyboardInterrupt:
+            console.print_header("\nBlender interactive mode interrupted. Exiting.")
+            break
+        except Exception as e:
+            console.print_error(f"Error processing Blender query: {e}")
+
+
+def handle_blender_command(args):
+    """
+    Handle the Blender agent command.
+
+    Args:
+        args: Parsed command line arguments for the blender command
+    """
+    log = get_logger(__name__)
+
+    # Check if Lemonade server is running
+    log.info("Checking Lemonade server connectivity...")
+    if not check_lemonade_health():
+        print_lemonade_error()
+        sys.exit(1)
+    log.info("✅ Lemonade server is accessible")
+
+    # Check if Blender MCP server is running
+    mcp_port = getattr(args, "mcp_port", 9876)
+    log.info(f"Checking Blender MCP server connectivity on port {mcp_port}...")
+    if not check_mcp_health(port=mcp_port):
+        print_mcp_error()
+        print(f"Note: Checking for MCP server on port {mcp_port}", file=sys.stderr)
+        sys.exit(1)
+    log.info("✅ Blender MCP server is accessible")
+
+    # Create output directory if specified
+    output_dir = args.output_dir
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    try:
+        # Create MCP client with custom port if specified
+        mcp_client = MCPClient(host="localhost", port=mcp_port)
+
+        # Create the BlenderAgent
+        agent = BlenderAgent(
+            use_local_llm=True,
+            mcp=mcp_client,
+            model_id=args.model,
+            max_steps=args.steps,
+            output_dir=output_dir,
+            streaming=args.stream,
+            show_stats=args.stats,
+            debug_prompts=args.debug_prompts,
+        )
+
+        # Run in interactive mode if specified
+        if args.interactive:
+            run_blender_interactive_mode(agent, print_result=args.print_result)
+        # Process a custom query if provided
+        elif args.query:
+            agent.console.print_header(f"Processing Blender query: '{args.query}'")
+            agent.process_query(args.query)
+            agent.display_result(print_result=args.print_result)
+        # Run specific example if provided, otherwise run all examples
+        else:
+            run_blender_examples(
+                agent, selected_example=args.example, print_result=args.print_result
+            )
+
+    except Exception as e:
+        log.error(f"Error running Blender agent: {e}")
+        print(f"❌ Error: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
