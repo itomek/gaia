@@ -4,10 +4,29 @@ Currently, the following capabilities are available, more will be added in the n
 
 | Use-Case Example   | Function                                 | Description                                                     |
 | ------------------ | ---------------------------------------- | --------------------------------------------------------------- |
-| No Agent           | Test LLM using basic completion          | Direct model interaction for testing and evaluation             |
-| Chaty              | Basic LLM chatbot with message history | Interactive conversational interface with context retention     |
-| Joker              | Simple RAG joke generator                | Demonstrates retrieval-augmented generation capabilities        |
-| Clip               | YouTube search and Q&A agent             | Basic agent for YouTube video transcript Q&A (requires YouTube API key) |
+| LLM Direct         | Direct LLM queries via CLI               | Direct model interaction using the new `gaia-cli llm` command  |
+| Blender Agent      | 3D content creation and manipulation     | Specialized agent for Blender automation and workflow          |
+
+## LLM Direct Usage
+
+The `gaia-cli llm` command provides direct access to language models without requiring server setup. This is the simplest way to interact with AI models:
+
+```bash
+# Basic query
+gaia-cli llm "What is 1+1?"
+
+# Specify model and token limit
+gaia-cli llm "Explain quantum computing" --model Llama-3.2-3B-Instruct-Hybrid --max-tokens 200
+
+# Disable streaming for batch processing
+gaia-cli llm "Write a short poem" --no-stream
+```
+
+**Requirements**: Requires lemonade-server to be running. The command will provide helpful error messages if the server is not accessible.
+
+## Blender Agent
+
+The Blender agent provides specialized functionality for 3D content creation and workflow automation. For more details, see the Blender agent documentation.
 
 ## Supported LLMs
 

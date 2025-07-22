@@ -20,7 +20,8 @@
 **Currently supports Windows 11 Home/Pro**
 
 - 🏠 **Local LLM Processing**: Easily run powerful language models directly on your Windows device without cloud dependencies
-- 🎯 **Multiple Use Cases**: From basic chat to RAG-enhanced applications and specialized agents
+- ⚡ **Direct LLM Access**: Query models instantly with the new `gaia-cli llm` command - no server setup required
+- 🎯 **Specialized Agents**: Includes Blender agent for 3D content creation and workflow automation
 - ⚡ **Optimized Performance**: Leverages the AMD NPU and iGPU for hybrid acceleration to get fast and efficient AI processing
 - 🖥️ **Easy-to-Use Interface**: Provides both a command-line interface (CLI) and a graphical user interface (GUI) option for easy interaction with models and agents
 - 🔧 **Extensible Architecture**: Easily build and integrate your own agents and use cases
@@ -36,7 +37,7 @@ For Ryzen AI LLM app development similar to GAIA, see [this developer guide](htt
 
 ## Optional Web Interface: GAIA UI (RAUX)
 
-GAIA UI is an optional, modern web-based interface for GAIA, built on the RAUX ([Open-WebUI](https://openwebui.com/) fork) platform. It offers a feature-rich, extensible, and user-friendly experience for interacting with GAIA's AI capabilities. GAIA UI is currently in beta and is being actively integrated with new features and improvements. 
+GAIA UI is an optional, modern web-based interface for GAIA, built on the RAUX ([Open-WebUI](https://openwebui.com/) fork) platform. It offers a feature-rich, extensible, and user-friendly experience for interacting with GAIA's AI capabilities. GAIA UI is currently in beta and is being actively integrated with new features and improvements.
 
 > **Note:** GAIA UI is referred to as "RAUX" internally in some technical documentation and code. For most users, it is presented as "GAIA UI".
 
@@ -146,7 +147,48 @@ Check your desktop for the GAIA-GUI icon and double-click it to launch the GUI. 
 
 ## Running the GAIA CLI
 
-To quickly get started with GAIA via the command line, you can use the GAIA CLI (`gaia-cli`) tool. Double click on the GAIA-CLI icon and run `gaia-cli -h` for help details. For more information and examples, please refer to the [gaia-cli documentation](docs/cli.md).
+To quickly get started with GAIA via the command line, you can use the GAIA CLI (`gaia-cli`) tool. Double click on the GAIA-CLI icon to launch the command-line shell with the GAIA environment activated, then run `gaia-cli --help` for help details.
+
+### Quick Start Examples
+
+**Direct LLM Queries** (fastest option, no server management required):
+```bash
+gaia-cli llm "What is artificial intelligence?"
+gaia-cli llm "Explain machine learning" --model llama3.2:3b --max-tokens 200
+```
+
+**Interactive Chat Sessions**:
+```bash
+gaia-cli chat                        # Start text chat with default agent
+gaia-cli chat --agent-name Blender   # Chat with Blender agent for 3D tasks
+```
+
+**Single Prompts to Agents**:
+```bash
+gaia-cli prompt "Create a red cube" --agent-name Blender
+gaia-cli prompt "What's the weather?" --stats
+```
+
+**Voice Interaction**:
+```bash
+gaia-cli talk  # Start voice-based conversation
+```
+
+### Available Commands
+
+- `llm` - Direct LLM queries (requires Lemonade server)
+- `prompt` - Send single message to an agent
+- `chat` - Interactive text conversation
+- `talk` - Voice-based conversation
+- `stats` - View performance statistics
+- `groundtruth` - Generate evaluation data with Claude
+- `test` - Run audio/speech tests
+- `youtube` - Download YouTube transcripts
+- `kill` - Kill processes on specific ports
+
+**Note**: Most commands require the Lemonade server to be running. Start it by double-clicking the desktop shortcut or running `lemonade-server serve`.
+
+For comprehensive information and examples, please refer to the [gaia-cli documentation](docs/cli.md).
 
 ## Building from Source
 
@@ -164,7 +206,7 @@ This is a new project with a codebase that is actively being developed. If you d
 - Submit your contributions via a Pull Request.
 - Ensure your code follows the same style as the rest of the repository.
 
-The best way to contribute is by adding a new agent that covers a unique use-case. You can use any of the agents/bots under the ./agents folder as a starting point. If you prefer to avoid UI development, you can add a feature to the CLI tool first. For adding features to the GUI, please refer to our [UI Development Guide](docs/ui.md).
+The best way to contribute is by adding a new agent that covers a unique use-case. You can use the existing agents under the `./src/gaia/agents/` folder as a starting point. If you prefer to avoid UI development, you can add a feature to the CLI tool first. For adding features to the GUI, please refer to our [UI Development Guide](docs/ui.md).
 
 # System Requirements
 

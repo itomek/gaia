@@ -9,7 +9,7 @@ import os
 __version__ = "0.9.0"
 
 # Lemonade version used across CI and installer
-LEMONADE_VERSION = "8.0.3"
+LEMONADE_VERSION = "8.0.6"
 
 
 def get_package_version() -> str:

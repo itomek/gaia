@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   gaia-cli-pytest:
-    runs-on: windows-latest
+    runs-on: [stx, miniforge]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +87,7 @@ jobs:
       - uses: FedericoCarboni/setup-ffmpeg@v3
         id: setup-ffmpeg
 
-      - name: Test GAIA
+      - name: Start Lemonade Server and Run Tests
         timeout-minutes: 20
         env:
           HUGGINGFACE_ACCESS_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
@@ -101,9 +101,6 @@ jobs:
           Write-Host "Verify Python environment"
           python -c "import sys; print(sys.executable)"
 
-          Write-Host "Verify NumPy is available"
-          python -c "import numpy; print(f'NumPy version: {numpy.__version__}'); print(f'NumPy path: {numpy.__file__}')"
-
           Write-Host "Find gaia executable location"
           $gaiaPath = Get-Command gaia -ErrorAction SilentlyContinue
           if (-not $gaiaPath) {
@@ -113,17 +110,168 @@ jobs:
           }
           Write-Host "Found gaia at: $($gaiaPath.Source)"
 
-          Write-Host "Running test_asr.py"
-          python tests\unit\test_asr.py 2>&1 | Out-String -Stream
-          if ($LASTEXITCODE -ne 0) {
-              throw "test_asr.py failed with exit code $LASTEXITCODE"
+          # Start the server in the background as a process (not PowerShell job)
+          Write-Host "Starting lemonade-server in background..."
+          # Start the server as a background process
+          $serverProcess = Start-Process -FilePath "lemonade-server" -ArgumentList "serve", "--no-tray" -PassThru -WindowStyle Hidden
+          Write-Host "Started lemonade-server process with ID: $($serverProcess.Id)"
+
+          # Wait for server to start up
+          Write-Host "Waiting for server to start up..."
+          $maxWaitTime = 30  # seconds
+          $waitTime = 0
+          $serverReady = $false
+
+          while ($waitTime -lt $maxWaitTime -and -not $serverReady) {
+              Start-Sleep -Seconds 2
+              $waitTime += 2
+
+              try {
+                  $response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/health" -Method GET -TimeoutSec 5
+                  Write-Host "Server is ready and responding to health checks"
+                  $serverReady = $true
+              } catch {
+                  Write-Host "Server not ready yet (waited $waitTime seconds)..."
+              }
           }
 
-          Write-Host "Running test_tts.py"
-          python tests\unit\test_tts.py 2>&1 | Out-String -Stream
-          if ($LASTEXITCODE -ne 0) {
-              throw "test_tts.py failed with exit code $LASTEXITCODE"
+          if (-not $serverReady) {
+              Write-Host "Server failed to start within $maxWaitTime seconds"
+              try {
+                  if (-not $serverProcess.HasExited) {
+                      $serverProcess.Kill()
+                  }
+              } catch {
+                  Write-Host "Error stopping server process: $_"
+              }
+              throw "Failed to start lemonade-server for tests"
           }
+
+          Write-Host "Lemonade server started successfully"
+
+      - name: Run Unit Tests (Direct CMD - Full Error Visibility)
+        shell: cmd
+        run: |
+          REM Activate conda environment
+          call "%GITHUB_WORKSPACE%\miniforge3\Scripts\activate.bat" gaiaenv
+
+          echo ================================================================
+          echo                 GAIA UNIT TESTS - FULL ERROR LOGGING
+          echo ================================================================
+          echo Environment: %CONDA_DEFAULT_ENV%
+          echo Python Version:
+          python --version
+          echo Working Directory: %CD%
+          echo.
+
+          REM Initialize test tracking
+          set test_llm_exit=0
+          set test_asr_exit=0
+          set test_tts_exit=0
+
+          REM ================================================================
+          REM TEST_LLM.PY
+          REM ================================================================
+          echo ****************************************************************
+          echo                          TEST_LLM.PY
+          echo ****************************************************************
+          echo Starting test_llm.py at %TIME%...
+          echo.
+
+          python tests\unit\test_llm.py
+          set test_llm_exit=%ERRORLEVEL%
+
+          echo.
+          echo ----------------------------------------------------------------
+          echo test_llm.py completed at %TIME% with exit code: %test_llm_exit%
+          if %test_llm_exit% equ 0 (
+              echo [SUCCESS] test_llm.py passed
+          ) else (
+              echo [FAILURE] test_llm.py failed with exit code %test_llm_exit%
+              echo Full error output displayed above - no truncation
+          )
+          echo ----------------------------------------------------------------
+          echo.
+
+          REM ================================================================
+          REM TEST_ASR.PY
+          REM ================================================================
+          echo ****************************************************************
+          echo                          TEST_ASR.PY
+          echo ****************************************************************
+          echo Starting test_asr.py at %TIME%...
+          echo.
+
+          python tests\unit\test_asr.py
+          set test_asr_exit=%ERRORLEVEL%
+
+          echo.
+          echo ----------------------------------------------------------------
+          echo test_asr.py completed at %TIME% with exit code: %test_asr_exit%
+          if %test_asr_exit% equ 0 (
+              echo [SUCCESS] test_asr.py passed
+          ) else (
+              echo [FAILURE] test_asr.py failed with exit code %test_asr_exit%
+              echo Full error output displayed above - no truncation
+          )
+          echo ----------------------------------------------------------------
+          echo.
+
+          REM ================================================================
+          REM TEST_TTS.PY
+          REM ================================================================
+          echo ****************************************************************
+          echo                          TEST_TTS.PY
+          echo ****************************************************************
+          echo Starting test_tts.py at %TIME%...
+          echo.
+
+          python tests\unit\test_tts.py
+          set test_tts_exit=%ERRORLEVEL%
+
+          echo.
+          echo ----------------------------------------------------------------
+          echo test_tts.py completed at %TIME% with exit code: %test_tts_exit%
+          if %test_tts_exit% equ 0 (
+              echo [SUCCESS] test_tts.py passed
+          ) else (
+              echo [FAILURE] test_tts.py failed with exit code %test_tts_exit%
+              echo Full error output displayed above - no truncation
+          )
+          echo ----------------------------------------------------------------
+          echo.
+
+          REM ================================================================
+          REM FINAL SUMMARY
+          REM ================================================================
+          echo ================================================================
+          echo                      FINAL TEST SUMMARY
+          echo ================================================================
+          echo test_llm.py:  exit code %test_llm_exit%
+          echo test_asr.py:  exit code %test_asr_exit%
+          echo test_tts.py:  exit code %test_tts_exit%
+          echo ================================================================
+
+          REM Calculate total failures
+          set /a total_failures=%test_llm_exit%+%test_asr_exit%+%test_tts_exit%
+
+          if %total_failures% equ 0 (
+              echo [OVERALL SUCCESS] All tests passed successfully
+              echo ================================================================
+              exit /b 0
+          ) else (
+              echo [OVERALL FAILURE] One or more tests failed
+              echo ================================================================
+              echo FAILED TESTS:
+              if %test_llm_exit% neq 0 echo   - test_llm.py ^(exit code %test_llm_exit%^)
+              if %test_asr_exit% neq 0 echo   - test_asr.py ^(exit code %test_asr_exit%^)
+              if %test_tts_exit% neq 0 echo   - test_tts.py ^(exit code %test_tts_exit%^)
+              echo ================================================================
+              echo IMPORTANT: All error messages are displayed in full above
+              echo No PowerShell wrapping or truncation - raw Python output preserved
+              echo ================================================================
+              exit /b 1
+          )
 
       - name: Debug GAIA Logs on Failure
         if: failure()

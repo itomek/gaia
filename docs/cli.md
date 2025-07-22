@@ -1,235 +1,335 @@
 # GAIA Command Line Interface (CLI)
 
-GAIA (Generative AI Acceleration Infrastructure & Applications) provides a command-line interface (CLI) for easy interaction with AI models and agents. The CLI allows you to start servers, manage chat sessions, and customize model configurations without writing code.
+GAIA (Generative AI Acceleration Infrastructure & Applications) provides a command-line interface (CLI) for easy interaction with AI models and agents. The CLI allows you to query models directly, manage chat sessions, and access various utilities without writing code.
 
 ## GAIA-CLI Getting Started Guide
 
 1. Make sure to follow the [Getting Started Guide](../README.md#getting-started-guide) to install the `gaia-cli` tool.
 
-1. GAIA automatically configures optimal settings for Ryzen AI hardware.
+2. GAIA automatically configures optimal settings for Ryzen AI hardware.
 
-1. Once installed, double click on the desktop icon **GAIA-CLI** to launch the command-line shell with the GAIA environment activated.
+3. Once installed, double click on the desktop icon **GAIA-CLI** to launch the command-line shell with the GAIA environment activated.
 
-1. Start the servers with default settings:
+4. The GAIA CLI connects to the Lemonade server for AI processing. Make sure the server is running by:
+   - Double-clicking the desktop shortcut, or
+   - Running: `lemonade-server serve`
+
+5. Now try the direct LLM demo in the [GAIA-CLI LLM Demo](#gaia-cli-llm-demo) section, chat demo in the [GAIA-CLI Chat Demo](#gaia-cli-chat-demo) section, or talk demo in the [GAIA-CLI Talk Demo](#gaia-cli-talk-demo) section.
+
+## GAIA-CLI LLM Demo
+
+The fastest way to interact with AI models is through the direct LLM command:
+
+1. Try a simple query:
    ```bash
-   gaia-cli start
-   ```
-   The optimal configuration for Ryzen AI hardware is automatically applied.
-
-   You can also use the hybrid shortcut or specify a different model:
-   ```bash
-   # Using hybrid shortcut
-   gaia-cli start --hybrid
-
-   # Or specify a different model
-   gaia-cli start --model "amd/Llama-3.2-3B-Instruct-awq-g128-int4-asym-fp16-onnx-hybrid"
-   ```
-
-1. Wait for servers to start up. You should see the following in the console:
-   ```bash
-   ...
-   INFO:     ::1:56598 - "GET /health HTTP/1.1" 200 OK
-   [2025-02-06 11:12:49] | INFO | gaia.cli.check_servers_ready | cli.py:204 | All servers are ready.
-   [2025-02-06 11:12:49] | INFO | gaia.cli.wait_for_servers | cli.py:145 | All servers are ready.
-   Servers started successfully.
+   gaia-cli llm "What is 1+1?"
    ```
 
-1. Now try the chat demo in [GAIA-CLI Chat Demo](./cli.md#gaia-cli-chat-demo) section or talk demo in [GAIA-CLI Talk Demo](./talk.md#gaia-cli-talk-demo) section.
+   This will stream the response directly to your terminal. The system will automatically check for the lemonade server and provide helpful error messages if it's not running.
+
+2. Use advanced options:
+   ```bash
+   # Specify model and token limit
+   gaia-cli llm "Explain quantum computing in simple terms" --model llama3.2:3b --max-tokens 200
+
+   # Disable streaming for batch processing
+   gaia-cli llm "Write a short poem about AI" --no-stream
+   ```
+
+3. If you get a connection error, make sure the lemonade server is running:
+   ```bash
+   lemonade-server serve
+   ```
 
 ## GAIA-CLI Chat Demo
 
-1. Follow the directions in [GAIA-CLI Getting Started Guide](#gaia-cli-getting-started-guide) to start the servers.
+1. Make sure the Lemonade server is running (see [Getting Started Guide](#gaia-cli-getting-started-guide)).
 
-1. Begin a chat session by running:
-   ```
+2. Begin a chat session by running:
+   ```bash
    gaia-cli chat
    ```
    This opens an interactive chat interface where you can converse with the AI.
-   ```
-   Starting chat with Chaty. Type 'stop' to quit, 'restart' to clear chat history.
-   ```
 
-1. During the chat:
+3. During the chat:
    - Type your messages and press Enter to send.
    - Type `stop` to quit the chat session.
+   - Type `restart` to clear chat history (functionality coming soon).
    ```bash
    You: who are you in one sentence?
-   {"status": "Success", "response": "Yer lookin' fer me, matey? I be the swashbucklin' AI pirate bot, here to help ye with yer queries and share tales o' the seven seas!"}
+   Chaty: I'm an AI assistant designed to help you with various tasks and answer your questions.
    You: stop
    Chat session ended.
    ```
 
-1. Terminate the servers when finished:
-   ```bash
-   gaia-cli stop
-   ```
-   This ensures all server processes are properly shut down.
-   ```
-   ...
-   [2024-10-14 18:36:55,341] | INFO | gaia.cli.stop | cli.py:233 | All servers stopped.
-   Servers stopped successfully.
-   ```
+## GAIA-CLI Talk Demo
+
+For voice-based interaction with AI models, see the [Voice Interaction Guide](./talk.md).
 
 ## Basic Usage
 
-The CLI supports several core commands:
-- `start`: Launch the GAIA servers
-- `chat`: Start an interactive chat session that tracks message history
-- `prompt`: Send a single message and get a response
-- `stop`: Shutdown all servers
-- `stats`: View model performance statistics
-- `kill`: Kill a process running on a specific port
-
-## Advanced Configuration
-
-The CLI supports various configuration options when starting the servers:
+The CLI supports the following core commands:
 
 ```bash
-gaia-cli start [OPTIONS]
+gaia-cli --help
 ```
 
-Available options:
-- `--agent-name`: Choose the AI agent (default: "Chaty")
-- `--model`: Specify the model to use (default: "llama3.2:1b")
-- `--max-new-tokens`: Maximum response length (default: 512)
-- `--background`: Launch mode ["terminal", "silent", "none"] (default: "silent")
-- `--hybrid`: Shortcut for optimal configuration (sets model to hybrid variant)
-- `--stats`: Show performance statistics after generation
+### Available Commands
+
+- **`llm`**: Send direct queries to language models (fastest option, no server management required)
+- **`prompt`**: Send a single message to an agent and get a response
+- **`chat`**: Start an interactive text chat session with message history
+- **`talk`**: Start a voice-based conversation session
+- **`stats`**: View model performance statistics from the most recent run
+- **`test`**: Run various audio/speech tests for development and troubleshooting
+- **`youtube`**: YouTube utilities for transcript downloading
+- **`kill`**: Kill a process running on a specific port
+- **`groundtruth`**: Generate ground truth data for RAG evaluation
+
+### Global Options
+
+All commands support these global options:
+- `--logging-level`: Set logging verbosity [DEBUG, INFO, WARNING, ERROR, CRITICAL] (default: INFO)
+- `-v, --version`: Show program's version number and exit
+
+## LLM Command
+
+The `llm` command provides direct access to language models:
+
+```bash
+gaia-cli llm QUERY [OPTIONS]
+```
+
+**Available options:**
+- `--model`: Specify the model to use (optional, uses client default)
+- `--max-tokens`: Maximum tokens to generate (default: 512)
+- `--no-stream`: Disable streaming response (streaming enabled by default)
+
+**Examples:**
+```bash
+# Basic query with streaming
+gaia-cli llm "What is machine learning?"
+
+# Use specific model with token limit
+gaia-cli llm "Explain neural networks" --model llama3.2:3b --max-tokens 300
+
+# Disable streaming for batch processing
+gaia-cli llm "Generate a Python function to sort a list" --no-stream
+```
+
+**Requirements**: The lemonade server must be running. If not available, the command will provide clear instructions on how to start it.
+
+## Prompt Command
+
+Send a single prompt to a GAIA agent:
+
+```bash
+gaia-cli prompt "MESSAGE" [OPTIONS]
+```
+
+**Available options:**
+- `--agent-name`: Name of the Gaia agent to use (default: "Chaty")
 - `--host`: Host address for the Agent server (default: "127.0.0.1")
 - `--port`: Port for the Agent server (default: 8001)
-- `--logging-level`: Set logging verbosity ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] (default: "INFO")
+- `--model`: Model to use for the agent (default: "llama3.2:1b")
+- `--max-new-tokens`: Maximum number of new tokens to generate (default: 512)
+- `--stats`: Show performance statistics after generation
 
-Common usage examples:
+**Examples:**
 ```bash
-# Start with optimal settings
-gaia-cli start
+# Basic prompt
+gaia-cli prompt "What is the weather like today?"
 
-# Use hybrid shortcut (same as default if available)
-gaia-cli start --hybrid
+# Use a specific agent with stats
+gaia-cli prompt "Create a 3D cube" --agent-name Blender --stats
 
-# Use Llama 3.2 3B model (overrides default model)
-gaia-cli start --model llama3.2:3b
-
-# Launch servers in a separate terminal window
-gaia-cli start --background terminal
-
-# Show performance stats after each response
-gaia-cli start --stats
-
-# Enable debug logging for troubleshooting
-gaia-cli start --logging-level DEBUG
+# Use different model and token limit
+gaia-cli prompt "Write a story" --model llama3.2:3b --max-new-tokens 1000
 ```
 
-### Background Launch Modes
+## Chat Command
 
-The `--background` option controls how the servers are launched:
+Start an interactive text conversation:
 
-- `terminal`: Opens a new terminal window for server processes (default)
-- `silent`: Runs servers in background with output redirected to gaia.cli.log
-- `none`: Runs servers in the current terminal
-
-When using background modes:
 ```bash
-# Launch in new terminal window
-gaia-cli start --background terminal
-
-# Launch silently with logging
-gaia-cli start --background silent
+gaia-cli chat [OPTIONS]
 ```
 
-You can then use `gaia-cli chat` or `gaia-cli talk` in a separate terminal while the servers run in the background. Use `gaia-cli stop` to shut down the servers when finished.
+**Available options:**
+- `--agent-name`: Name of the Gaia agent to use (default: "Chaty")
+- `--host`: Host address for the Agent server (default: "127.0.0.1")
+- `--port`: Port for the Agent server (default: 8001)
+- `--model`: Model to use for the agent (default: "llama3.2:1b")
+- `--max-new-tokens`: Maximum number of new tokens to generate (default: 512)
 
-## Running GAIA CLI Talk Mode
-GAIA CLI supports voice-based interaction with AI models through talk mode. For detailed instructions on using talk mode, including setup, configuration options, testing and troubleshooting, please refer to the [Voice Interaction Guide](./talk.md).
+**Example:**
+```bash
+# Start chat with default agent
+gaia-cli chat
 
-## Development Setup
+# Start chat with Blender agent
+gaia-cli chat --agent-name Blender
 
-For manual setup including creation of the virtual environment and installation of dependencies, refer to the instructions outlined [here](./dev.md). This approach is not recommended for most users and is only needed for development purposes.
+# Use different model
+gaia-cli chat --model llama3.2:3b
+```
 
-## Testing and Utilities
+## Talk Command
 
-The CLI includes several testing and utility commands for development and troubleshooting.
+Start a voice-based conversation:
 
-### Test Commands
+```bash
+gaia-cli talk [OPTIONS]
+```
+
+**Available options:**
+- `--agent-name`: Name of the Gaia agent to use (default: "Chaty")
+- `--host`: Host address for the Agent server (default: "127.0.0.1")
+- `--port`: Port for the Agent server (default: 8001)
+- `--model`: Model to use for the agent (default: "llama3.2:1b")
+- `--max-new-tokens`: Maximum number of new tokens to generate (default: 512)
+- `--no-tts`: Disable text-to-speech in voice chat mode
+- `--audio-device-index`: Index of the audio input device to use (default: 1)
+- `--whisper-model-size`: Size of the Whisper model [tiny, base, small, medium, large] (default: base)
+
+For detailed voice interaction instructions, see the [Voice Interaction Guide](./talk.md).
+
+## Stats Command
+
+View performance statistics from the most recent model run:
+
+```bash
+gaia-cli stats [OPTIONS]
+```
+
+**Available options:**
+- `--host`: Host address for the LLM server (default: "127.0.0.1")
+
+## Groundtruth Command
+
+Generate ground truth data for RAG evaluation using Claude:
+
+```bash
+gaia-cli groundtruth (-f FILE | -d DIRECTORY) [OPTIONS]
+```
+
+**Required arguments (mutually exclusive):**
+- `-f, --file`: Path to a single document file to process
+- `-d, --directory`: Directory containing documents to process
+
+**Available options:**
+- `-o, --output-dir`: Output directory for generated ground truth files (default: ./output/groundtruth)
+- `-p, --pattern`: File pattern to match when processing directory (default: *.html)
+- `-m, --model`: Claude model to use (default: claude-sonnet-4-20250514)
+- `--max-tokens`: Maximum tokens for Claude responses (default: 4096)
+- `--no-save-text`: Don't save extracted text for HTML files
+- `--custom-prompt`: Path to a file containing a custom prompt for Claude
+- `--num-samples`: Number of Q&A pairs to generate per document (default: 5)
+
+**Examples:**
+```bash
+# Process a single file
+gaia-cli groundtruth -f ./data/html/blender/introduction.html
+
+# Process all HTML files in a directory
+gaia-cli groundtruth -d ./data/html/blender
+
+# Process with custom output directory and more Q&A pairs
+gaia-cli groundtruth -f ./data/html/intro.html -o ./output/gt --num-samples 10
+
+# Process PDFs with custom pattern
+gaia-cli groundtruth -d ./data -p "*.pdf" -o ./output/gt
+
+# Use custom Claude model
+gaia-cli groundtruth -f ./data/doc.html -m claude-3-opus-20240229
+```
+
+## Test Commands
+
+Run various tests for development and troubleshooting:
 
 ```bash
 gaia-cli test --test-type TYPE [OPTIONS]
 ```
 
-Text-to-Speech (TTS) tests:
+### Text-to-Speech (TTS) Tests
+
+**Test types:**
 - `tts-preprocessing`: Test TTS text preprocessing
 - `tts-streaming`: Test TTS streaming playback
 - `tts-audio-file`: Test TTS audio file generation
 
-Text-to-Speech (TTS) options:
-- `--test-text`: Text to use for TTS tests: preprocessing, streaming, audio file generation
+**TTS options:**
+- `--test-text`: Text to use for TTS tests
 - `--output-audio-file`: Output file path for TTS audio file test (default: output.wav)
 
-Automatic Speech Recognition (ASR) tests:
-- `asr-file-transcription`: Test ASR file transcription
-- `asr-microphone`: Test ASR microphone input
-
-Automatic Speech Recognition (ASR) options:
-- `--input-audio-file`: Input audio file path for ASR file transcription test
-- `--recording-duration`: Recording duration in seconds for ASR microphone test (default: 10)
-- `--audio-device-index`: Index of audio input device for ASR microphone test (optional)
-- `--whisper-model-size`: Size of the Whisper model to use for ASR tests (default: base)
-
-Example usage:
+**Examples:**
 ```bash
 # Test TTS preprocessing with custom text
 gaia-cli test --test-type tts-preprocessing --test-text "Hello, world!"
 
-# Test TTS streaming with custom text
-gaia-cli test --test-type tts-streaming --test-text "Hello, world!"
+# Test TTS streaming
+gaia-cli test --test-type tts-streaming --test-text "Testing streaming playback"
 
-# Test TTS audio file generation with custom text and output file path
-gaia-cli test --test-type tts-audio-file --test-text "Hello, world!" --output-audio-file my_speech.wav
-
-# Test ASR file transcription
-gaia-cli test --test-type asr-file-transcription --input-audio-file ./data/audio/test.m4a --whisper-model-size base
-
-# Test microphone input for 30 seconds
-gaia-cli test --test-type asr-microphone --recording-duration 30 --audio-device-index 1
+# Generate audio file
+gaia-cli test --test-type tts-audio-file --test-text "Save this as audio" --output-audio-file speech.wav
 ```
 
-### YouTube Utilities
+### Automatic Speech Recognition (ASR) Tests
 
-The CLI provides utilities for working with YouTube content:
+**Test types:**
+- `asr-file-transcription`: Test ASR file transcription
+- `asr-microphone`: Test ASR microphone input
+- `asr-list-audio-devices`: List available audio input devices
+
+**ASR options:**
+- `--input-audio-file`: Input audio file path for file transcription test
+- `--recording-duration`: Recording duration in seconds for microphone test (default: 10)
+- `--audio-device-index`: Index of audio input device (default: 1)
+- `--whisper-model-size`: Whisper model size [tiny, base, small, medium, large] (default: base)
+
+**Examples:**
+```bash
+# Test file transcription
+gaia-cli test --test-type asr-file-transcription --input-audio-file ./data/audio/test.m4a
+
+# Test microphone for 30 seconds
+gaia-cli test --test-type asr-microphone --recording-duration 30
+
+# List audio devices
+gaia-cli test --test-type asr-list-audio-devices
+```
+
+## YouTube Utilities
+
+Download transcripts from YouTube videos:
 
 ```bash
-gaia-cli youtube [OPTIONS]
+gaia-cli youtube --download-transcript URL [--output-path PATH]
 ```
 
-Available options:
-- `--download-transcript URL`: Download transcript from a YouTube URL
-- `--output-path PATH`: Output file path for transcript (optional)
+**Available options:**
+- `--download-transcript`: YouTube URL to download transcript from
+- `--output-path`: Output file path for transcript (optional, defaults to transcript_<video_id>.txt)
 
-Example usage:
+**Example:**
 ```bash
 # Download YouTube transcript
 gaia-cli youtube --download-transcript "https://youtube.com/watch?v=..." --output-path transcript.txt
 ```
 
-### Audio Device Management
+## Kill Command
 
-When using voice features, you can list available audio input devices:
-
-```bash
-gaia-cli talk --list-devices
-```
-
-This will display all available audio input devices with their indices and properties, helping you choose the correct device for voice interaction.
-
-### Process Management
-
-The `kill` command allows you to terminate processes running on specific ports:
+Terminate processes running on specific ports:
 
 ```bash
 gaia-cli kill --port PORT_NUMBER
 ```
 
-For example:
+**Required options:**
+- `--port`: Port number to kill process on
+
+**Examples:**
 ```bash
 # Kill process running on port 8000
 gaia-cli kill --port 8000
@@ -238,51 +338,43 @@ gaia-cli kill --port 8000
 gaia-cli kill --port 8001
 ```
 
-This is useful for cleaning up lingering server processes that weren't properly shut down. The command will:
+This is useful for cleaning up lingering server processes. The command will:
 - Find the process ID (PID) of any process bound to the specified port
 - Forcefully terminate that process
 - Provide feedback about the operation's success or failure
 
-### Server State Management
+## Development Setup
 
-The GAIA CLI uses a `.gaia_servers.json` file to manage server state and connection information. When you run `gaia-cli start`, it creates or updates this file in the current working directory. The file contains server configurations, for example:
-
-```json
-{
-    "agent_name": "Chaty",
-    "host": "127.0.0.1",
-    "port": 8001,
-    "model": "llama3.2:1b",
-    "max_new_tokens": 512,
-    "server_pids": {
-        "agent": 27324,
-        "llm": 25176
-    },
-    "logging_level": "DEBUG"
-}
-```
-
-This configuration file tracks:
-- Connection details (host, port)
-- Model configuration (model name, parameters)
-- Server process IDs for management
-- Agent settings and logging preferences
-
-When running client commands like `gaia-cli chat`, the CLI looks for the `.gaia_servers.json` file in the current directory to establish connections. This means:
-
-- All commands should be run from the same directory where `gaia-cli start` was executed
+For manual setup including creation of the virtual environment and installation of dependencies, refer to the instructions outlined [here](./dev.md). This approach is not recommended for most users and is only needed for development purposes.
 
 ## Troubleshooting
 
 ### Common Issues
 
-For general troubleshooting, refer to the [Development Guide](./dev.md#troubleshooting) which covers:
-- Installation issues
-- Model loading problems
-- Server startup failures
-- Performance optimization
+**Connection Errors:**
+If you get connection errors with any command, ensure the Lemonade server is running:
+```bash
+lemonade-server serve
+```
 
-# License
+**Model Issues:**
+- Make sure you have sufficient RAM (16GB+ recommended)
+- Check that your model files are properly downloaded
+- Verify your Hugging Face token if prompted
+
+**Audio Issues:**
+- Use `gaia-cli test --test-type asr-list-audio-devices` to check available devices
+- Verify your microphone permissions in Windows settings
+- Try different audio device indices if the default doesn't work
+
+**Performance:**
+- For Hybrid mode, disable discrete GPUs in Device Manager
+- Ensure NPU drivers are up to date
+- Monitor system resources during model execution
+
+For general troubleshooting, refer to the [Development Guide](./dev.md#troubleshooting) and [FAQ](./faq.md).
+
+## License
 
 Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 SPDX-License-Identifier: MIT
