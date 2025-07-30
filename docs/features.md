@@ -5,6 +5,7 @@ Currently, the following capabilities are available, more will be added in the n
 | Use-Case Example   | Function                                 | Description                                                     |
 | ------------------ | ---------------------------------------- | --------------------------------------------------------------- |
 | LLM Direct         | Direct LLM queries via CLI               | Direct model interaction using the new `gaia llm` command  |
+| Chat Agent         | Interactive conversations with history   | Interactive chat sessions with conversation context and commands |
 | Blender Agent      | 3D content creation and manipulation     | Specialized agent for Blender automation and workflow          |
 
 ## LLM Direct Usage
@@ -23,6 +24,43 @@ gaia llm "Write a short poem" --no-stream
 ```
 
 **Requirements**: Requires lemonade-server to be running. The command will provide helpful error messages if the server is not accessible.
+
+## Chat Agent
+
+The Chat agent provides an interactive conversational interface with conversation history and various utility commands:
+
+```bash
+# Start interactive chat session
+gaia chat
+
+# Send a single message
+gaia chat "What is machine learning?"
+
+# Use a specific model
+gaia chat --model Llama-3.2-1B-Instruct-awq-g128-int4-asym-fp16-onnx-hybrid
+
+# Set custom system prompt
+gaia chat --system-prompt "You are a helpful coding assistant"
+```
+
+**Key features:**
+- **Conversation History**: Maintains context across messages with configurable history length
+- **Interactive Commands**: Built-in commands for session management and debugging
+- **Streaming Responses**: Real-time response streaming for better user experience
+- **Model Flexibility**: Support for different LLM models with automatic prompt formatting
+- **Single Message Mode**: Non-interactive mode for scripting and automation
+
+**Interactive Commands:**
+- `/clear` - Clear conversation history
+- `/history` - Show conversation history
+- `/system` - Show current system prompt configuration
+- `/model` - Show current model information
+- `/prompt` - Show complete formatted prompt sent to LLM
+- `/stats` - Show performance statistics (tokens/sec, latency, etc.)
+- `/help` - Show available commands
+- `quit`, `exit`, or `bye` - End the chat session
+
+**Requirements:** Requires lemonade-server to be running. The chat agent defaults to Llama-3.2-3B-Instruct-Hybrid model for optimal performance.
 
 ## Blender Agent
 

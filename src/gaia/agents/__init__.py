@@ -8,3 +8,9 @@ try:
 except ImportError:
     logger.debug("Llm agent not available")
     llm = None
+
+try:
+    from gaia.agents.chat.app import ChatApp as chat
+except ImportError:
+    logger.debug("Chat agent not available")
+    chat = None

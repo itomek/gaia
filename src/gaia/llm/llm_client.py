@@ -186,7 +186,6 @@ class LLMClient:
             - tokens_per_second: Rate of token generation
             - input_tokens: Number of tokens in the input
             - output_tokens: Number of tokens in the output
-            - decode_token_times: List of times taken to decode each token
         """
         if not self.base_url:
             # Return empty stats if not using local LLM
@@ -195,7 +194,6 @@ class LLMClient:
                 "tokens_per_second": None,
                 "input_tokens": None,
                 "output_tokens": None,
-                "decode_token_times": [],
             }
 
         try:
@@ -203,7 +201,11 @@ class LLMClient:
             stats_url = f"{self.base_url}/stats"
             response = requests.get(stats_url)
             if response.status_code == 200:
-                return response.json()
+                stats = response.json()
+                # Remove decode_token_times as it's too verbose
+                if "decode_token_times" in stats:
+                    del stats["decode_token_times"]
+                return stats
             else:
                 logger.warning(
                     f"Failed to get stats: {response.status_code} - {response.text}"

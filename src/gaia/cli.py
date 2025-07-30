@@ -138,13 +138,13 @@ class GaiaCliClient:
         agent_name="Chaty",
         host="127.0.0.1",
         port=8001,
-        model="llama3.2:1b",
-        max_new_tokens=512,
+        model="Llama-3.2-3B-Instruct-Hybrid",
+        max_tokens=512,
         whisper_model_size="base",
         audio_device_index=1,
         silence_threshold=0.5,
         show_stats=False,
-        enable_tts=True,
+        enable_tts=False,
         logging_level="INFO",
     ):
         self.log = self.__class__.log  # Use the class-level logger for instances
@@ -158,7 +158,7 @@ class GaiaCliClient:
         self.agent_url = f"http://{host}:{port}"
         self.llm_url = f"http://{host}:{self.llm_port}"
         self.model = model
-        self.max_new_tokens = max_new_tokens
+        self.max_tokens = max_tokens
         self.cli_mode = True  # Set this to True for CLI mode
         self.show_stats = show_stats
 
@@ -175,11 +175,11 @@ class GaiaCliClient:
             logging_level=logging_level,
         )
 
-        self.log.info("Gaia CLI client initialized.")
+        self.log.debug("Gaia CLI client initialized.")
         self.log.debug(
             f"agent_name: {self.agent_name}\n host: {self.host}\n"
             f"port: {self.port}\n llm_port: {self.llm_port}\n"
-            f"model: {self.model}\n max_new_tokens: {self.max_new_tokens}"
+            f"model: {self.model}\n max_tokens: {self.max_tokens}"
         )
 
     async def send_message(self, message):
@@ -245,24 +245,6 @@ class GaiaCliClient:
         """Send a request to halt the current generation."""
         await self.audio_client.halt_generation()
 
-    async def chat(self):
-        """Text-based chat interface"""
-        print(
-            f"Starting text chat with {self.agent_name}.\n"
-            "Type 'stop' to quit or 'restart' to clear chat history."
-        )
-        while True:
-            user_input = input("You: ").strip()
-            if user_input.lower().rstrip(".") == "stop":
-                break
-            elif user_input.lower().rstrip(".") == "restart":
-                print("Chat restart functionality not implemented")
-            else:
-                print(f"{self.agent_name}:", end=" ", flush=True)
-                async for _ in self.send_message(user_input):
-                    pass
-                print()
-
     async def talk(self):
         """Voice-based chat interface"""
         self.audio_client.initialize_tts()
@@ -271,6 +253,57 @@ class GaiaCliClient:
     async def prompt(self, message):
         async for chunk in self.send_message(message):
             yield chunk
+
+    def chat(
+        self, message=None, model=None, max_tokens=512, system_prompt=None, stats=False
+    ):
+        """Chat interface using the new ChatApp - interactive if no message, single message if message provided"""
+        try:
+            from gaia.agents.chat.app import main as chat_main
+
+            # Interactive mode if no message provided, single message mode if message provided
+            use_interactive = message is None
+
+            if use_interactive:
+                # Interactive mode
+                chat_main(
+                    model=model,
+                    max_tokens=max_tokens,
+                    system_prompt=system_prompt,
+                    interactive=True,
+                )
+            else:
+                # Single message mode
+                response = chat_main(
+                    message=message,
+                    model=model,
+                    max_tokens=max_tokens,
+                    system_prompt=system_prompt,
+                    interactive=False,
+                )
+
+                # Display response directly
+                print(response)
+
+                # Show stats if requested
+                if stats:
+                    from gaia.agents.chat.app import ChatApp
+
+                    app = ChatApp(system_prompt=system_prompt, model=model)
+                    stats_data = app.get_stats()
+                    if stats_data:
+                        print(f"\n{'='*30}")
+                        print("Performance Statistics:")
+                        print("=" * 30)
+                        for key, value in stats_data.items():
+                            print(f"{key}: {value}")
+                        print("=" * 30)
+
+        except Exception as e:
+            # Check if it's a connection error and provide helpful message
+            self.log.error(f"Error in chat: {str(e)}")
+            print(f"❌ Error: {str(e)}")
+            sys.exit(1)
 
 
 async def async_main(action, **kwargs):
@@ -282,8 +315,10 @@ async def async_main(action, **kwargs):
             print_lemonade_error()
             sys.exit(1)
 
-    # All actions now require a client since we assume Lemonade is running
-    client = GaiaCliClient(**{k: v for k, v in kwargs.items() if k != "message"})
+    # Create client for all actions - exclude parameters that aren't constructor arguments
+    client = GaiaCliClient(
+        **{k: v for k, v in kwargs.items() if k not in ["message", "stats"]}
+    )
 
     if action == "prompt":
         if not kwargs.get("message"):
@@ -299,8 +334,13 @@ async def async_main(action, **kwargs):
                 return {"response": response, "stats": stats}
         return {"response": response}
     elif action == "chat":
-        await client.chat()
-        log.info("Chat session ended.")
+        client.chat(
+            message=kwargs.get("message"),
+            model=kwargs.get("model"),
+            max_tokens=kwargs.get("max_tokens", 512),
+            system_prompt=kwargs.get("system_prompt"),
+            stats=kwargs.get("stats", False),
+        )
         return
     elif action == "talk":
         await client.talk()
@@ -383,14 +423,14 @@ def main():
     )
     prompt_parser.add_argument(
         "--model",
-        default="llama3.2:1b",
-        help="Model to use for the agent (default: llama3.2:1b)",
+        default="Llama-3.2-3B-Instruct-Hybrid",
+        help="Model to use for the agent (default: Llama-3.2-3B-Instruct-Hybrid)",
     )
     prompt_parser.add_argument(
-        "--max-new-tokens",
+        "--max-tokens",
         type=int,
         default=512,
-        help="Maximum number of new tokens to generate (default: 512)",
+        help="Maximum number of tokens to generate (default: 512)",
     )
     prompt_parser.add_argument(
         "--stats",
@@ -399,34 +439,30 @@ def main():
     )
 
     chat_parser = subparsers.add_parser(
-        "chat", help="Start text conversation with Gaia", parents=[parent_parser]
+        "chat",
+        help="Start interactive chat session with conversation history",
+        parents=[parent_parser],
     )
     chat_parser.add_argument(
-        "--agent-name",
-        default="Chaty",
-        help="Name of the Gaia agent to use (e.g., Llm, Chaty, Joker, Clip, Rag, etc.)",
-    )
-    chat_parser.add_argument(
-        "--host",
-        default="127.0.0.1",
-        help="Host address for the Agent server (default: 127.0.0.1)",
-    )
-    chat_parser.add_argument(
-        "--port",
-        type=int,
-        default=8001,
-        help="Port for the Agent server (default: 8001)",
+        "message",
+        nargs="?",
+        help="Message to send to the chatbot (defaults to interactive mode if not provided)",
     )
     chat_parser.add_argument(
         "--model",
-        default="llama3.2:1b",
-        help="Model to use for the agent (default: llama3.2:1b)",
+        default="Llama-3.2-3B-Instruct-Hybrid",
+        help="Model name to use (default: Llama-3.2-3B-Instruct-Hybrid)",
     )
     chat_parser.add_argument(
-        "--max-new-tokens",
+        "--max-tokens",
         type=int,
         default=512,
-        help="Maximum number of new tokens to generate (default: 512)",
+        help="Maximum tokens to generate (default: 512)",
+    )
+    chat_parser.add_argument("--system-prompt", help="Custom system prompt to use")
+
+    chat_parser.add_argument(
+        "--stats", action="store_true", help="Show performance statistics"
     )
 
     talk_parser = subparsers.add_parser(
@@ -450,14 +486,14 @@ def main():
     )
     talk_parser.add_argument(
         "--model",
-        default="llama3.2:1b",
-        help="Model to use for the agent (default: llama3.2:1b)",
+        default="Llama-3.2-3B-Instruct-Hybrid",
+        help="Model to use for the agent (default: Llama-3.2-3B-Instruct-Hybrid)",
     )
     talk_parser.add_argument(
-        "--max-new-tokens",
+        "--max-tokens",
         type=int,
         default=512,
-        help="Maximum number of new tokens to generate (default: 512)",
+        help="Maximum number of tokens to generate (default: 512)",
     )
     talk_parser.add_argument(
         "--no-tts",
@@ -968,7 +1004,7 @@ Examples:
   gaia generate --meeting-transcript -o ./output/meetings --target-tokens 3000 --count-per-type 3
   gaia generate --meeting-transcript -o ./output/meetings --meeting-types standup planning
 
-  # Generate business emails  
+  # Generate business emails
   gaia generate --email -o ./output/emails
   gaia generate --email -o ./output/emails --target-tokens 1500 --count-per-type 3
   gaia generate --email -o ./output/emails --email-types project_update sales_outreach

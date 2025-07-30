@@ -45,21 +45,46 @@ The fastest way to interact with AI models is through the direct LLM command:
 
 1. Make sure the Lemonade server is running (see [Getting Started Guide](#gaia-cli-getting-started-guide)).
 
-2. Begin a chat session by running:
+2. Begin an interactive chat session:
    ```bash
    gaia chat
    ```
-   This opens an interactive chat interface where you can converse with the AI.
+   This opens an interactive chat interface with conversation history and streaming responses.
 
-3. During the chat:
-   - Type your messages and press Enter to send.
-   - Type `stop` to quit the chat session.
-   - Type `restart` to clear chat history (functionality coming soon).
+3. During the chat session, you can:
+   - Type your messages and press Enter to send
+   - Use special commands to manage your session:
+     - `/clear` - Clear conversation history
+     - `/history` - Show conversation history
+     - `/system` - Show current system prompt
+     - `/model` - Show model information
+     - `/prompt` - Show complete formatted prompt
+     - `/stats` - Show performance statistics
+     - `/help` - Show available commands
+   - Type `quit`, `exit`, or `bye` to end the session
+
+   Example interaction:
    ```bash
    You: who are you in one sentence?
-   Chaty: I'm an AI assistant designed to help you with various tasks and answer your questions.
-   You: stop
-   Chat session ended.
+   Assistant: I'm an AI assistant designed to help you with various tasks and answer your questions.
+   You: /history
+   ==============================
+   Conversation History:
+   ==============================
+   User: who are you in one sentence?
+   Assistant: I'm an AI assistant designed to help you with various tasks and answer your questions.
+   ==============================
+   You: quit
+   Goodbye!
+   ```
+
+4. You can also send single messages without starting an interactive session:
+   ```bash
+   # Send a single message
+   gaia chat "What is machine learning?"
+
+   # Use a specific model
+   gaia chat "Explain quantum computing" --model Llama-3.2-1B-Instruct-awq-g128-int4-asym-fp16-onnx-hybrid
    ```
 
 ## GAIA CLI Talk Demo
@@ -157,31 +182,49 @@ gaia prompt "Write a story" --model llama3.2:3b --max-new-tokens 1000
 
 ## Chat Command
 
-Start an interactive text conversation:
+Start an interactive conversation or send a single message with conversation history:
 
 ```bash
-gaia chat [OPTIONS]
+gaia chat [MESSAGE] [OPTIONS]
 ```
+
+**Behavior:**
+- **No message provided**: Starts interactive chat session
+- **Message provided**: Sends single message and exits
 
 **Available options:**
-- `--agent-name`: Name of the Gaia agent to use (default: "Chaty")
-- `--host`: Host address for the Agent server (default: "127.0.0.1")
-- `--port`: Port for the Agent server (default: 8001)
-- `--model`: Model to use for the agent (default: "llama3.2:1b")
-- `--max-new-tokens`: Maximum number of new tokens to generate (default: 512)
+- `--model`: Model name to use (default: Llama-3.2-3B-Instruct-Hybrid)
+- `--max-tokens`: Maximum tokens to generate (default: 512)
+- `--system-prompt`: Custom system prompt for the conversation
+- `--stats`: Show performance statistics (single message mode only)
 
-**Example:**
+**Examples:**
 ```bash
-# Start chat with default agent
+# Start interactive chat session (default behavior when no message provided)
 gaia chat
 
-# Use different model
-gaia chat --model llama3.2:3b
+# Send a single message
+gaia chat "What is machine learning?"
+
+# Use specific model with custom system prompt for single message
+gaia chat "Help me code" --system-prompt "You are a helpful coding assistant"
+
+# Interactive mode with custom settings
+gaia chat --max-tokens 1000 --model Llama-3.2-3B-Instruct-Hybrid
 ```
 
-**Chat Commands:**
-- Type `stop` to quit the chat session
-- Type `restart` to clear chat history (functionality coming soon)
+**Interactive Commands:**
+During an interactive chat session, you can use these special commands:
+- `/clear` - Clear conversation history
+- `/history` - Show conversation history
+- `/system` - Show current system prompt configuration
+- `/model` - Show current model information
+- `/prompt` - Show complete formatted prompt sent to LLM
+- `/stats` - Show performance statistics (tokens/sec, latency, token counts)
+- `/help` - Show available commands
+- `quit`, `exit`, or `bye` - End the chat session
+
+**Requirements**: The lemonade server must be running. The chat maintains conversation context automatically and supports both streaming and non-streaming modes.
 
 ## Talk Command
 

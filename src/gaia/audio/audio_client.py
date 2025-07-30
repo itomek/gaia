@@ -47,7 +47,7 @@ class AudioClient:
         self.transcription_queue = queue.Queue()
         self.tts = None
 
-        self.log.info("Audio client initialized.")
+        self.log.debug("Audio client initialized.")
 
     async def start_voice_chat(self, message_processor_callback):
         """Start a voice-based chat session."""
