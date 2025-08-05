@@ -1,19 +1,25 @@
 # Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# This workflow runs comprehensive tests for the Chat SDK functionality
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: GAIA CLI Tests
+name: Chat SDK Tests
 
 on:
   push:
     branches: ["main"]
+    paths:
+      - "src/gaia/agents/chat/**"
+      - "tests/test_chat_sdk.py"
+      - "src/gaia/llm/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths-ignore:
+    paths:
       - "src/gaia/agents/chat/**"
+      - "tests/test_chat_sdk.py"
+      - "src/gaia/llm/**"
   merge_group:
   workflow_dispatch:
 
@@ -21,7 +27,7 @@ permissions:
   contents: read
 
 jobs:
-  gaia-cli-pytest:
+  chat-sdk-tests:
     runs-on: [stx, miniforge]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     steps:
@@ -56,7 +62,7 @@ jobs:
 
           Write-Host "Step 2: Install dependencies"
           python -m pip install --upgrade pip
-          pip install -e .[dev,talk]
+          pip install -e .[dev]
 
           Write-Host "Step 3: Verify installation"
           $gaiaPath = Get-Command gaia -ErrorAction SilentlyContinue
@@ -68,11 +74,8 @@ jobs:
           Write-Host "Found gaia at: $($gaiaPath.Source)"
           python -m pip check
 
-      - uses: FedericoCarboni/setup-ffmpeg@v3
-        id: setup-ffmpeg
-
-      - name: Start Lemonade Server and Run Tests
-        timeout-minutes: 20
+      - name: Start Lemonade Server for Integration Tests
+        timeout-minutes: 15
         env:
           HUGGINGFACE_ACCESS_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
           HF_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
@@ -133,135 +136,50 @@ jobs:
 
           Write-Host "Lemonade server started successfully"
 
-      - name: Run Unit Tests (Direct CMD - Full Error Visibility)
+
+
+      - name: Run Chat SDK Integration Tests with Lemonade
         shell: cmd
         run: |
           REM Activate conda environment
           call "%GITHUB_WORKSPACE%\miniforge3\Scripts\activate.bat" gaiaenv
 
           echo ================================================================
-          echo                 GAIA UNIT TESTS - FULL ERROR LOGGING
+          echo           CHAT SDK INTEGRATION TESTS WITH LEMONADE SERVER
           echo ================================================================
-          echo Environment: %CONDA_DEFAULT_ENV%
-          echo Python Version:
-          python --version
-          echo Working Directory: %CD%
+          echo Testing real LLM integration with running Lemonade server
           echo.
 
-          REM Initialize test tracking
-          set test_llm_exit=0
-          set test_asr_exit=0
-          set test_tts_exit=0
-
-          REM ================================================================
-          REM TEST_LLM.PY
-          REM ================================================================
           echo ****************************************************************
-          echo                          TEST_LLM.PY
+          echo                 COMPREHENSIVE INTEGRATION TEST SUITE
           echo ****************************************************************
-          echo Starting test_llm.py at %TIME%...
+          echo Starting comprehensive integration tests at %TIME%...
           echo.
 
-          python tests\unit\test_llm.py
-          set test_llm_exit=%ERRORLEVEL%
+          REM Run the comprehensive integration test suite
+          python tests\test_chat_sdk.py
+          set integration_exit=%ERRORLEVEL%
 
           echo.
           echo ----------------------------------------------------------------
-          echo test_llm.py completed at %TIME% with exit code: %test_llm_exit%
-          if %test_llm_exit% equ 0 (
-              echo [SUCCESS] test_llm.py passed
+          echo Integration tests completed at %TIME% with exit code: %integration_exit%
+          if %integration_exit% equ 0 (
+              echo [SUCCESS] Chat SDK integration tests passed
           ) else (
-              echo [FAILURE] test_llm.py failed with exit code %test_llm_exit%
+              echo [FAILURE] Chat SDK integration tests failed with exit code %integration_exit%
               echo Full error output displayed above - no truncation
           )
           echo ----------------------------------------------------------------
-          echo.
 
-          REM ================================================================
-          REM TEST_ASR.PY
-          REM ================================================================
-          echo ****************************************************************
-          echo                          TEST_ASR.PY
-          echo ****************************************************************
-          echo Starting test_asr.py at %TIME%...
-          echo.
-
-          python tests\unit\test_asr.py
-          set test_asr_exit=%ERRORLEVEL%
-
-          echo.
-          echo ----------------------------------------------------------------
-          echo test_asr.py completed at %TIME% with exit code: %test_asr_exit%
-          if %test_asr_exit% equ 0 (
-              echo [SUCCESS] test_asr.py passed
-          ) else (
-              echo [FAILURE] test_asr.py failed with exit code %test_asr_exit%
-              echo Full error output displayed above - no truncation
-          )
-          echo ----------------------------------------------------------------
-          echo.
-
-          REM ================================================================
-          REM TEST_TTS.PY
-          REM ================================================================
-          echo ****************************************************************
-          echo                          TEST_TTS.PY
-          echo ****************************************************************
-          echo Starting test_tts.py at %TIME%...
-          echo.
-
-          python tests\unit\test_tts.py
-          set test_tts_exit=%ERRORLEVEL%
-
-          echo.
-          echo ----------------------------------------------------------------
-          echo test_tts.py completed at %TIME% with exit code: %test_tts_exit%
-          if %test_tts_exit% equ 0 (
-              echo [SUCCESS] test_tts.py passed
-          ) else (
-              echo [FAILURE] test_tts.py failed with exit code %test_tts_exit%
-              echo Full error output displayed above - no truncation
-          )
-          echo ----------------------------------------------------------------
-          echo.
-
-          REM ================================================================
-          REM FINAL SUMMARY
-          REM ================================================================
-          echo ================================================================
-          echo                      FINAL TEST SUMMARY
-          echo ================================================================
-          echo test_llm.py:  exit code %test_llm_exit%
-          echo test_asr.py:  exit code %test_asr_exit%
-          echo test_tts.py:  exit code %test_tts_exit%
-          echo ================================================================
-
-          REM Calculate total failures
-          set /a total_failures=%test_llm_exit%+%test_asr_exit%+%test_tts_exit%
-
-          if %total_failures% equ 0 (
-              echo [OVERALL SUCCESS] All tests passed successfully
-              echo ================================================================
-              exit /b 0
-          ) else (
-              echo [OVERALL FAILURE] One or more tests failed
-              echo ================================================================
-              echo FAILED TESTS:
-              if %test_llm_exit% neq 0 echo   - test_llm.py ^(exit code %test_llm_exit%^)
-              if %test_asr_exit% neq 0 echo   - test_asr.py ^(exit code %test_asr_exit%^)
-              if %test_tts_exit% neq 0 echo   - test_tts.py ^(exit code %test_tts_exit%^)
-              echo ================================================================
-              echo IMPORTANT: All error messages are displayed in full above
-              echo No PowerShell wrapping or truncation - raw Python output preserved
-              echo ================================================================
+          if %integration_exit% neq 0 (
               exit /b 1
           )
 
-      - name: Debug GAIA Logs on Failure
+      - name: Debug Chat SDK Logs on Failure
         if: failure()
         shell: cmd
         run: |
-          echo === Debugging GAIA failure ===
+          echo === Debugging Chat SDK test failure ===
 
           echo === Check for GAIA log files ===
           if exist "gaia.cli.log" (
@@ -276,3 +194,13 @@ jobs:
 
           echo === Check ports in use ===
           netstat -an | findstr ":8000 :8001"
+
+          echo === Show recent Python errors ===
+          if exist "*.log" (
+            echo Recent log files:
+            dir *.log
+          )
+
+          echo === Environment information ===
+          echo CONDA_DEFAULT_ENV: %CONDA_DEFAULT_ENV%
+          echo PATH: %PATH%

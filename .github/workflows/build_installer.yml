@@ -17,9 +17,15 @@ on:
         value: ${{ jobs.build-installer.outputs.COMMIT_HASH }}
   push:
     branches: ["main"]
+    paths:
+      - "installer/**"
+      - "src/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "installer/**"
+      - "src/**"
   merge_group:
   workflow_dispatch:
 

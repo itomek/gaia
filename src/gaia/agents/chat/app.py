@@ -269,12 +269,12 @@ from gaia.agents.chat.sdk import ChatSession
 
 sessions = ChatSession()
 work_chat = sessions.create_session(
-    "work",
+    "work", 
     system_prompt="Professional assistant",
     assistant_name="WorkBot"
 )
 personal_chat = sessions.create_session(
-    "personal",
+    "personal", 
     system_prompt="Friendly companion",
     assistant_name="Buddy"
 )

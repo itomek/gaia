@@ -6,9 +6,17 @@ name: GAIA Hybrid Local Tests 🌩️
 on:
   push:
     branches: ["main"]
+    paths:
+      - "src/**"
+      - "installer/**"
+      - "tests/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "src/**"
+      - "installer/**"
+      - "tests/**"
   merge_group:
   workflow_dispatch:
 
@@ -22,8 +30,8 @@ jobs:
 
   gaia-hybrid-local-tests:
     runs-on: [stx, miniforge]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     needs: build-installer
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     steps:
       - uses: actions/checkout@v4
 
