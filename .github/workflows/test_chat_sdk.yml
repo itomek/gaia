@@ -157,6 +157,7 @@ jobs:
           echo.
 
           REM Run the comprehensive integration test suite
+          set PYTHONIOENCODING=utf-8
           python tests\test_chat_sdk.py
           set integration_exit=%ERRORLEVEL%
 

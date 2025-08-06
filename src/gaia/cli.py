@@ -473,6 +473,97 @@ def main():
         help="Size of the Whisper model to use (default: base)",
     )
 
+    # Add summarize command
+    summarize_parser = subparsers.add_parser(
+        "summarize",
+        help="Summarize meeting transcripts and emails",
+        parents=[parent_parser],
+    )
+    summarize_parser.add_argument(
+        "-i",
+        "--input",
+        help="Input file or directory path (required unless using --list-configs)",
+    )
+    summarize_parser.add_argument(
+        "-o",
+        "--output",
+        help="Output file/directory path (auto-adjusted based on format)",
+    )
+    summarize_parser.add_argument(
+        "-t",
+        "--type",
+        choices=["transcript", "email", "auto"],
+        default="auto",
+        help="Input type (default: auto-detect)",
+    )
+    summarize_parser.add_argument(
+        "-f",
+        "--format",
+        choices=["json", "pdf", "email", "both"],
+        default="json",
+        help="Output format (default: json). 'both' generates json and pdf",
+    )
+    summarize_parser.add_argument(
+        "-m",
+        "--model",
+        default="Llama-3.2-3B-Instruct-Hybrid",
+        help="LLM model to use (default: Llama-3.2-3B-Instruct-Hybrid). Use gpt-4 for OpenAI",
+    )
+    summarize_parser.add_argument(
+        "--styles",
+        nargs="+",
+        choices=[
+            "brief",
+            "detailed",
+            "bullets",
+            "executive",
+            "participants",
+            "action_items",
+            "all",
+        ],
+        default=["executive", "participants", "action_items"],
+        help="Summary style(s) to generate (default: executive participants action_items)",
+    )
+    summarize_parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=1024,
+        help="Maximum tokens for summary (default: 1024)",
+    )
+    summarize_parser.add_argument(
+        "--email-to", help="Email recipients (comma-separated) for email output format"
+    )
+    summarize_parser.add_argument(
+        "--email-subject", help="Email subject line (default: auto-generated)"
+    )
+    summarize_parser.add_argument("--email-cc", help="CC recipients (comma-separated)")
+    summarize_parser.add_argument(
+        "--config", help="Use predefined configuration file from configs/ directory"
+    )
+    summarize_parser.add_argument(
+        "--list-configs",
+        action="store_true",
+        help="List all available configuration templates",
+    )
+    summarize_parser.add_argument(
+        "--quiet",
+        action="store_true",
+        help="Minimal output, suppress progress indicators",
+    )
+    summarize_parser.add_argument(
+        "--verbose", action="store_true", help="Detailed output with debug information"
+    )
+    summarize_parser.add_argument(
+        "--combined-prompt",
+        action="store_true",
+        help="Combine multiple styles into single LLM call for efficiency",
+    )
+    summarize_parser.add_argument(
+        "--no-viewer",
+        action="store_true",
+        help="Don't automatically open HTML viewer for JSON output",
+    )
+
     # Add Blender agent command
     blender_parser = subparsers.add_parser(
         "blender",
@@ -1229,6 +1320,413 @@ Examples:
             log.error(f"Error generating report: {e}")
             print(f"Error generating report: {e}")
             return
+
+        return
+
+    # Handle summarize command
+    if args.action == "summarize":
+        import json
+        from gaia.apps.summarize.app import SummarizerApp, SummaryConfig
+        from gaia.apps.summarize.html_viewer import HTMLViewer
+
+        # Handle list-configs option
+        if args.list_configs:
+            from gaia.apps.summarize.app import SummarizerApp
+            import gaia.apps.summarize.app
+
+            config_dir = Path(gaia.apps.summarize.app.__file__).parent / "configs"
+            if config_dir.exists():
+                print("\nAvailable summarization configurations:\n")
+                for config_file in sorted(config_dir.glob("*.json")):
+                    try:
+                        with open(config_file, encoding="utf-8") as f:
+                            config_data = json.load(f)
+                        name = config_file.stem
+                        desc = config_data.get("description", "No description")
+                        print(f"{name:<20} - {desc}")
+                    except Exception:
+                        pass
+                print("\nUse: gaia summarize --config <config_name>")
+            else:
+                print("No configuration templates found.")
+            return
+
+        # Validate required arguments (input not required for --list-configs)
+        if not args.list_configs and not args.input:
+            # Show help instead of just an error
+            print("\nUsage: gaia summarize -i INPUT [options]\n")
+            print("Summarize meeting transcripts and emails\n")
+            print("Required arguments:")
+            print("  -i, --input INPUT    Input file or directory path\n")
+            print("Common options:")
+            print(
+                "  -o, --output OUTPUT  Output file/directory path (auto-adjusted based on format)"
+            )
+            print(
+                "  -f, --format FORMAT  Output format: json, pdf, email, both (default: json)"
+            )
+            print(
+                "  --styles STYLES      Summary style(s): brief, detailed, bullets, executive,"
+            )
+            print("                       participants, action_items, all")
+            print(
+                "                       (default: executive participants action_items)"
+            )
+            print(
+                "  --config CONFIG      Use predefined configuration from configs/ directory"
+            )
+            print("  --list-configs       List all available configuration templates\n")
+            print("Examples:")
+            print("  gaia summarize -i meeting.txt -o summary.json")
+            print("  gaia summarize -i meeting.txt --styles executive action_items")
+            print("  gaia summarize -i ./transcripts/ -o ./summaries/")
+            print("  gaia summarize --list-configs\n")
+            print("For full help: gaia summarize --help")
+            sys.exit(1)
+
+        # Handle "all" style
+        if "all" in args.styles:
+            args.styles = [
+                "brief",
+                "detailed",
+                "bullets",
+                "executive",
+                "participants",
+                "action_items",
+            ]
+
+        # Validate email format requirements
+        if args.format == "email":
+            if Path(args.input).is_dir():
+                print(
+                    "❌ Error: Email format only supports single file input, not directories"
+                )
+                sys.exit(1)
+            if not args.email_to:
+                print("❌ Error: --email-to is required for email output format")
+                sys.exit(1)
+
+            # Validate email addresses
+            from gaia.apps.summarize.app import validate_email_list
+
+            try:
+                validate_email_list(args.email_to)
+                if args.email_cc:
+                    validate_email_list(args.email_cc)
+            except ValueError as e:
+                print(f"❌ Error: {e}")
+                sys.exit(1)
+
+        # Load configuration if specified
+        if args.config:
+            import gaia.apps.summarize
+
+            config_path = (
+                Path(gaia.apps.summarize.__file__).parent
+                / "configs"
+                / f"{args.config}.json"
+            )
+            if config_path.exists():
+                with open(config_path, encoding="utf-8") as f:
+                    config_data = json.load(f)
+                # Apply config values
+                if "styles" in config_data:
+                    args.styles = config_data["styles"]
+                if "format" in config_data:
+                    args.format = config_data["format"]
+                if "max_tokens" in config_data:
+                    args.max_tokens = config_data["max_tokens"]
+                if "combined_prompt" in config_data:
+                    args.combined_prompt = config_data["combined_prompt"]
+                log.info(f"Loaded configuration from {args.config}")
+            else:
+                print(f"❌ Error: Configuration file '{args.config}' not found")
+                sys.exit(1)
+
+        # Set logging level
+        if args.verbose:
+            log_manager.set_level("gaia.apps.summarize", logging.DEBUG)
+        elif args.quiet:
+            log_manager.set_level("gaia.apps.summarize", logging.WARNING)
+
+        # Create summarizer config
+        config = SummaryConfig(
+            model=args.model,
+            max_tokens=args.max_tokens,
+            input_type=args.type,
+            styles=args.styles,
+            combined_prompt=args.combined_prompt,
+        )
+
+        # Create summarizer app
+        app = SummarizerApp(config)
+
+        try:
+            input_path = Path(args.input)
+
+            if input_path.is_file():
+                # Single file processing
+                if not args.quiet:
+                    print(f"Summarizing file: {input_path}")
+
+                result = app.summarize_file(input_path)
+
+                # Handle output
+                if args.format == "json":
+                    output_path = args.output or input_path.with_suffix(".summary.json")
+                    with open(output_path, "w", encoding="utf-8") as f:
+                        json.dump(result, f, indent=2)
+                    print(f"✅ Summary saved to: {output_path}")
+
+                    # Create and open HTML viewer unless disabled
+                    if not args.no_viewer:
+                        html_path = HTMLViewer.create_and_open(
+                            result, output_path, auto_open=True
+                        )
+                        print(f"🌐 HTML viewer created: {html_path}")
+                        print(
+                            "   (Use --no-viewer to disable automatic HTML generation)"
+                        )
+
+                elif args.format == "email":
+                    # Email output - show preview and open email client
+                    print("\n📧 Email Preview:")
+                    print(f"To: {args.email_to}")
+                    if args.email_cc:
+                        print(f"CC: {args.email_cc}")
+                    subject = args.email_subject or f"Summary - {input_path.stem}"
+                    print(f"Subject: {subject}")
+
+                    # Build email body
+                    email_body = f"Summary of: {input_path.name}\n"
+                    email_body += "=" * 50 + "\n\n"
+
+                    # Add summaries based on result structure
+                    if "summary" in result:
+                        # Single style output
+                        email_body += result["summary"]["text"] + "\n\n"
+                        if "items" in result["summary"]:
+                            email_body += "Action Items:\n"
+                            for item in result["summary"]["items"]:
+                                email_body += f"  • {item}\n"
+                            email_body += "\n"
+                    else:
+                        # Multiple styles output
+                        for style, summary_data in result["summaries"].items():
+                            email_body += f"{style.upper().replace('_', ' ')}:\n"
+                            email_body += "-" * 30 + "\n"
+                            if "text" in summary_data:
+                                email_body += summary_data["text"] + "\n"
+                            if "items" in summary_data:
+                                for item in summary_data["items"]:
+                                    email_body += f"  • {item}\n"
+                            if "participants" in summary_data:
+                                for participant in summary_data["participants"]:
+                                    email_body += f"  • {participant}\n"
+                            email_body += "\n"
+
+                    # Show preview of email body
+                    print("\nEmail Body Preview (first 500 chars):")
+                    print("-" * 50)
+                    print(email_body[:500] + ("..." if len(email_body) > 500 else ""))
+                    print("-" * 50)
+
+                    print("\nPress Enter to open email client, or Ctrl+C to cancel...")
+                    try:
+                        input()
+
+                        # Create mailto URL
+                        import urllib.parse
+                        import platform
+
+                        mailto_params = {
+                            "subject": subject,
+                            "body": email_body[
+                                :2000
+                            ],  # Limit body to avoid URL length issues
+                        }
+                        if args.email_cc:
+                            mailto_params["cc"] = args.email_cc
+
+                        # Build mailto URL
+                        params_str = urllib.parse.urlencode(
+                            mailto_params, quote_via=urllib.parse.quote
+                        )
+                        mailto_url = f"mailto:{args.email_to}?{params_str}"
+
+                        # Open email client
+                        system = platform.system()
+                        try:
+                            if system == "Windows":
+                                subprocess.run(
+                                    ["start", "", mailto_url], shell=True, check=True
+                                )
+                            elif system == "Darwin":  # macOS
+                                subprocess.run(["open", mailto_url], check=True)
+                            else:  # Linux/Unix
+                                subprocess.run(["xdg-open", mailto_url], check=True)
+                            print("✅ Email client opened successfully")
+                        except subprocess.CalledProcessError:
+                            print(
+                                "❌ Failed to open email client. Please check your default email client settings."
+                            )
+                        except Exception as e:
+                            print(f"❌ Error opening email client: {e}")
+
+                    except KeyboardInterrupt:
+                        print("\nCancelled.")
+
+                elif args.format in ["pdf", "both"]:
+                    # Generate PDF output
+                    try:
+                        from gaia.apps.summarize.pdf_formatter import (
+                            PDFFormatter,
+                            HAS_REPORTLAB,
+                        )
+
+                        if not HAS_REPORTLAB:
+                            print(
+                                "❌ Error: PDF output requires reportlab. Install with: pip install reportlab"
+                            )
+                            if args.format == "both":
+                                print(
+                                    "ℹ️  JSON output was still generated successfully."
+                                )
+                            sys.exit(1)
+
+                        formatter = PDFFormatter()
+                        pdf_path = Path(
+                            args.output or input_path.with_suffix(".summary.pdf")
+                        )
+
+                        # Generate PDF
+                        formatter.format_summary_as_pdf(result, pdf_path)
+                        print(f"✅ PDF summary saved to: {pdf_path}")
+
+                        # Also save JSON if format is "both"
+                        if args.format == "both":
+                            json_path = pdf_path.with_suffix(".json")
+                            with open(json_path, "w", encoding="utf-8") as f:
+                                json.dump(result, f, indent=2)
+                            print(f"✅ JSON summary saved to: {json_path}")
+
+                            # Create HTML viewer for JSON
+                            if not args.no_viewer:
+                                html_path = HTMLViewer.create_and_open(
+                                    result, json_path, auto_open=True
+                                )
+                                print(f"🌐 HTML viewer created: {html_path}")
+
+                    except ImportError as e:
+                        print(f"❌ Error: {e}")
+                        if args.format == "both":
+                            # Fall back to JSON only
+                            json_path = Path(
+                                args.output or input_path.with_suffix(".summary.json")
+                            )
+                            with open(json_path, "w", encoding="utf-8") as f:
+                                json.dump(result, f, indent=2)
+                            print(f"✅ JSON summary saved to: {json_path}")
+                            print(
+                                "ℹ️  PDF generation skipped due to missing dependencies."
+                            )
+                        else:
+                            sys.exit(1)
+                    except Exception as e:
+                        print(f"❌ Error generating PDF: {e}")
+                        sys.exit(1)
+
+            elif input_path.is_dir():
+                # Directory batch processing
+                if not args.quiet:
+                    print(f"Summarizing directory: {input_path}")
+
+                results = app.summarize_directory(input_path)
+
+                if not results:
+                    print("❌ No files found to summarize")
+                    sys.exit(1)
+
+                # Save results
+                output_dir = Path(args.output or "./summaries")
+                output_dir.mkdir(exist_ok=True)
+
+                # Check if we need PDF formatter
+                pdf_formatter = None
+                if args.format in ["pdf", "both"]:
+                    try:
+                        from gaia.apps.summarize.pdf_formatter import (
+                            PDFFormatter,
+                            HAS_REPORTLAB,
+                        )
+
+                        if HAS_REPORTLAB:
+                            pdf_formatter = PDFFormatter()
+                        else:
+                            print(
+                                "⚠️  Warning: PDF output requires reportlab. Install with: pip install reportlab"
+                            )
+                            if args.format == "pdf":
+                                print("❌ Cannot generate PDF files without reportlab.")
+                                sys.exit(1)
+                    except ImportError:
+                        print("⚠️  Warning: PDF formatter not available")
+                        if args.format == "pdf":
+                            sys.exit(1)
+
+                for i, result in enumerate(results):
+                    input_file = result["metadata"]["input_file"]
+                    base_name = Path(input_file).stem
+
+                    files_created = []
+
+                    # Save JSON if needed
+                    if args.format in ["json", "both"]:
+                        json_path = output_dir / f"{base_name}.summary.json"
+                        with open(json_path, "w", encoding="utf-8") as f:
+                            json.dump(result, f, indent=2)
+                        files_created.append(json_path.name)
+
+                        # Create HTML viewer for JSON (don't auto-open for batch)
+                        if not args.no_viewer:
+                            html_path = HTMLViewer.create_and_open(
+                                result,
+                                json_path,
+                                auto_open=False,  # Don't open browser for each file in batch
+                            )
+                            files_created.append(html_path.name)
+
+                    # Save PDF if needed
+                    if args.format in ["pdf", "both"] and pdf_formatter:
+                        pdf_path = output_dir / f"{base_name}.summary.pdf"
+                        try:
+                            pdf_formatter.format_summary_as_pdf(result, pdf_path)
+                            files_created.append(pdf_path.name)
+                        except Exception as e:
+                            print(
+                                f"⚠️  Warning: Failed to generate PDF for {base_name}: {e}"
+                            )
+
+                    if not args.quiet and files_created:
+                        print(
+                            f"✅ [{i+1}/{len(results)}] {Path(input_file).name} → {', '.join(files_created)}"
+                        )
+
+                print(
+                    f"\n✅ Processed {len(results)} files. Summaries saved to: {output_dir}"
+                )
+                if not args.no_viewer and args.format in ["json", "both"]:
+                    print("   📂 HTML viewers created for each JSON file")
+                    print("   💡 Open any .html file to view the formatted summary")
+
+            else:
+                print(f"❌ Error: Input path does not exist: {input_path}")
+                sys.exit(1)
+
+        except Exception as e:
+            log.error(f"Error during summarization: {e}")
+            print(f"❌ Error: {e}")
+            sys.exit(1)
 
         return
 
