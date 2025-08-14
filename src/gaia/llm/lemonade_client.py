@@ -11,6 +11,7 @@ OpenAI-compatible API and additional functionality.
 import json
 import logging
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -222,8 +223,26 @@ class LemonadeClient:
                 if sys.platform.startswith("win") and self.server_process.pid:
                     # On Windows, use taskkill to ensure process tree is terminated
                     os.system(f"taskkill /F /PID {self.server_process.pid} /T")
+                elif self.server_process.pid:
+                    # On Linux/Unix, kill the process group to terminate child processes
+                    try:
+                        os.killpg(os.getpgid(self.server_process.pid), signal.SIGTERM)
+                        # Wait a bit for graceful termination
+                        try:
+                            self.server_process.wait(timeout=2)
+                        except subprocess.TimeoutExpired:
+                            # Force kill if graceful termination failed
+                            os.killpg(
+                                os.getpgid(self.server_process.pid), signal.SIGKILL
+                            )
+                    except (OSError, ProcessLookupError):
+                        # Process or process group doesn't exist, try individual kill
+                        try:
+                            self.server_process.kill()
+                        except ProcessLookupError:
+                            pass  # Process already terminated
                 else:
-                    # Try to kill normally
+                    # Fallback: try to kill normally
                     self.server_process.kill()
                 # Wait for process to terminate
                 try:

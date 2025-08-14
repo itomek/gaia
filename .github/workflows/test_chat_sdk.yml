@@ -1,10 +1,11 @@
 # Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
-# This workflow runs comprehensive tests for the Chat SDK functionality
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+# This workflow tests the Chat SDK functionality with Lemonade server integration
+# Tests include: Chat SDK API, conversation handling, and Lemonade integration
+# Platform: Windows (with Lemonade server support)
 
-name: Chat SDK Tests
+name: Chat SDK Tests (Windows)
 
 on:
   push:
@@ -27,7 +28,8 @@ permissions:
   contents: read
 
 jobs:
-  chat-sdk-tests:
+  test-chat-sdk-windows:
+    name: Test Chat SDK on Windows (Lemonade Integration)
     runs-on: [stx, miniforge]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     steps:

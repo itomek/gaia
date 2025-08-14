@@ -4,7 +4,8 @@
 [![GAIA Installer Test](https://github.com/amd/gaia/actions/workflows/test_installer.yml/badge.svg)](https://github.com/amd/gaia/tree/main/tests "Check out our installer tests")
 [![GAIA CLI Tests](https://github.com/amd/gaia/actions/workflows/test_gaia_cli.yml/badge.svg)](https://github.com/amd/gaia/tree/main/tests "Check out our cli tests")
 [![Latest Release](https://img.shields.io/github/v/release/amd/gaia?include_prereleases)](https://github.com/amd/gaia/releases/latest "Download the latest release")
-[![OS - Windows](https://img.shields.io/badge/OS-windows-blue)](https://github.com/amd/gaia/blob/main/docs/install.md "Check out our instructions")
+[![OS - Windows](https://img.shields.io/badge/OS-Windows-blue)](https://github.com/amd/gaia/blob/main/docs/installer.md "Windows installer")
+[![OS - Linux](https://img.shields.io/badge/OS-Linux-green)](https://github.com/amd/gaia/blob/main/README.md#linux-installation-cli-only "Linux CLI support")
 [![Made with Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)](https://github.com/amd/gaia/blob/main/docs/install.md "Check out our instructions")
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
@@ -17,9 +18,11 @@
 
 **GAIA is an open-source solution designed for the quick setup and execution of generative AI applications on local PC hardware.** It enables fast and efficient execution of LLM-based applications using a hybrid hardware approach that combines the AMD Neural Processing Unit (NPU) and Integrated Graphics Processing Unit (iGPU) in the Ryzen-AI PC. GAIA provides the following key features:
 
-**Currently supports Windows 11 Home/Pro**
+**Platform Support:**
+- **Windows 11 Home/Pro**: Full GUI and CLI support with installer
+- **Linux (Ubuntu/Debian)**: CLI support via source installation
 
-- 🏠 **Local LLM Processing**: Easily run powerful language models directly on your Windows device without cloud dependencies
+- 🏠 **Local LLM Processing**: Easily run powerful language models directly on your device without cloud dependencies
 - ⚡ **Direct LLM Access**: Query models instantly with the new `gaia llm` command - no server setup required
 - 🎯 **Specialized Agents**: Includes Blender agent for 3D content creation and workflow automation
 - ⚡ **Optimized Performance**: Leverages the AMD NPU and iGPU for hybrid acceleration to get fast and efficient AI processing
@@ -74,9 +77,16 @@ For more details and setup instructions, see the [UI Documentation](docs/ui.md).
 ## Prerequisites
 
 **System Requirements:**
-- **Windows 11 Home/Pro** (macOS and Linux not supported)
+
+**Windows (Full Support):**
+- **Windows 11 Home/Pro** 
 - **16GB RAM minimum** (32GB recommended)
 - **AMD Ryzen processor** (any generation)
+
+**Linux (CLI Only):**
+- **Ubuntu 20.04+** or **Debian 11+**
+- **16GB RAM minimum** (32GB recommended)
+- **x86_64 architecture**
 
 **Performance Tiers:**
 - **🚀 Hybrid Mode** (NPU + iGPU): Requires AMD Ryzen AI 9 HX 300 series or newer
@@ -146,6 +156,41 @@ Available parameters:
 - `/S` - Silent installation (no UI)
 - `/MODE=X` - Set installation mode (GENERIC, NPU, or HYBRID)
 - `/D=<path>` - Set installation directory (must be last parameter)
+
+### Linux Installation (CLI Only)
+
+For Linux systems, GAIA CLI can be installed from source:
+
+**Prerequisites:**
+- Python 3.10+
+- pip package manager
+- git
+
+**Installation Steps:**
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/amd/gaia.git
+   cd gaia
+   ```
+
+2. Install GAIA CLI:
+   ```bash
+   pip install -e .
+   ```
+
+3. Install Lemonade server (for model serving):
+   ```bash
+   # Download and install Lemonade server
+   # Visit https://www.lemonade-server.ai for latest Linux release
+   # Or build from source following their documentation
+   ```
+
+4. Verify installation:
+   ```bash
+   gaia -v
+   ```
+
+**Note:** Linux installation provides CLI functionality only. GUI features are not available on Linux.
 
 ## Uninstallation Steps
 
@@ -267,7 +312,10 @@ The best way to contribute is by adding a new agent that covers a unique use-cas
 
 GAIA with Ryzen AI Hybrid NPU/iGPU execution has been tested on the following system below. Any system that has the AMD Ryzen AI 9 300 series processor with NPU Driver 32.0.203.237 on Windows 11 or newer with minimum of 16GB of main memory should work. For more details on what is supported, see [here](https://www.amd.com/en/products/software/ryzen-ai-software.html#tabs-2733982b05-item-7720bb7a69-tab).
 
-⚠️ **NOTE**: GAIA works on Windows 11 Pro/Home and does not support macOS or Linux at this time.
+⚠️ **NOTE**: 
+- **Windows**: Full GUI and CLI support with installer
+- **Linux**: CLI support only via source installation (GUI not supported)
+- **macOS**: Not supported at this time
 
 GAIA has been tested on the following system:
 

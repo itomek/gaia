@@ -2560,8 +2560,8 @@ Let me know your answer!
 def kill_process_by_port(port):
     """Find and kill a process running on a specific port."""
     try:
-        # For Windows
         if sys.platform.startswith("win"):
+            # Windows implementation
             cmd = f"netstat -ano | findstr :{port}"
             output = subprocess.check_output(cmd, shell=True).decode()
             if output:
@@ -2574,7 +2574,6 @@ def kill_process_by_port(port):
                         try:
                             pid = int(parts[-1])
                             if pid > 0:  # Ensure we don't try to kill PID 0
-                                # Add check=True to subprocess.run
                                 subprocess.run(
                                     f"taskkill /PID {pid} /F", shell=True, check=True
                                 )
@@ -2588,6 +2587,72 @@ def kill_process_by_port(port):
                     "success": False,
                     "message": f"Could not find valid PID for port {port}",
                 }
+        else:
+            # Linux/Unix implementation
+            try:
+                # Use lsof to find process using the port
+                cmd = f"lsof -ti:{port}"
+                output = subprocess.check_output(cmd, shell=True).decode().strip()
+                if output:
+                    pids = output.split("\n")
+                    killed_pids = []
+                    for pid_str in pids:
+                        try:
+                            pid = int(pid_str.strip())
+                            if pid > 0:
+                                subprocess.run(f"kill -9 {pid}", shell=True, check=True)
+                                killed_pids.append(str(pid))
+                        except (ValueError, subprocess.CalledProcessError):
+                            continue
+                    if killed_pids:
+                        return {
+                            "success": True,
+                            "message": f"Killed process(es) {', '.join(killed_pids)} running on port {port}",
+                        }
+                return {
+                    "success": False,
+                    "message": f"Could not find valid PID for port {port}",
+                }
+            except subprocess.CalledProcessError:
+                # If lsof is not available, try netstat + ps approach
+                try:
+                    # Use netstat to find the port, then extract PID
+                    cmd = f"netstat -tulpn | grep :{port}"
+                    output = subprocess.check_output(cmd, shell=True).decode()
+                    if output:
+                        for line in output.strip().split("\n"):
+                            if f":{port}" in line:
+                                parts = line.strip().split()
+                                # Look for PID/process_name pattern in the last column
+                                for part in parts:
+                                    if "/" in part:
+                                        try:
+                                            pid = int(part.split("/")[0])
+                                            if pid > 0:
+                                                subprocess.run(
+                                                    f"kill -9 {pid}",
+                                                    shell=True,
+                                                    check=True,
+                                                )
+                                                return {
+                                                    "success": True,
+                                                    "message": f"Killed process {pid} running on port {port}",
+                                                }
+                                        except (
+                                            ValueError,
+                                            subprocess.CalledProcessError,
+                                        ):
+                                            continue
+                    return {
+                        "success": False,
+                        "message": f"Could not find valid PID for port {port}",
+                    }
+                except subprocess.CalledProcessError:
+                    return {
+                        "success": False,
+                        "message": f"No process found running on port {port} (lsof and netstat methods failed)",
+                    }
+
         return {"success": False, "message": f"No process found running on port {port}"}
     except subprocess.CalledProcessError:
         return {"success": False, "message": f"No process found running on port {port}"}

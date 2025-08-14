@@ -2,11 +2,17 @@
 
 Currently, the following capabilities are available, more will be added in the near future:
 
-| Use-Case Example   | Function                                 | Description                                                     |
-| ------------------ | ---------------------------------------- | --------------------------------------------------------------- |
-| LLM Direct         | Direct LLM queries via CLI               | Direct model interaction using the new `gaia llm` command  |
-| Chat Agent         | Interactive conversations with history   | Interactive chat sessions with conversation context and commands |
-| Blender Agent      | 3D content creation and manipulation     | Specialized agent for Blender automation and workflow          |
+## Platform Support Overview
+
+- **Windows 11**: Full GUI and CLI support with all features
+- **Linux (Ubuntu/Debian)**: CLI support only (LLM Direct, Chat Agent, Evaluation tools)
+- **macOS**: Not supported
+
+| Use-Case Example   | Function                                 | Description                                                     | Platform Support |
+| ------------------ | ---------------------------------------- | --------------------------------------------------------------- | ---------------- |
+| LLM Direct         | Direct LLM queries via CLI               | Direct model interaction using the new `gaia llm` command      | Windows, Linux   |
+| Chat Agent         | Interactive conversations with history   | Interactive chat sessions with conversation context and commands | Windows, Linux   |
+| Blender Agent      | 3D content creation and manipulation     | Specialized agent for Blender automation and workflow          | Windows Only     |
 
 ## LLM Direct Usage
 
@@ -24,6 +30,8 @@ gaia llm "Write a short poem" --no-stream
 ```
 
 **Requirements**: Requires lemonade-server to be running. The command will provide helpful error messages if the server is not accessible.
+
+**Platform Availability**: Windows and Linux
 
 ## Chat Agent
 
@@ -66,6 +74,8 @@ gaia chat --assistant-name "Gaia"
 
 **Requirements:** Requires lemonade-server to be running. The chat agent defaults to Llama-3.2-3B-Instruct-Hybrid model for optimal performance.
 
+**Platform Availability**: Windows and Linux
+
 ## Blender Agent
 
 The Blender agent provides specialized functionality for 3D content creation and workflow automation. It is now fully integrated into the CLI for easy access:
@@ -92,6 +102,8 @@ gaia blender --example 2
 - **Interactive Planning**: Multi-step scene creation with automatic planning
 
 **Requirements:** In addition to the Lemonade server, the Blender agent requires a Blender MCP server to be running. See the [CLI documentation](./cli.md#blender-command) for complete setup instructions.
+
+**Platform Availability**: Windows only (Linux support planned for future releases)
 
 ## Supported LLMs
 

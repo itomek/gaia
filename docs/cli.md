@@ -2,8 +2,15 @@
 
 GAIA (Generative AI Acceleration Infrastructure & Applications) provides a command-line interface (CLI) for easy interaction with AI models and agents. The CLI allows you to query models directly, manage chat sessions, and access various utilities without writing code.
 
+## Platform Support
+
+- **Windows 11**: Full CLI support with installer and desktop shortcuts
+- **Linux (Ubuntu/Debian)**: Full CLI support via source installation
+- **macOS**: Not supported
+
 ## GAIA-CLI Getting Started Guide
 
+### Windows Installation
 1. Make sure to follow the [Getting Started Guide](../README.md#getting-started-guide) to install the necessary `gaia` CLI and `lemonade` LLM serving tools.
 
 2. GAIA automatically configures optimal settings for Ryzen AI hardware.
@@ -13,6 +20,22 @@ GAIA (Generative AI Acceleration Infrastructure & Applications) provides a comma
 4. The GAIA CLI connects to the Lemonade server for AI processing. Make sure the server is running by:
    - Double-clicking the desktop shortcut, or
    - Running: `lemonade-server serve`
+
+### Linux Installation
+1. **Install from Source**: Follow the [Linux Installation](../README.md#linux-installation-cli-only) instructions in the main README.
+
+2. **Install Lemonade Server**: Download and install the Lemonade server from [lemonade-server.ai](https://www.lemonade-server.ai) or build from source.
+
+3. **Start the Server**: Run the Lemonade server:
+   ```bash
+   lemonade-server serve
+   ```
+
+4. **Verify Installation**: Test the CLI:
+   ```bash
+   gaia -v
+   gaia llm "Hello, world!"
+   ```
 
 5. Now try the direct LLM demo in the [GAIA CLI LLM Demo](#gaia-cli-llm-demo) section, chat demo in the [GAIA CLI Chat Demo](#gaia-cli-chat-demo) section, or talk demo in the [GAIA CLI Talk Demo](#gaia-cli-talk-demo) section.
 
@@ -90,6 +113,8 @@ The fastest way to interact with AI models is through the direct LLM command:
 ## GAIA CLI Talk Demo
 
 For voice-based interaction with AI models, see the [Voice Interaction Guide](./talk.md).
+
+**Note:** Voice features are currently available on Windows only. Linux support for audio/TTS features is planned for future releases.
 
 ## Basic Usage
 

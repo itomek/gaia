@@ -5,6 +5,7 @@
 """Integration tests for the summarizer application via CLI"""
 
 import json
+import os
 import pytest
 import subprocess
 import sys
@@ -21,7 +22,12 @@ class TestSummarizer:
         """Path to data/txt directory"""
         return Path(__file__).parent.parent / "data" / "txt"
 
-    def test_summarize_transcript(self, data_txt_path):
+    @pytest.fixture
+    def test_model(self):
+        """Get test model from environment or use default"""
+        return os.environ.get("GAIA_TEST_MODEL", "Llama-3.2-3B-Instruct-Hybrid")
+
+    def test_summarize_transcript(self, data_txt_path, test_model):
         """Integration test: summarize a real meeting transcript via CLI"""
         # Create temporary output file
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp_file:
@@ -35,7 +41,7 @@ class TestSummarizer:
             print("=" * 60)
             print(f"📄 Input file: {input_file}")
             print(f"📁 Output file: {output_path}")
-            print(f"🤖 Model: Llama-3.2-3B-Instruct-Hybrid")
+            print(f"🤖 Model: {test_model}")
             print(f"📝 Styles: executive, participants, action_items")
             print("⏳ Running CLI command...")
 
@@ -54,7 +60,7 @@ class TestSummarizer:
                 "participants",
                 "action_items",
                 "--model",
-                "Llama-3.2-3B-Instruct-Hybrid",
+                test_model,
                 "--no-viewer",  # Disable HTML viewer for testing
             ]
 
@@ -98,7 +104,7 @@ class TestSummarizer:
             # Check metadata
             assert "input_type" in summary_result["metadata"]
             assert summary_result["metadata"]["input_type"] == "transcript"
-            assert summary_result["metadata"]["model"] == "Llama-3.2-3B-Instruct-Hybrid"
+            assert summary_result["metadata"]["model"] == test_model
             assert "summary_styles" in summary_result["metadata"]
             print(
                 f"✓ Metadata verified - Type: {summary_result['metadata']['input_type']}"
@@ -143,7 +149,7 @@ class TestSummarizer:
             if output_path.exists():
                 output_path.unlink()
 
-    def test_summarize_email(self, data_txt_path):
+    def test_summarize_email(self, data_txt_path, test_model):
         """Integration test: summarize a real email via CLI"""
         # Add delay to prevent server overload from previous test
         print("⏳ Waiting 3 seconds to prevent server overload...")
@@ -161,7 +167,7 @@ class TestSummarizer:
             print("=" * 60)
             print(f"📄 Input file: {input_file}")
             print(f"📁 Output file: {output_path}")
-            print(f"🤖 Model: Llama-3.2-3B-Instruct-Hybrid")
+            print(f"🤖 Model: {test_model}")
             print(f"📝 Style: brief")
             print(f"📧 Input type: email")
             print("⏳ Running CLI command...")
@@ -181,7 +187,7 @@ class TestSummarizer:
                 "--type",
                 "email",
                 "--model",
-                "Llama-3.2-3B-Instruct-Hybrid",
+                test_model,
                 "--no-viewer",  # Disable HTML viewer for testing
             ]
 
@@ -226,7 +232,7 @@ class TestSummarizer:
 
             # Check metadata for single style
             assert summary_result["metadata"]["input_type"] == "email"
-            assert summary_result["metadata"]["model"] == "Llama-3.2-3B-Instruct-Hybrid"
+            assert summary_result["metadata"]["model"] == test_model
             assert (
                 summary_result["metadata"]["summary_style"] == "brief"
             )  # Single style uses "summary_style"
@@ -261,7 +267,7 @@ class TestSummarizer:
             if output_path.exists():
                 output_path.unlink()
 
-    def test_multiple_styles(self, data_txt_path):
+    def test_multiple_styles(self, data_txt_path, test_model):
         """Integration test: verify multiple summary styles work correctly via CLI"""
         # Add delay to prevent server overload from previous tests
         print("⏳ Waiting 5 seconds to prevent server overload...")
@@ -283,7 +289,7 @@ class TestSummarizer:
             print("=" * 60)
             print(f"📄 Input file: {input_file}")
             print(f"📁 Output file: {output_path}")
-            print(f"🤖 Model: Llama-3.2-3B-Instruct-Hybrid")
+            print(f"🤖 Model: {test_model}")
             print(f"📝 Styles ({len(all_styles)}): {', '.join(all_styles)}")
             print("⏳ Running CLI command...")
 
@@ -303,7 +309,7 @@ class TestSummarizer:
                 + all_styles
                 + [
                     "--model",
-                    "Llama-3.2-3B-Instruct-Hybrid",
+                    test_model,
                     "--no-viewer",  # Disable HTML viewer for testing
                 ]
             )

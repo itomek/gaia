@@ -1,8 +1,10 @@
 # GAIA Installer Guide
 
-## Installation Modes
+**Note:** This installer is for Windows only. For Linux systems, see the [CLI Installation Guide](../README.md#linux-installation-cli-only) for source-based installation.
 
-GAIA supports three modes, each optimized for different use cases via the Lemonade Server tool:
+## Installation Modes (Windows Only)
+
+The GAIA Windows installer supports three modes, each optimized for different use cases via the Lemonade Server tool:
 
 1. **Hybrid Mode**: Best overall performance
    - Combines NPU and GPU capabilities
