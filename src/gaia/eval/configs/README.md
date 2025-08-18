@@ -4,35 +4,49 @@ This directory contains example configurations for running batch experiments on 
 
 ## Available Configurations
 
-### 1. `basic_summarization.json`
-**Purpose**: Simple, single-model summarization
-**Best for**: Getting started, basic summarization needs
-**Models**: Claude Sonnet 4
+### 1. `basic_summarization_lfm2.json`
+**Purpose**: Mixed cloud and local model comparison
+**Best for**: Comparing Claude (cloud) vs local Lemonade models
+**Models**: Claude Sonnet 4, Mistral-7B, Phi-3.5-Mini, LFM2, various other local models
 **Features**:
-- Clear, structured summarization prompt
-- Moderate token limit (1024)
-- Low temperature for consistency
+- Cloud vs local model performance comparison
+- Consistent system prompt across all models
+- Production-ready with `combined_prompt: false`
 
 **Usage**:
 ```bash
-gaia batch-experiment -c src/gaia/eval/configs/basic_summarization.json -i ./transcripts -o ./results
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_lfm2.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
 ```
 
-### 2. `multi_model_comparison.json`
-**Purpose**: Compare different Claude model performance
-**Best for**: Model selection, cost vs quality analysis
-**Models**: Haiku (fast/cheap), Sonnet (balanced), Opus (detailed/expensive)
+### 2. `basic_summarization_hybrid.json`
+**Purpose**: Llama model size comparison
+**Best for**: Comparing different Llama Hybrid model sizes
+**Models**: Llama-3.2-1B, Llama-3.2-3B, Llama-3.1-8B (all Hybrid versions)
 **Features**:
-- Same task, different models
-- Optimized prompts and token limits per model
-- Cost vs quality comparison
+- Compare small vs medium vs large Llama models
+- All local inference through Lemonade
+- Consistent configuration across sizes
 
 **Usage**:
 ```bash
-gaia batch-experiment -c src/gaia/eval/configs/multi_model_comparison.json -i ./transcripts -o ./results
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_hybrid.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
 ```
 
-### 3. `summary_styles.json`
+### 3. `basic_summarization_gguf.json`
+**Purpose**: GGUF quantized model comparison
+**Best for**: Testing quantized models for edge deployment
+**Models**: Qwen3-0.6B, Qwen3-1.7B, Qwen3-4B (all GGUF format)
+**Features**:
+- Ultra-lightweight models suitable for resource-constrained environments
+- All local inference with minimal memory footprint
+- Perfect for privacy-focused deployments
+
+**Usage**:
+```bash
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_gguf.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+```
+
+### 4. `summary_styles.json`
 **Purpose**: Explore different summarization approaches
 **Best for**: Finding the right summary style for your use case
 **Models**: Claude Sonnet 4 (consistent model, varying approaches)
@@ -45,22 +59,7 @@ gaia batch-experiment -c src/gaia/eval/configs/multi_model_comparison.json -i ./
 
 **Usage**:
 ```bash
-gaia batch-experiment -c src/gaia/eval/configs/summary_styles.json -i ./transcripts -o ./results
-```
-
-### 4. `comprehensive_analysis.json`
-**Purpose**: Full analysis across models and approaches
-**Best for**: Complete evaluation, research, thorough comparison
-**Models**: Claude Haiku, Sonnet, Opus + Local Lemonade
-**Features**:
-- Standard analysis vs deep analysis
-- Cloud vs local model comparison
-- Stakeholder-focused perspective
-- Wide range of analytical approaches
-
-**Usage**:
-```bash
-gaia batch-experiment -c src/gaia/eval/configs/comprehensive_analysis.json -i ./transcripts -o ./results
+gaia batch-experiment -c src/gaia/eval/configs/summary_styles.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
 ```
 
 ## How to Use These Configurations
@@ -68,24 +67,40 @@ gaia batch-experiment -c src/gaia/eval/configs/comprehensive_analysis.json -i ./
 ### Basic Workflow
 ```bash
 # 1. Choose a configuration
-CONFIG="src/gaia/eval/configs/basic_summarization.json"
+CONFIG="src/gaia/eval/configs/basic_summarization_lfm2.json"
 
-# 2. Run experiments on your transcript data
-gaia batch-experiment -c $CONFIG -i ./your_transcripts -o ./results
+# 2. Generate groundtruth from your transcript data
+gaia groundtruth -d ./test_data/meetings --use-case summarization -o ./groundtruth
 
-# 3. Evaluate results (optional)
-gaia eval -f ./results/Claude-Sonnet-Basic-Summary.experiment.json
+# 3. Run experiments using groundtruth (for comparative evaluation)
+gaia batch-experiment -c $CONFIG -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
 
-# 4. Generate comparative report
-gaia report -d ./results
+# 4. Evaluate results 
+gaia eval -d ./experiments -o ./evaluation
+
+# 5. Generate comparative report
+gaia report -d ./evaluation -o ./reports/evaluation_report.md
+
+# 6. View interactive results
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
 ```
 
-### Advanced Workflow with Custom Questions
-If you have existing groundtruth data with custom questions:
+### Model Performance Comparison Workflow
+Compare different model types systematically:
 
 ```bash
-# Use questions from groundtruth for Q&A experiments
-gaia batch-experiment -c $CONFIG -i ./transcripts -q ./groundtruth/meeting.qa.json -o ./results
+# Compare cloud vs local models
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_lfm2.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Compare different Llama sizes
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_hybrid.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Compare lightweight GGUF models
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_gguf.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Evaluate all experiments together
+gaia eval -d ./experiments -o ./evaluation
+gaia report -d ./evaluation -o ./reports/model_comparison_report.md
 ```
 
 ### Creating Custom Configurations
@@ -141,17 +156,41 @@ You can modify these configurations or create your own:
 - **Brainstorming**: 0.6-0.8
 
 ### Model Selection Guidelines
-- **Claude Haiku**: Fast, cost-effective, good for basic summaries
-- **Claude Sonnet**: Balanced performance, good for most use cases
-- **Claude Opus**: Highest quality, best for complex analysis
-- **Local Lemonade**: Privacy-focused, good for sensitive content
+
+**Cloud Models:**
+- **Claude Sonnet 4**: High quality, reliable for production use, costs ~$0.003/1K input tokens
+
+**Local Models (via Lemonade):**
+- **Llama-3.1-8B-Hybrid**: Best local quality, good for most use cases
+- **Llama-3.2-3B-Hybrid**: Balanced performance, faster inference
+- **Llama-3.2-1B-Hybrid**: Fastest inference, basic summaries
+- **Mistral-7B**: Good alternative to Llama, different training approach
+- **Qwen3-4B-GGUF**: Best quantized model quality
+- **Qwen3-1.7B-GGUF**: Good quantized performance
+- **Qwen3-0.6B-GGUF**: Ultra-lightweight for edge deployment
+- **Phi-3.5-Mini**: Microsoft's efficient small model
 
 ## Getting Started
 
-1. **Start simple**: Use `basic_summarization.json` for your first experiment
-2. **Compare models**: Try `multi_model_comparison.json` to understand cost/quality tradeoffs
-3. **Explore styles**: Use `summary_styles.json` to find your preferred approach
-4. **Go comprehensive**: Use `comprehensive_analysis.json` for thorough evaluation
+1. **Start simple**: Use `basic_summarization_lfm2.json` for your first experiment (includes both cloud and local models)
+2. **Compare local models**: Try `basic_summarization_hybrid.json` to compare different Llama sizes
+3. **Test lightweight models**: Use `basic_summarization_gguf.json` for resource-constrained environments
+4. **Explore styles**: Use `summary_styles.json` to find your preferred summarization approach
+
+### Recommended Learning Path
+```bash
+# Step 1: Start with mixed cloud/local comparison
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_lfm2.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Step 2: Focus on local models if privacy/cost is important
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_hybrid.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Step 3: Test edge deployment with quantized models
+gaia batch-experiment -c src/gaia/eval/configs/basic_summarization_gguf.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Step 4: Experiment with different summarization styles
+gaia batch-experiment -c src/gaia/eval/configs/summary_styles.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+```
 
 ## Support
 

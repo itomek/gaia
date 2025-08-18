@@ -263,10 +263,12 @@ class LemonadeClient:
 
     def __del__(self):
         """Cleanup server process on deletion."""
-        if not self.keep_alive:
+        # Check if keep_alive attribute exists (might not if __init__ failed early)
+        if hasattr(self, "keep_alive") and not self.keep_alive:
             self.terminate_server()
-        elif self.server_process:
-            self.log.info("Not terminating server because keep_alive=True")
+        elif hasattr(self, "server_process") and self.server_process:
+            if hasattr(self, "log"):
+                self.log.info("Not terminating server because keep_alive=True")
 
     def chat_completions(
         self,

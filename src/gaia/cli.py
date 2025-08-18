@@ -2,10 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 import sys
-import argparse
 import time
 import asyncio
-import queue
 import logging
 import subprocess
 from pathlib import Path
@@ -342,6 +340,8 @@ def run_cli(action, **kwargs):
 
 
 def main():
+    import argparse
+
     # Create the main parser
     parser = argparse.ArgumentParser(
         description=f"Gaia CLI - Interact with Gaia AI agents. \n{version}",
@@ -560,7 +560,7 @@ def main():
     summarize_parser.add_argument(
         "--combined-prompt",
         action="store_true",
-        help="Combine multiple styles into single LLM call for efficiency",
+        help="Combine multiple styles into single LLM call (experimental - may reduce quality)",
     )
     summarize_parser.add_argument(
         "--no-viewer",
@@ -945,6 +945,11 @@ Examples:
         action="store_true",
         help="Only display summary, don't save detailed evaluation report",
     )
+    eval_parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="Generate consolidated report from existing evaluation data without re-running evaluations",
+    )
 
     # Add new subparser for generating summary reports from evaluation directories
     report_parser = subparsers.add_parser(
@@ -1042,12 +1047,12 @@ Examples:
     visualize_parser.add_argument(
         "--test-data-dir",
         type=str,
-        help="Directory containing test data files (default: ./test_data)",
+        help="Directory containing test data files (default: ./output/test_data)",
     )
     visualize_parser.add_argument(
         "--groundtruth-dir",
         type=str,
-        help="Directory containing groundtruth files (default: ./groundtruth)",
+        help="Directory containing groundtruth files (default: ./output/groundtruth)",
     )
 
     # Add new subparser for generating synthetic test data
@@ -1218,6 +1223,11 @@ Examples:
         type=str,
         help="Create configuration from groundtruth file metadata (provide groundtruth file path)",
     )
+    batch_exp_parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip experiments that have already been generated in the output folder",
+    )
 
     args = parser.parse_args()
 
@@ -1292,26 +1302,50 @@ Examples:
 
             # Display key metrics summary
             models_data = result["summary_data"]
+            evaluation_type = result.get("evaluation_type", "unknown")
+
             if models_data:
                 best_model = models_data[0]
-                print(
-                    f"  Best performing model: {best_model['name']} ({best_model['pass_rate']:.0%} pass rate)"
-                )
-                print(
-                    f"  Overall performance range: {models_data[-1]['pass_rate']:.0%} - {best_model['pass_rate']:.0%}"
-                )
 
-                # Check if any model meets production standards
-                production_ready = any(
-                    m["pass_rate"] >= 0.7 and m["mean_similarity"] >= 0.7
-                    for m in models_data
-                )
-                if production_ready:
-                    print("  Status: Some models approaching production readiness")
-                else:
+                if evaluation_type == "summarization":
+                    # Show quality score for summarization evaluations
                     print(
-                        "  Status: No models meet production standards (70% pass rate + 0.7 similarity)"
+                        f"  Best performing model: {best_model['name']} ({best_model['quality_score']:.1f}% quality score)"
                     )
+                    print(
+                        f"  Overall quality range: {models_data[-1]['quality_score']:.1f}% - {best_model['quality_score']:.1f}%"
+                    )
+
+                    # Check if any model meets production standards for summarization
+                    production_ready = any(
+                        m["quality_score"] >= 70.0 for m in models_data
+                    )
+                    if production_ready:
+                        print("  Status: Some models approaching production readiness")
+                    else:
+                        print(
+                            "  Status: No models meet production standards (70%+ quality score)"
+                        )
+                else:
+                    # Show pass rate for RAG evaluations
+                    print(
+                        f"  Best performing model: {best_model['name']} ({best_model['pass_rate']:.0%} pass rate)"
+                    )
+                    print(
+                        f"  Overall performance range: {models_data[-1]['pass_rate']:.0%} - {best_model['pass_rate']:.0%}"
+                    )
+
+                    # Check if any model meets production standards for RAG
+                    production_ready = any(
+                        m["pass_rate"] >= 0.7 and m["mean_similarity"] >= 0.7
+                        for m in models_data
+                    )
+                    if production_ready:
+                        print("  Status: Some models approaching production readiness")
+                    else:
+                        print(
+                            "  Status: No models meet production standards (70% pass rate + 0.7 similarity)"
+                        )
 
             # Clean up temp file if using summary_only
             if args.summary_only and output_path is None:
@@ -1348,8 +1382,8 @@ Examples:
                         name = config_file.stem
                         desc = config_data.get("description", "No description")
                         print(f"{name:<20} - {desc}")
-                    except Exception:
-                        pass
+                    except (json.JSONDecodeError, OSError) as e:
+                        log.debug(f"Failed to read config file {config_file}: {e}")
                 print("\nUse: gaia summarize --config <config_name>")
             else:
                 print("No configuration templates found.")
@@ -1814,6 +1848,8 @@ Let me know your answer!
                 print("Speak into your microphone...")
 
                 # Setup transcription queue and start recording
+                import queue
+
                 transcription_queue = queue.Queue()
                 asr.transcription_queue = transcription_queue
                 asr.start_recording()
@@ -2161,6 +2197,37 @@ Let me know your answer!
             if args.directory:
                 # Find all experiment JSON files in the directory (recursively)
                 experiment_dir = Path(args.directory)
+
+                # If report-only mode, look for existing evaluation files
+                if args.report_only:
+                    eval_dir = Path(args.output_dir)
+                    if not eval_dir.exists():
+                        print(f"❌ Evaluation directory not found: {args.output_dir}")
+                        print(
+                            "Please run evaluation first or specify correct output directory."
+                        )
+                        return
+
+                    # Find all evaluation files
+                    eval_files = list(eval_dir.rglob("*.eval.json"))
+                    if not eval_files:
+                        print(
+                            f"❌ No .eval.json files found in directory: {args.output_dir}"
+                        )
+                        return
+
+                    print(f"Found {len(eval_files)} evaluation files")
+
+                    # Generate consolidated report
+                    evaluation_files = [f.name for f in eval_files]
+                    consolidated_report_path = (
+                        evaluator.create_consolidated_evaluation_report(
+                            evaluation_files, args.output_dir, str(experiment_dir)
+                        )
+                    )
+                    print(f"✅ Consolidated Report: {consolidated_report_path}")
+                    return
+
                 json_files = list(experiment_dir.rglob("*.experiment.json"))
 
                 if not json_files:
@@ -2205,19 +2272,39 @@ Let me know your answer!
 
                         metrics = overall_rating.get("metrics", {})
                         if metrics:
-                            print(f"  Questions: {metrics.get('num_questions', 'N/A')}")
+                            # Display metrics based on evaluation type
+                            if "num_questions" in metrics:
+                                # Q&A evaluation metrics
+                                print(
+                                    f"  Questions: {metrics.get('num_questions', 'N/A')}"
+                                )
 
-                            pass_rate = metrics.get("pass_rate", "N/A")
-                            if isinstance(pass_rate, (int, float)):
-                                print(f"  Pass Rate: {pass_rate:.1%}")
-                            else:
-                                print(f"  Pass Rate: {pass_rate}")
+                                pass_rate = metrics.get("pass_rate", "N/A")
+                                if isinstance(pass_rate, (int, float)):
+                                    print(f"  Pass Rate: {pass_rate:.1%}")
+                                else:
+                                    print(f"  Pass Rate: {pass_rate}")
 
-                            mean_similarity = metrics.get("mean_similarity", "N/A")
-                            if isinstance(mean_similarity, (int, float)):
-                                print(f"  Mean Similarity: {mean_similarity:.3f}")
-                            else:
-                                print(f"  Mean Similarity: {mean_similarity}")
+                                mean_similarity = metrics.get("mean_similarity", "N/A")
+                                if isinstance(mean_similarity, (int, float)):
+                                    print(f"  Mean Similarity: {mean_similarity:.3f}")
+                                else:
+                                    print(f"  Mean Similarity: {mean_similarity}")
+                            elif "total_summaries" in metrics:
+                                # Summarization evaluation metrics
+                                print(
+                                    f"  Summaries: {metrics.get('total_summaries', 'N/A')}"
+                                )
+
+                                quality_score = metrics.get("quality_score", "N/A")
+                                if isinstance(quality_score, (int, float)):
+                                    print(f"  Quality Score: {quality_score:.1f}")
+                                else:
+                                    print(f"  Quality Score: {quality_score}")
+
+                                print(
+                                    f"  Excellent: {metrics.get('excellent_count', 0)}, Good: {metrics.get('good_count', 0)}, Fair: {metrics.get('fair_count', 0)}, Poor: {metrics.get('poor_count', 0)}"
+                                )
 
                         # Accumulate usage and cost
                         if evaluation_data.get("total_usage"):
@@ -2259,6 +2346,13 @@ Let me know your answer!
 
             else:
                 # Handle single file processing (existing logic)
+                if args.report_only:
+                    print(
+                        "❌ Error: --report-only flag can only be used with directory input (-d)"
+                    )
+                    print("For single file evaluation, run without --report-only flag.")
+                    return
+
                 evaluation_data = evaluator.generate_enhanced_report(
                     results_path=args.results_file,
                     output_dir=output_dir,
@@ -2273,19 +2367,35 @@ Let me know your answer!
 
                 metrics = overall_rating.get("metrics", {})
                 if metrics:
-                    print(f"  Questions: {metrics.get('num_questions', 'N/A')}")
+                    # Display metrics based on evaluation type
+                    if "num_questions" in metrics:
+                        # Q&A evaluation metrics
+                        print(f"  Questions: {metrics.get('num_questions', 'N/A')}")
 
-                    pass_rate = metrics.get("pass_rate", "N/A")
-                    if isinstance(pass_rate, (int, float)):
-                        print(f"  Pass Rate: {pass_rate:.1%}")
-                    else:
-                        print(f"  Pass Rate: {pass_rate}")
+                        pass_rate = metrics.get("pass_rate", "N/A")
+                        if isinstance(pass_rate, (int, float)):
+                            print(f"  Pass Rate: {pass_rate:.1%}")
+                        else:
+                            print(f"  Pass Rate: {pass_rate}")
 
-                    mean_similarity = metrics.get("mean_similarity", "N/A")
-                    if isinstance(mean_similarity, (int, float)):
-                        print(f"  Mean Similarity: {mean_similarity:.3f}")
-                    else:
-                        print(f"  Mean Similarity: {mean_similarity}")
+                        mean_similarity = metrics.get("mean_similarity", "N/A")
+                        if isinstance(mean_similarity, (int, float)):
+                            print(f"  Mean Similarity: {mean_similarity:.3f}")
+                        else:
+                            print(f"  Mean Similarity: {mean_similarity}")
+                    elif "total_summaries" in metrics:
+                        # Summarization evaluation metrics
+                        print(f"  Summaries: {metrics.get('total_summaries', 'N/A')}")
+
+                        quality_score = metrics.get("quality_score", "N/A")
+                        if isinstance(quality_score, (int, float)):
+                            print(f"  Quality Score: {quality_score:.1f}")
+                        else:
+                            print(f"  Quality Score: {quality_score}")
+
+                        print(
+                            f"  Excellent: {metrics.get('excellent_count', 0)}, Good: {metrics.get('good_count', 0)}, Fair: {metrics.get('fair_count', 0)}, Poor: {metrics.get('poor_count', 0)}"
+                        )
 
                 if not args.summary_only:
                     print(f"  Detailed Report: {args.output_dir}")
@@ -2521,14 +2631,23 @@ Let me know your answer!
         try:
             # Run batch experiments
             runner = BatchExperimentRunner(args.config)
-            result_files = runner.run_all_experiments(
+            result_files, skipped_count = runner.run_all_experiments(
                 input_path=args.input,
                 output_dir=args.output_dir,
                 delay_seconds=args.delay,
                 queries_source=args.queries_source,
+                skip_existing=args.skip_existing,
             )
 
-            print(f"✅ Completed {len(result_files)} experiments")
+            # Report results with skip information
+            if skipped_count > 0:
+                new_count = len(result_files) - skipped_count
+                print(
+                    f"✅ Completed {len(result_files)} experiments ({new_count} new, {skipped_count} skipped)"
+                )
+            else:
+                print(f"✅ Completed {len(result_files)} experiments")
+
             print(f"  Results saved to: {args.output_dir}")
             print("  Generated files:")
             for result_file in result_files:
@@ -2794,12 +2913,14 @@ def handle_visualize_command(args):
         else workspace_dir / "evaluation"
     )
     test_data_dir = (
-        Path(args.test_data_dir) if args.test_data_dir else workspace_dir / "test_data"
+        Path(args.test_data_dir)
+        if args.test_data_dir
+        else workspace_dir / "output" / "test_data"
     )
     groundtruth_dir = (
         Path(args.groundtruth_dir)
         if args.groundtruth_dir
-        else workspace_dir / "groundtruth"
+        else workspace_dir / "output" / "groundtruth"
     )
 
     # Get the webapp directory

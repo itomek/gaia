@@ -13,6 +13,9 @@ Currently, the following capabilities are available, more will be added in the n
 | LLM Direct         | Direct LLM queries via CLI               | Direct model interaction using the new `gaia llm` command      | Windows, Linux   |
 | Chat Agent         | Interactive conversations with history   | Interactive chat sessions with conversation context and commands | Windows, Linux   |
 | Blender Agent      | 3D content creation and manipulation     | Specialized agent for Blender automation and workflow          | Windows Only     |
+| Summarization      | Document and transcript summarization    | AI-powered summarization with multiple output formats          | Windows, Linux   |
+| Evaluation Suite   | Model evaluation and benchmarking       | Comprehensive evaluation framework with groundtruth generation  | Windows, Linux   |
+| Voice Interaction  | Speech-to-speech conversation           | Voice-based AI interaction with TTS and ASR                    | Windows Only     |
 
 ## LLM Direct Usage
 
@@ -104,6 +107,110 @@ gaia blender --example 2
 **Requirements:** In addition to the Lemonade server, the Blender agent requires a Blender MCP server to be running. See the [CLI documentation](./cli.md#blender-command) for complete setup instructions.
 
 **Platform Availability**: Windows only (Linux support planned for future releases)
+
+## Summarization
+
+The Summarization feature provides AI-powered document and transcript processing with multiple output formats:
+
+```bash
+# Summarize a meeting transcript
+gaia summarize -i meeting_transcript.txt -o summary.json
+
+# Summarize emails with PDF output
+gaia summarize -i emails_directory/ -f pdf -o summaries/
+
+# Generate specific summary styles
+gaia summarize -i document.txt --styles executive action_items --max-tokens 1024
+
+# List available configuration templates
+gaia summarize --list-configs
+```
+
+**Key features:**
+- **Multiple Input Types**: Process transcripts, emails, and documents
+- **Flexible Output Formats**: JSON, PDF, email, or both
+- **Configurable Styles**: Executive summaries, detailed summaries, action items, key decisions, participants, and topics
+- **Batch Processing**: Process entire directories of documents
+- **Template Support**: Use predefined configuration templates
+- **Model Flexibility**: Support for both local (Lemonade) and cloud (OpenAI/Claude) models
+
+**Output formats:**
+- `json` - Structured JSON with all summary components
+- `pdf` - Professional PDF reports
+- `email` - Email-ready format with recipients
+- `both` - Generate both JSON and PDF
+
+**Summary styles:**
+- `executive` - High-level executive summary
+- `detailed` - Comprehensive detailed summary
+- `action_items` - Extracted action items
+- `key_decisions` - Important decisions made
+- `participants` - Meeting participants and roles
+- `topics` - Main topics discussed
+
+**Platform Availability**: Windows and Linux
+
+## Evaluation Framework
+
+GAIA includes a comprehensive evaluation framework for testing and comparing AI model performance:
+
+```bash
+# Generate synthetic test data
+gaia generate --meeting-transcript -o ./test_data --meeting-types standup --count-per-type 2
+
+# Create evaluation standards (ground truth)
+gaia groundtruth -d ./test_data --use-case summarization -o ./groundtruth
+
+# Run batch experiments
+gaia batch-experiment -c config.json -i ./groundtruth -o ./experiments
+
+# Evaluate results
+gaia eval -d ./experiments -o ./evaluation
+
+# Generate reports
+gaia report -d ./evaluation -o ./reports/report.md
+
+# Launch interactive visualizer
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
+```
+
+**Key capabilities:**
+- **Synthetic Data Generation**: Create realistic test scenarios
+- **Ground Truth Creation**: Generate evaluation standards
+- **Batch Experimentation**: Test multiple models systematically
+- **Automated Evaluation**: Score and compare model outputs
+- **Interactive Visualization**: Web-based results explorer
+- **Cost Tracking**: Monitor API costs and token usage
+- **Performance Metrics**: Detailed timing and quality analysis
+
+**Platform Availability**: Windows and Linux
+
+## Voice Interaction (Talk)
+
+The Talk feature enables voice-based conversations with AI models:
+
+```bash
+# Start voice conversation
+gaia talk
+
+# Use specific model with voice
+gaia talk --model Llama-3.2-3B-Instruct-Hybrid
+
+# Disable text-to-speech (ASR only)
+gaia talk --no-tts
+
+# Configure audio settings
+gaia talk --audio-device-index 1 --whisper-model-size medium
+```
+
+**Key features:**
+- **Speech Recognition**: Whisper ASR for voice input
+- **Text-to-Speech**: Kokoro TTS for natural voice output
+- **Real-time Processing**: Streaming audio pipeline
+- **Device Selection**: Configure audio input devices
+- **Model Flexibility**: Choose ASR model sizes
+
+**Platform Availability**: Windows only (Linux audio support planned)
 
 ## Supported LLMs
 

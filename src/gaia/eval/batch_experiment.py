@@ -1,8 +1,9 @@
 import json
 import time
+import numpy as np
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from gaia.logger import get_logger
 from gaia.eval.claude import ClaudeClient
@@ -82,9 +83,13 @@ class BatchExperimentRunner:
                 model=experiment.model, max_tokens=experiment.max_tokens
             )
         elif experiment.llm_type.lower() == "lemonade":
-            return LemonadeClient(
-                model=experiment.model, verbose=False, **experiment.parameters
-            )
+            # Filter out non-LLM parameters before passing to client
+            llm_params = {
+                k: v
+                for k, v in experiment.parameters.items()
+                if k not in ["combined_prompt"]
+            }
+            return LemonadeClient(model=experiment.model, verbose=False, **llm_params)
         else:
             raise ValueError(f"Unsupported LLM type: {experiment.llm_type}")
 
@@ -151,14 +156,28 @@ class BatchExperimentRunner:
             if "choices" in response_data and response_data["choices"]:
                 response_text = response_data["choices"][0].get("text", "")
 
+            # Get token statistics from Lemonade
+            try:
+                stats = client.get_stats()
+                input_tokens = stats.get("input_tokens", 0) if stats else 0
+                output_tokens = stats.get("output_tokens", 0) if stats else 0
+                total_tokens = input_tokens + output_tokens
+            except Exception as e:
+                self.log.warning(f"Failed to get stats from Lemonade: {e}")
+                input_tokens = output_tokens = total_tokens = 0
+
             return {
                 "response": response_text.strip(),
                 "usage": {
-                    "input_tokens": 0,
-                    "output_tokens": 0,
-                    "total_tokens": 0,
-                },  # Lemonade doesn't provide usage stats
-                "cost": {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0},
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "total_tokens": total_tokens,
+                },
+                "cost": {
+                    "input_cost": 0.0,
+                    "output_cost": 0.0,
+                    "total_cost": 0.0,
+                },  # Local inference has no cost
                 "error": None,
             }
         except Exception as e:
@@ -182,60 +201,137 @@ class BatchExperimentRunner:
         }
 
     def process_summarization_claude(
-        self, client: ClaudeClient, transcript: str, system_prompt: str
+        self,
+        client: ClaudeClient,
+        transcript: str,
+        system_prompt: str,
+        combined_prompt: bool = False,
     ) -> Dict:
-        """Process summarization by making independent calls for each component."""
+        """Process summarization by making independent or combined calls for each component."""
         try:
             summary_prompts = self._get_summary_prompts(system_prompt)
-            self.log.info(
-                f"Processing summarization with {len(summary_prompts)} independent calls"
-            )
             results = {}
             total_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
             total_cost = {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}
             errors = []
 
-            for component, prompt_template in summary_prompts.items():
-                try:
-                    # Create full prompt with transcript
-                    full_prompt = (
-                        f"{prompt_template}\n\nTranscript:\n{transcript}\n\nResponse:"
+            if combined_prompt:
+                # Make a single call with all components
+                self.log.info(
+                    f"Summarizing transcript with 1 combined model call for: {', '.join(summary_prompts.keys())}"
+                )
+
+                # Build combined prompt
+                combined_request = f"{system_prompt}\n\nPlease provide the following summaries for the transcript:\n\n"
+                for component, prompt in summary_prompts.items():
+                    combined_request += (
+                        f"**{component.upper()}**:\n{prompt.split(':')[-1].strip()}\n\n"
+                    )
+                combined_request += f"\nTranscript:\n{transcript}\n\nPlease structure your response with clear headers for each section."
+
+                response_data = client.get_completion_with_usage(combined_request)
+
+                # Extract response text
+                response = response_data["content"]
+                if isinstance(response, list):
+                    response_text = (
+                        response[0].text
+                        if hasattr(response[0], "text")
+                        else str(response[0])
+                    )
+                else:
+                    response_text = (
+                        response.text if hasattr(response, "text") else str(response)
                     )
 
-                    response_data = client.get_completion_with_usage(full_prompt)
+                # Parse response into components
+                for component in summary_prompts.keys():
+                    # Try to extract each component from the combined response
+                    component_upper = component.upper()
+                    start_markers = [
+                        f"**{component_upper}**:",
+                        f"{component_upper}:",
+                        f"# {component_upper}",
+                        f"## {component_upper}",
+                    ]
 
-                    # Extract response text
-                    response = response_data["content"]
-                    if isinstance(response, list):
-                        response_text = (
-                            response[0].text
-                            if hasattr(response[0], "text")
-                            else str(response[0])
-                        )
-                    else:
-                        response_text = (
-                            response.text
-                            if hasattr(response, "text")
-                            else str(response)
-                        )
+                    section_text = ""
+                    for marker in start_markers:
+                        if marker in response_text:
+                            start_idx = response_text.find(marker) + len(marker)
+                            # Find the next section or end
+                            end_idx = len(response_text)
+                            for other_component in summary_prompts.keys():
+                                if other_component == component:
+                                    continue
+                                other_upper = other_component.upper()
+                                for other_marker in [
+                                    f"**{other_upper}**:",
+                                    f"{other_upper}:",
+                                    f"# {other_upper}",
+                                    f"## {other_upper}",
+                                ]:
+                                    idx = response_text.find(other_marker, start_idx)
+                                    if idx != -1 and idx < end_idx:
+                                        end_idx = idx
+                            section_text = response_text[start_idx:end_idx].strip()
+                            break
 
-                    results[component] = response_text.strip()
+                    results[component] = (
+                        section_text if section_text else response_text.strip()
+                    )
 
-                    # Accumulate usage and cost
-                    if response_data["usage"]:
-                        for key in total_usage:
-                            total_usage[key] += response_data["usage"].get(key, 0)
-                    if response_data["cost"]:
-                        for key in total_cost:
-                            total_cost[key] += response_data["cost"].get(key, 0.0)
+                # Use combined usage and cost
+                if response_data["usage"]:
+                    total_usage = response_data["usage"]
+                if response_data["cost"]:
+                    total_cost = response_data["cost"]
 
-                    # Small delay between component calls to avoid rate limiting
-                    time.sleep(0.5)
+            else:
+                # Original behavior: independent calls
+                self.log.info(
+                    f"Summarizing transcript with {len(summary_prompts)} independent model calls: {', '.join(summary_prompts.keys())}"
+                )
 
-                except Exception as e:
-                    self.log.error(f"Error processing {component} with Claude: {e}")
-                    results[component] = f"ERROR: {str(e)}"
-                    errors.append(f"{component}: {str(e)}")
+                for component, prompt_template in summary_prompts.items():
+                    try:
+                        # Create full prompt with transcript
+                        full_prompt = f"{prompt_template}\n\nTranscript:\n{transcript}\n\nResponse:"
+
+                        response_data = client.get_completion_with_usage(full_prompt)
+
+                        # Extract response text
+                        response = response_data["content"]
+                        if isinstance(response, list):
+                            response_text = (
+                                response[0].text
+                                if hasattr(response[0], "text")
+                                else str(response[0])
+                            )
+                        else:
+                            response_text = (
+                                response.text
+                                if hasattr(response, "text")
+                                else str(response)
+                            )
+
+                        results[component] = response_text.strip()
+
+                        # Accumulate usage and cost
+                        if response_data["usage"]:
+                            for key in total_usage:
+                                total_usage[key] += response_data["usage"].get(key, 0)
+                        if response_data["cost"]:
+                            for key in total_cost:
+                                total_cost[key] += response_data["cost"].get(key, 0.0)
+
+                        # Small delay between component calls to avoid rate limiting
+                        time.sleep(0.5)
+
+                    except Exception as e:
+                        self.log.error(f"Error processing {component} with Claude: {e}")
+                        results[component] = f"ERROR: {str(e)}"
+                        errors.append(f"{component}: {str(e)}")
 
             return {
                 "response": results,
@@ -259,51 +355,157 @@ class BatchExperimentRunner:
         system_prompt: str,
         max_tokens: int,
         temperature: float,
+        combined_prompt: bool = False,
     ) -> Dict:
-        """Process summarization by making independent calls for each component."""
+        """Process summarization by making independent or combined calls for each component."""
         try:
             summary_prompts = self._get_summary_prompts(system_prompt)
-            self.log.info(
-                f"Processing summarization with {len(summary_prompts)} independent calls"
-            )
             results = {}
             total_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
             total_cost = {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}
             errors = []
 
-            for component, prompt_template in summary_prompts.items():
+            if combined_prompt:
+                # Make a single call with all components
+                self.log.info(
+                    f"Summarizing transcript with 1 combined model call for: {', '.join(summary_prompts.keys())}"
+                )
+
+                # Build combined prompt
+                combined_request = f"{system_prompt}\n\nPlease provide the following summaries for the transcript:\n\n"
+                for component, prompt in summary_prompts.items():
+                    combined_request += (
+                        f"**{component.upper()}**:\n{prompt.split(':')[-1].strip()}\n\n"
+                    )
+                combined_request += f"\nTranscript:\n{transcript}\n\nPlease structure your response with clear headers for each section."
+
+                response_data = client.completions(
+                    model=client.model,
+                    prompt=combined_request,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    stream=False,
+                )
+
+                # Extract text from the response
+                response_text = ""
+                if "choices" in response_data and response_data["choices"]:
+                    response_text = response_data["choices"][0].get("text", "")
+
+                # Get token statistics from Lemonade
                 try:
-                    # Create full prompt with transcript
-                    full_prompt = (
-                        f"{prompt_template}\n\nTranscript:\n{transcript}\n\nResponse:"
-                    )
-
-                    response_data = client.completions(
-                        model=client.model,
-                        prompt=full_prompt,
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                        stream=False,
-                    )
-
-                    # Extract text from the response
-                    response_text = ""
-                    if "choices" in response_data and response_data["choices"]:
-                        response_text = response_data["choices"][0].get("text", "")
-
-                    results[component] = response_text.strip()
-
-                    # Small delay between component calls to avoid rate limiting
-                    time.sleep(0.5)
-
+                    stats = client.get_stats()
+                    input_tokens = stats.get("input_tokens", 0) if stats else 0
+                    output_tokens = stats.get("output_tokens", 0) if stats else 0
+                    total_tokens = input_tokens + output_tokens
+                    total_usage = {
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "total_tokens": total_tokens,
+                    }
                 except Exception as e:
-                    self.log.error(f"Error processing {component} with Lemonade: {e}")
-                    results[component] = f"ERROR: {str(e)}"
-                    errors.append(f"{component}: {str(e)}")
+                    self.log.warning(f"Failed to get stats from Lemonade: {e}")
+                    total_usage = {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "total_tokens": 0,
+                    }
+
+                # Parse response into components
+                for component in summary_prompts.keys():
+                    # Try to extract each component from the combined response
+                    component_upper = component.upper()
+                    start_markers = [
+                        f"**{component_upper}**:",
+                        f"{component_upper}:",
+                        f"# {component_upper}",
+                        f"## {component_upper}",
+                    ]
+
+                    section_text = ""
+                    for marker in start_markers:
+                        if marker in response_text:
+                            start_idx = response_text.find(marker) + len(marker)
+                            # Find the next section or end
+                            end_idx = len(response_text)
+                            for other_component in summary_prompts.keys():
+                                if other_component == component:
+                                    continue
+                                other_upper = other_component.upper()
+                                for other_marker in [
+                                    f"**{other_upper}**:",
+                                    f"{other_upper}:",
+                                    f"# {other_upper}",
+                                    f"## {other_upper}",
+                                ]:
+                                    idx = response_text.find(other_marker, start_idx)
+                                    if idx != -1 and idx < end_idx:
+                                        end_idx = idx
+                            section_text = response_text[start_idx:end_idx].strip()
+                            break
+
+                    results[component] = (
+                        section_text if section_text else response_text.strip()
+                    )
+
+                # Total usage already calculated above, cost is always 0 for local
+                total_cost = {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}
+
+            else:
+                # Original behavior: independent calls
+                self.log.info(
+                    f"Summarizing transcript with {len(summary_prompts)} independent model calls: {', '.join(summary_prompts.keys())}"
+                )
+
+                for component, prompt_template in summary_prompts.items():
+                    try:
+                        # Create full prompt with transcript
+                        full_prompt = f"{prompt_template}\n\nTranscript:\n{transcript}\n\nResponse:"
+
+                        response_data = client.completions(
+                            model=client.model,
+                            prompt=full_prompt,
+                            max_tokens=max_tokens,
+                            temperature=temperature,
+                            stream=False,
+                        )
+
+                        # Extract text from the response
+                        response_text = ""
+                        if "choices" in response_data and response_data["choices"]:
+                            response_text = response_data["choices"][0].get("text", "")
+
+                        results[component] = response_text.strip()
+
+                        # Get token statistics from Lemonade
+                        try:
+                            stats = client.get_stats()
+                            if stats:
+                                total_usage["input_tokens"] += stats.get(
+                                    "input_tokens", 0
+                                )
+                                total_usage["output_tokens"] += stats.get(
+                                    "output_tokens", 0
+                                )
+                                total_usage["total_tokens"] += stats.get(
+                                    "input_tokens", 0
+                                ) + stats.get("output_tokens", 0)
+                        except Exception as e:
+                            self.log.warning(f"Failed to get stats from Lemonade: {e}")
+
+                        # Small delay between component calls to avoid rate limiting
+                        time.sleep(0.5)
+
+                    except Exception as e:
+                        self.log.error(
+                            f"Error processing {component} with Lemonade: {e}"
+                        )
+                        results[component] = f"ERROR: {str(e)}"
+                        errors.append(f"{component}: {str(e)}")
 
             return {
                 "response": results,
-                "usage": total_usage,  # Lemonade doesn't provide usage stats
+                "usage": total_usage,
                 "cost": total_cost,
                 "error": "; ".join(errors) if errors else None,
             }
@@ -315,6 +517,37 @@ class BatchExperimentRunner:
                 "cost": {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0},
                 "error": str(e),
             }
+
+    def check_experiment_exists(
+        self, experiment: ExperimentConfig, output_dir: str
+    ) -> bool:
+        """Check if an experiment file already exists in the output directory.
+
+        Args:
+            experiment: The experiment configuration
+            output_dir: The output directory path
+
+        Returns:
+            True if experiment file exists, False otherwise
+        """
+        output_base_path = Path(output_dir)
+
+        # Generate the same safe filename that would be used for the output
+        safe_name = "".join(
+            c if (c.isalnum() or c in (" ", "-", "_")) else "_" if c == "." else ""
+            for c in experiment.name
+        ).rstrip()
+        safe_name = safe_name.replace(" ", "_")
+
+        # Check for consolidated file
+        consolidated_filename = f"{safe_name}.experiment.json"
+        consolidated_path = output_base_path / consolidated_filename
+
+        if consolidated_path.exists():
+            self.log.info(f"Experiment file already exists: {consolidated_path}")
+            return True
+
+        return False
 
     def load_data_from_source(
         self, input_path: str, experiment_type: str = "qa", queries_source: str = None
@@ -697,6 +930,9 @@ class BatchExperimentRunner:
         delay_seconds: float = 1.0,
     ) -> str:
         """Run a single experiment with the given data items."""
+        # Start timing the experiment
+        experiment_start_time = time.time()
+
         self.log.info(
             f"Running experiment: {experiment.name} (type: {experiment.experiment_type})"
         )
@@ -704,13 +940,30 @@ class BatchExperimentRunner:
         # Create LLM client
         client = self.create_llm_client(experiment)
 
+        # Set up output directories for incremental writing
+        output_base_path = Path(output_dir)
+        output_base_path.mkdir(parents=True, exist_ok=True)
+
+        # Generate safe filename from experiment name
+        safe_name = "".join(
+            c if (c.isalnum() or c in (" ", "-", "_")) else "_" if c == "." else ""
+            for c in experiment.name
+        ).rstrip()
+        safe_name = safe_name.replace(" ", "_")
+
+        # Create intermediate results directory
+        intermediate_dir = output_base_path / f"{safe_name}.intermediate"
+        intermediate_dir.mkdir(parents=True, exist_ok=True)
+
         # Process each data item
         results = []
         total_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
         total_cost = {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}
         errors = []
+        item_timings = []  # Track timing for each item
 
         for i, data_item in enumerate(data_items):
+            item_start_time = time.time()
             data_type = data_item["type"]
             self.log.info(
                 f"Processing item {i+1}/{len(data_items)} (type: {data_type})"
@@ -871,16 +1124,22 @@ class BatchExperimentRunner:
             elif data_type == "summarization":
                 # Process summarization task using independent calls for each component
                 if experiment.llm_type.lower() == "claude":
+                    combined = experiment.parameters.get("combined_prompt", False)
                     result = self.process_summarization_claude(
-                        client, data_item["transcript"], experiment.system_prompt
+                        client,
+                        data_item["transcript"],
+                        experiment.system_prompt,
+                        combined,
                     )
                 elif experiment.llm_type.lower() == "lemonade":
+                    combined = experiment.parameters.get("combined_prompt", False)
                     result = self.process_summarization_lemonade(
                         client,
                         data_item["transcript"],
                         experiment.system_prompt,
                         experiment.max_tokens,
                         experiment.temperature,
+                        combined,
                     )
 
                 # Use the structured response directly from independent calls
@@ -918,11 +1177,75 @@ class BatchExperimentRunner:
             if result["error"]:
                 errors.append(f"Item {i+1}: {result['error']}")
 
+            # Add processing time to result entry
+            item_time = time.time() - item_start_time
+            result_entry["processing_time_seconds"] = round(item_time, 3)
+            item_timings.append(item_time)
+
             results.append(result_entry)
+
+            # Write intermediate result immediately for crash recovery
+            try:
+                intermediate_file = (
+                    intermediate_dir / f"item_{i+1:04d}_{data_type}.json"
+                )
+                intermediate_data = {
+                    "item_index": i,
+                    "data_type": data_type,
+                    "data_item": data_item,
+                    "result": result_entry,
+                    "usage": result.get("usage", {}),
+                    "cost": result.get("cost", {}),
+                    "error": result.get("error"),
+                    "timestamp": datetime.now().isoformat(),
+                    "processing_time_seconds": round(item_time, 3),
+                }
+
+                with open(intermediate_file, "w", encoding="utf-8") as f:
+                    json.dump(intermediate_data, f, indent=2)
+
+                # Update progress file
+                progress_file = intermediate_dir / "progress.json"
+                progress_data = {
+                    "experiment_name": experiment.name,
+                    "total_items": len(data_items),
+                    "completed_items": i + 1,
+                    "progress_percent": round((i + 1) / len(data_items) * 100, 1),
+                    "total_usage": total_usage.copy(),
+                    "total_cost": total_cost.copy(),
+                    "errors_count": len(errors),
+                    "last_updated": datetime.now().isoformat(),
+                    "estimated_remaining_time": None,
+                }
+
+                # Calculate estimated remaining time
+                if i > 0:
+                    avg_time_per_item = sum(item_timings) / len(item_timings)
+                    remaining_items = len(data_items) - (i + 1)
+                    estimated_remaining = remaining_items * avg_time_per_item
+                    progress_data["estimated_remaining_time"] = round(
+                        estimated_remaining, 1
+                    )
+
+                with open(progress_file, "w", encoding="utf-8") as f:
+                    json.dump(progress_data, f, indent=2)
+
+                self.log.info(
+                    f"Progress: {i+1}/{len(data_items)} items completed ({progress_data['progress_percent']}%)"
+                )
+
+            except Exception as e:
+                self.log.warning(f"Failed to write intermediate result {i+1}: {e}")
 
             # Add delay between requests to avoid rate limiting
             if delay_seconds > 0 and i < len(data_items) - 1:
                 time.sleep(delay_seconds)
+
+        # Calculate total experiment time
+        total_experiment_time = time.time() - experiment_start_time
+
+        # Determine inference type (cloud vs local)
+        inference_type = "cloud" if experiment.llm_type.lower() == "claude" else "local"
 
         # Create output data in format expected by eval tool
         output_data = {
@@ -931,6 +1254,7 @@ class BatchExperimentRunner:
                 "experiment_type": experiment.experiment_type,
                 "llm_type": experiment.llm_type,
                 "model": experiment.model,
+                "inference_type": inference_type,  # Add inference type
                 "system_prompt": experiment.system_prompt,
                 "max_tokens": experiment.max_tokens,
                 "temperature": experiment.temperature,
@@ -941,6 +1265,19 @@ class BatchExperimentRunner:
                 "total_usage": total_usage,
                 "total_cost": total_cost,
                 "errors": errors,
+                "timing": {
+                    "total_experiment_time_seconds": round(total_experiment_time, 3),
+                    "per_item_times_seconds": [round(t, 3) for t in item_timings],
+                    "average_per_item_seconds": (
+                        round(np.mean(item_timings), 3) if item_timings else 0
+                    ),
+                    "max_per_item_seconds": (
+                        round(max(item_timings), 3) if item_timings else 0
+                    ),
+                    "min_per_item_seconds": (
+                        round(min(item_timings), 3) if item_timings else 0
+                    ),
+                },
             },
             "analysis": {},
         }
@@ -956,14 +1293,7 @@ class BatchExperimentRunner:
             output_data["analysis"]["summarization_results"] = results
 
         # Determine output structure based on data items
-        output_base_path = Path(output_dir)
-        output_base_path.mkdir(parents=True, exist_ok=True)
-
-        # Generate safe filename from experiment name
-        safe_name = "".join(
-            c for c in experiment.name if c.isalnum() or c in (" ", "-", "_")
-        ).rstrip()
-        safe_name = safe_name.replace(" ", "_")
+        # (output_base_path and safe_name already created earlier for incremental writing)
 
         # Check if we have multiple items with individual source files (hierarchical structure needed)
         has_individual_items = any(
@@ -997,6 +1327,9 @@ class BatchExperimentRunner:
             )
             self.log.info(f"Individual experiment files: {len(individual_files)}")
 
+            # Clean up intermediate files after successful completion
+            self._cleanup_intermediate_files(intermediate_dir)
+
             return str(consolidated_path)
         else:
             # Single file output (traditional behavior)
@@ -1007,6 +1340,10 @@ class BatchExperimentRunner:
                 json.dump(output_data, f, indent=2)
 
             self.log.info(f"Experiment results saved to: {result_path}")
+
+            # Clean up intermediate files after successful completion
+            self._cleanup_intermediate_files(intermediate_dir)
+
             return str(result_path)
 
     def _save_individual_experiment_files(
@@ -1108,21 +1445,67 @@ class BatchExperimentRunner:
 
         return individual_files
 
+    def _cleanup_intermediate_files(self, intermediate_dir: Path) -> None:
+        """Clean up intermediate files after successful completion."""
+        try:
+            import shutil
+
+            if intermediate_dir.exists():
+                shutil.rmtree(intermediate_dir)
+                self.log.info(f"Cleaned up intermediate files from: {intermediate_dir}")
+        except Exception as e:
+            self.log.warning(
+                f"Failed to clean up intermediate directory {intermediate_dir}: {e}"
+            )
+
     def run_all_experiments(
         self,
         input_path: str,
         output_dir: str,
         delay_seconds: float = 1.0,
         queries_source: str = None,
-    ) -> List[str]:
-        """Run all experiments defined in the config file."""
+        skip_existing: bool = False,
+    ) -> Tuple[List[str], int]:
+        """Run all experiments defined in the config file.
+
+        Returns:
+            tuple: (result_files, skipped_count) where result_files is a list of output file paths
+                   and skipped_count is the number of experiments that were skipped
+        """
+        # Start timing all experiments
+        all_experiments_start_time = time.time()
+
         self.log.info(
             f"Starting batch experiments with {len(self.experiments)} configurations"
         )
 
         # Run each experiment
         result_files = []
+        skipped_count = 0
         for i, experiment in enumerate(self.experiments):
+            # Check if we should skip this experiment
+            if skip_existing and self.check_experiment_exists(experiment, output_dir):
+                self.log.info(
+                    f"Skipping experiment {i+1}/{len(self.experiments)}: {experiment.name} (already exists)"
+                )
+                skipped_count += 1
+
+                # Add the existing file to result_files for consolidated report
+                output_base_path = Path(output_dir)
+                safe_name = "".join(
+                    (
+                        c
+                        if (c.isalnum() or c in (" ", "-", "_"))
+                        else "_" if c == "." else ""
+                    )
+                    for c in experiment.name
+                ).rstrip()
+                safe_name = safe_name.replace(" ", "_")
+                consolidated_filename = f"{safe_name}.experiment.json"
+                consolidated_path = output_base_path / consolidated_filename
+                result_files.append(str(consolidated_path))
+                continue
+
             self.log.info(
                 f"Running experiment {i+1}/{len(self.experiments)}: {experiment.name} (type: {experiment.experiment_type})"
             )
@@ -1145,23 +1528,36 @@ class BatchExperimentRunner:
                 self.log.info(f"Waiting {delay_seconds}s before next experiment...")
                 time.sleep(delay_seconds)
 
-        self.log.info(
-            f"Completed {len(result_files)} out of {len(self.experiments)} experiments"
-        )
+        # Calculate total time for all experiments
+        total_time = time.time() - all_experiments_start_time
+
+        if skipped_count > 0:
+            self.log.info(
+                f"Completed {len(result_files) - skipped_count} new experiments, skipped {skipped_count} existing"
+            )
+        else:
+            self.log.info(
+                f"Completed {len(result_files)} out of {len(self.experiments)} experiments"
+            )
+        self.log.info(f"Total execution time: {round(total_time, 2)} seconds")
 
         # Create consolidated experiments report at root level
         if len(result_files) > 1:
             consolidated_report_path = self._create_consolidated_experiments_report(
-                result_files, output_dir, input_path
+                result_files, output_dir, input_path, total_time
             )
             self.log.info(
                 f"Consolidated experiments report saved to: {consolidated_report_path}"
             )
 
-        return result_files
+        return result_files, skipped_count
 
     def _create_consolidated_experiments_report(
-        self, result_files: List[str], output_dir: str, input_path: str
+        self,
+        result_files: List[str],
+        output_dir: str,
+        input_path: str,
+        total_time: float = None,
     ) -> str:
         """Create a consolidated report of all experiments."""
         output_base_path = Path(output_dir)
@@ -1224,6 +1620,12 @@ class BatchExperimentRunner:
             "experiments": all_experiments,
         }
 
+        # Add total execution time if provided
+        if total_time is not None:
+            consolidated_report["metadata"]["total_execution_time_seconds"] = round(
+                total_time, 3
+            )
+
         # Save consolidated report
         consolidated_filename = "consolidated_experiments_report.json"
         consolidated_path = output_base_path / consolidated_filename
@@ -1247,6 +1649,7 @@ class BatchExperimentRunner:
                     "max_tokens": 512,
                     "temperature": 0.1,
                     "parameters": {},
+                    "_comment": "Cloud inference - will incur API costs",
                 },
                 {
                     "name": "Claude-Sonnet-Summarization-Standard",
@@ -1257,6 +1660,7 @@ class BatchExperimentRunner:
                     "max_tokens": 512,
                     "temperature": 0.1,
                     "parameters": {},
+                    "_comment": "Cloud inference - will incur API costs",
                 },
                 {
                     "name": "Claude-Sonnet-QA-Detailed",
@@ -1277,6 +1681,7 @@ class BatchExperimentRunner:
                     "max_tokens": 512,
                     "temperature": 0.1,
                     "parameters": {"host": "127.0.0.1", "port": 8000},
+                    "_comment": "Local inference - FREE, runs on your hardware",
                 },
                 {
                     "name": "Lemonade-Llama-Summarization-Creative",
@@ -1287,6 +1692,7 @@ class BatchExperimentRunner:
                     "max_tokens": 512,
                     "temperature": 0.7,
                     "parameters": {"host": "127.0.0.1", "port": 8000},
+                    "_comment": "Local inference - FREE, runs on your hardware",
                 },
             ],
         }
@@ -1489,6 +1895,11 @@ Examples:
         type=str,
         help="Create configuration from groundtruth file metadata (provide groundtruth file path)",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip experiments that have already been generated in the output folder",
+    )
 
     args = parser.parse_args()
 
@@ -1530,14 +1941,23 @@ Examples:
 
     # Run batch experiments
     runner = BatchExperimentRunner(args.config)
-    result_files = runner.run_all_experiments(
+    result_files, skipped_count = runner.run_all_experiments(
         input_path=args.input,
         output_dir=args.output_dir,
         delay_seconds=args.delay,
         queries_source=args.queries_source,
+        skip_existing=args.skip_existing,
     )
 
-    print(f"✅ Completed {len(result_files)} experiments")
+    # Report results with skip information
+    if skipped_count > 0:
+        new_count = len(result_files) - skipped_count
+        print(
+            f"✅ Completed {len(result_files)} experiments ({new_count} new, {skipped_count} skipped)"
+        )
+    else:
+        print(f"✅ Completed {len(result_files)} experiments")
+
     print(f"  Results saved to: {args.output_dir}")
     print(f"  Generated files:")
     for result_file in result_files:

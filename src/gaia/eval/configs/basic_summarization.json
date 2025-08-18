@@ -9,12 +9,14 @@
       "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
       "max_tokens": 1024,
       "temperature": 0.1,
-      "parameters": {}
+      "parameters": {
+        "combined_prompt": false
+      }
     },
     {
-      "name": "Lemonade-LFM2-1.2B-Basic-Summary",
+      "name": "Mistral-7B-v0.3-Instruct-Hybrid-Basic-Summary",
       "llm_type": "lemonade",
-      "model": "user.LFM2-1.2B",
+      "model": "Mistral-7B-v0.3-Instruct-Hybrid",
       "experiment_type": "summarization",
       "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
       "max_tokens": 1024,
@@ -22,7 +24,27 @@
       "parameters": {}
     },
     {
-      "name": "Lemonade-Llama-3.2-3B-Instruct-Hybrid-Basic-Summary",
+      "name": "gpt-oss-20b-GGUF-Basic-Summary",
+      "llm_type": "lemonade",
+      "model": "gpt-oss-20b-GGUF",
+      "experiment_type": "summarization",
+      "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
+      "max_tokens": 1024,
+      "temperature": 0.1,
+      "parameters": {}
+    },
+    {
+      "name": "Phi-3.5-Mini-Instruct-GGUF-Basic-Summary",
+      "llm_type": "lemonade",
+      "model": "user.Phi-3.5-Mini-Instruct-GGUF",
+      "experiment_type": "summarization",
+      "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
+      "max_tokens": 1024,
+      "temperature": 0.1,
+      "parameters": {}
+    },
+    {
+      "name": "Llama-3.2-3B-Instruct-Hybrid-Basic-Summary",
       "llm_type": "lemonade",
       "model": "Llama-3.2-3B-Instruct-Hybrid",
       "experiment_type": "summarization",
@@ -32,9 +54,20 @@
       "parameters": {}
     },
     {
-      "name": "Lemonade-Llama-3.1-8B-Instruct-Hybrid-Basic-Summary",
+      "name": "Qwen3-1.7B-GGUF-Basic-Summary",
       "llm_type": "lemonade",
-      "model": "Llama-3.1-8B-Instruct-Hybrid",
+      "model": "Qwen3-1.7B-GGUF",
+      "experiment_type": "summarization",
+      "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
+      "max_tokens": 1024,
+      "temperature": 0.1,
+      "minions": 0,
+      "parameters": {}
+    },
+    {
+      "name": "LFM2-1.2B-Basic-Summary",
+      "llm_type": "lemonade",
+      "model": "user.LFM2-1.2B",
       "experiment_type": "summarization",
       "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
       "max_tokens": 1024,
@@ -42,23 +75,14 @@
       "parameters": {}
     },
     {
-      "name": "Lemonade-DeepSeek-R1-Distill-Qwen-7B-Hybrid-Basic-Summary",
+      "name": "Qwen3-0.6B-GGUF-Basic-Summary",
       "llm_type": "lemonade",
-      "model": "DeepSeek-R1-Distill-Qwen-7B-Hybrid",
+      "model": "Qwen3-0.6B-GGUF",
       "experiment_type": "summarization",
       "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
       "max_tokens": 1024,
       "temperature": 0.1,
-      "parameters": {}
-    },
-    {
-      "name": "Lemonade-Mistral-7B-v0.3-Instruct-Hybrid-Basic-Summary",
-      "llm_type": "lemonade",
-      "model": "Mistral-7B-v0.3-Instruct-Hybrid",
-      "experiment_type": "summarization",
-      "system_prompt": "You are an expert meeting analyst. Analyze the transcript carefully and provide clear, accurate information based on the content.",
-      "max_tokens": 1024,
-      "temperature": 0.1,
+      "minions": 0,
       "parameters": {}
     }
   ]

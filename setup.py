@@ -75,6 +75,9 @@ setup(
             "kokoro>=0.3.1",
             "soundfile",
             "sounddevice",
+        ],
+        "youtube": [
+            "llama-index-readers-youtube-transcript",
         ]
     },
     classifiers=[],

@@ -1,4 +1,5 @@
 import json
+import time
 import argparse
 from datetime import datetime
 from pathlib import Path
@@ -39,6 +40,8 @@ class GroundTruthGenerator:
     }}
 
     Generate exactly {num_samples} qa_pairs - no more, no less.
+    
+    IMPORTANT: Return ONLY the JSON object with no additional text, explanations, or formatting.
     """
         elif use_case == UseCase.SUMMARIZATION:
             return f"""
@@ -69,6 +72,8 @@ class GroundTruthGenerator:
     }}
 
     Focus on generating comprehensive summaries and metadata for transcript summarization evaluation.
+    
+    IMPORTANT: Return ONLY the JSON object with no additional text, explanations, or formatting.
     """
         elif use_case == UseCase.QA:
             return f"""
@@ -97,6 +102,8 @@ class GroundTruthGenerator:
     }}
 
     Generate exactly {num_samples} qa_pairs - no more, no less. Focus on questions that would be commonly asked about this type of meeting transcript.
+    
+    IMPORTANT: Return ONLY the JSON object with no additional text, explanations, or formatting.
     """
         elif use_case == UseCase.EMAIL:
             return f"""
@@ -136,6 +143,8 @@ class GroundTruthGenerator:
     }}
 
     Focus on generating comprehensive summaries and analysis for business email evaluation. Always include exactly 5 qa_pairs.
+    
+    IMPORTANT: Return ONLY the JSON object with no additional text, explanations, or formatting.
     """
         else:
             raise ValueError(f"Unsupported use case: {use_case}")
@@ -152,6 +161,7 @@ class GroundTruthGenerator:
         save_text=True,
         output_dir=None,
         num_samples=5,
+        save_file=True,
     ):
         """
         Generate ground truth data for a given document based on use case.
@@ -207,7 +217,7 @@ class GroundTruthGenerator:
                 parsed_analysis = json.loads(analysis)
             except json.JSONDecodeError as je:
                 # Try to extract JSON from the response if it's wrapped in text
-                self.log.warning(
+                self.log.debug(
                     "Initial JSON parsing failed, attempting to extract JSON from response"
                 )
 
@@ -250,8 +260,12 @@ class GroundTruthGenerator:
                 "analysis": parsed_analysis,
             }
 
-            # Save to file if output_dir specified
-            if output_dir:
+            # Save to file if save_file is True
+            if save_file:
+                # Default output directory to ./groundtruth if not specified
+                if output_dir is None:
+                    output_dir = "./groundtruth"
+
                 output_dir = Path(output_dir)
                 output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -280,14 +294,10 @@ class GroundTruthGenerator:
                         output_dir
                         / f"{file_path.stem}.{use_case.value}.groundtruth.json"
                     )
-            else:
-                output_path = file_path.with_suffix(
-                    f".{use_case.value}.groundtruth.json"
-                )
 
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(output_data, f, indent=2)
-            self.log.info(f"Ground truth data saved to: {output_path}")
+                with open(output_path, "w", encoding="utf-8") as f:
+                    json.dump(output_data, f, indent=2)
+                self.log.info(f"Ground truth data saved to: {output_path}")
 
             return output_data
 
@@ -348,11 +358,19 @@ class GroundTruthGenerator:
         for match in matching_files:
             self.log.info(f"  Found: {match}")
 
-        for file_path in matching_files:
-            self.log.info(f"Processing file: {file_path}")
+        # Create progress tracking directory
+        progress_dir = output_dir / f"groundtruth_{use_case.value}_progress"
+        progress_dir.mkdir(parents=True, exist_ok=True)
+
+        for i, file_path in enumerate(matching_files):
+            self.log.info(f"Processing file {i+1}/{len(matching_files)}: {file_path}")
+            file_start_time = time.time()
+
             try:
-                # Generate without saving individual files by not passing output_dir
-                result = self.generate(file_path, use_case=use_case, **generate_kwargs)
+                # Generate without saving individual files by passing save_file=False
+                result = self.generate(
+                    file_path, use_case=use_case, save_file=False, **generate_kwargs
+                )
                 results.append(result)
 
                 # Calculate relative path from input_dir to preserve directory structure
@@ -369,13 +387,61 @@ class GroundTruthGenerator:
                     / f"{file_path.stem}.{use_case.value}.groundtruth.json"
                 )
 
-                # Save individual file temporarily for consolidation process
+                # Save individual file (this provides immediate incremental progress)
                 with open(individual_file_path, "w", encoding="utf-8") as f:
                     json.dump(result, f, indent=2)
                 individual_files.append(individual_file_path)
 
+                # Write progress tracking information
+                file_time = time.time() - file_start_time
+                progress_file = progress_dir / f"file_{i+1:04d}_progress.json"
+                progress_data = {
+                    "file_index": i,
+                    "file_path": str(file_path),
+                    "individual_output_path": str(individual_file_path),
+                    "processing_time_seconds": round(file_time, 3),
+                    "usage": result.get("metadata", {}).get("usage", {}),
+                    "cost": result.get("metadata", {}).get("cost", {}),
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "completed",
+                }
+
+                with open(progress_file, "w", encoding="utf-8") as f:
+                    json.dump(progress_data, f, indent=2)
+
+                # Update overall progress
+                overall_progress_file = progress_dir / "overall_progress.json"
+                overall_progress_data = {
+                    "total_files": len(matching_files),
+                    "completed_files": i + 1,
+                    "progress_percent": round((i + 1) / len(matching_files) * 100, 1),
+                    "use_case": use_case.value,
+                    "last_updated": datetime.now().isoformat(),
+                }
+
+                with open(overall_progress_file, "w", encoding="utf-8") as f:
+                    json.dump(overall_progress_data, f, indent=2)
+
+                self.log.info(
+                    f"Ground truth progress: {i+1}/{len(matching_files)} files completed ({overall_progress_data['progress_percent']}%)"
+                )
+
             except Exception as e:
                 self.log.error(f"Error processing {file_path}: {e}")
+
+                # Write error progress information
+                progress_file = progress_dir / f"file_{i+1:04d}_progress.json"
+                progress_data = {
+                    "file_index": i,
+                    "file_path": str(file_path),
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "error",
+                }
+
+                with open(progress_file, "w", encoding="utf-8") as f:
+                    json.dump(progress_data, f, indent=2)
+
                 continue
 
         if not results:
@@ -419,6 +485,20 @@ class GroundTruthGenerator:
             # If consolidation fails, return individual results
             self.log.warning("Falling back to individual results")
             return results
+        finally:
+            # Clean up progress directory after successful completion
+            try:
+                import shutil
+
+                if progress_dir.exists():
+                    shutil.rmtree(progress_dir)
+                    self.log.info(
+                        f"Cleaned up progress tracking files from: {progress_dir}"
+                    )
+            except Exception as e:
+                self.log.warning(
+                    f"Failed to clean up progress directory {progress_dir}: {e}"
+                )
 
     def consolidate_groundtruth(
         self,

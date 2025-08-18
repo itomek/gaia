@@ -24,9 +24,38 @@ app.get('/api/files', (req, res) => {
             ? fs.readdirSync(EXPERIMENTS_PATH).filter(file => file.endsWith('.experiment.json'))
             : [];
         
-        const evaluations = fs.existsSync(EVALUATIONS_PATH)
-            ? fs.readdirSync(EVALUATIONS_PATH).filter(file => file.endsWith('.experiment.eval.json'))
-            : [];
+        let evaluations = [];
+        if (fs.existsSync(EVALUATIONS_PATH)) {
+            // Get files from root
+            const rootFiles = fs.readdirSync(EVALUATIONS_PATH).filter(file => 
+                file.endsWith('.experiment.eval.json') || 
+                file === 'consolidated_evaluations_report.json' ||
+                file.endsWith('_evaluations_report.json'));
+            evaluations.push(...rootFiles.map(file => ({
+                name: file,
+                path: path.join(EVALUATIONS_PATH, file),
+                type: 'evaluation',
+                directory: 'root'
+            })));
+            
+            // Check for subdirectories
+            const items = fs.readdirSync(EVALUATIONS_PATH, { withFileTypes: true });
+            for (const item of items) {
+                if (item.isDirectory()) {
+                    const subDirPath = path.join(EVALUATIONS_PATH, item.name);
+                    const subDirFiles = fs.readdirSync(subDirPath).filter(file => 
+                        file.endsWith('.experiment.eval.json') || 
+                        file === 'consolidated_evaluations_report.json' ||
+                        file.endsWith('_evaluations_report.json'));
+                    evaluations.push(...subDirFiles.map(file => ({
+                        name: `${item.name}/${file}`,
+                        path: path.join(subDirPath, file),
+                        type: 'evaluation',
+                        directory: item.name
+                    })));
+                }
+            }
+        }
 
         res.json({
             experiments: experiments.map(file => ({
@@ -34,11 +63,7 @@ app.get('/api/files', (req, res) => {
                 path: path.join(EXPERIMENTS_PATH, file),
                 type: 'experiment'
             })),
-            evaluations: evaluations.map(file => ({
-                name: file,
-                path: path.join(EVALUATIONS_PATH, file),
-                type: 'evaluation'
-            }))
+            evaluations: evaluations
         });
     } catch (error) {
         res.status(500).json({ error: 'Failed to list files', details: error.message });
@@ -62,10 +87,10 @@ app.get('/api/experiment/:filename', (req, res) => {
     }
 });
 
-// API endpoint to load evaluation data
-app.get('/api/evaluation/:filename', (req, res) => {
+// API endpoint to load evaluation data (supports subdirectories)
+app.get('/api/evaluation/*', (req, res) => {
     try {
-        const filename = req.params.filename;
+        const filename = req.params[0];
         const filePath = path.join(EVALUATIONS_PATH, filename);
         
         if (!fs.existsSync(filePath)) {

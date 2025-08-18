@@ -72,6 +72,281 @@ export ANTHROPIC_API_KEY=your_key_here
 lemonade-server serve
 ```
 
+**Additional Requirements:**
+- **Node.js (with npm)**: Required for the interactive visualizer (`gaia visualize` command)
+  - Download from [nodejs.org](https://nodejs.org/en/download) or install via a package manager
+  - Verify both are available (you may need to restart your shell):
+
+    ```bash
+    node -v
+    npm -v
+    ```
+
+  - If either command fails:
+    - Windows: `winget install OpenJS.NodeJS.LTS` (or `conda install -c conda-forge nodejs`), then restart your shell
+    - macOS: `brew install node`
+    - Linux: use your distro package manager (e.g., `apt install nodejs npm`)
+  - The visualizer will automatically install its webapp dependencies on first launch
+
+## Quick Start
+
+**Try your first evaluation in 5 minutes:**
+
+```bash
+# 1. Run complete meeting summarization experiment
+gaia generate --meeting-transcript -o ./test_data --meeting-types standup --count-per-type 1
+gaia groundtruth -d ./test_data --use-case summarization -o ./groundtruth
+gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+gaia eval -d ./experiments -o ./evaluation
+gaia report -d ./evaluation -o ./reports/evaluation_report.md
+
+# 2. View results
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
+```
+
+This creates one synthetic meeting transcript, generates evaluation standards, tests it with multiple models, scores the results, and launches an interactive comparison interface. The default configuration uses **individual prompts** for maximum reliability and accuracy.
+
+**Note:** This workflow uses **Comparative Evaluation** mode with groundtruth data for objective, reliable results (see Evaluation Modes section for details).
+
+### Understanding the Output
+
+After running the Quick Start, you'll have these directories:
+
+- **`./test_data/`** - Synthetic meeting transcript(s) for testing
+- **`./groundtruth/`** - Expected "correct" summaries and evaluation criteria
+- **`./experiments/`** - Raw responses from each model tested
+- **`./evaluation/`** - Scored comparisons showing which model performed best
+- **`./reports/`** - Human-readable markdown report with analysis and insights
+
+The visualizer shows side-by-side comparisons with quality ratings (Excellent/Good/Fair/Poor) and cost breakdowns. When using Comparative Evaluation mode, these ratings are based on objective comparison against groundtruth data.
+
+## Step-by-Step Workflows
+
+Follow these complete workflows to reproduce evaluation experiments from start to finish.
+
+### Workflow 1: Meeting Transcript Summarization
+
+**Complete example: Evaluate how well different models summarize meeting transcripts**
+
+```bash
+# Step 1: Generate synthetic meeting transcripts
+gaia generate --meeting-transcript -o ./test_data/meetings --meeting-types standup planning --count-per-type 2
+
+# Step 2: Create evaluation standards (ground truth)
+gaia groundtruth -d ./test_data/meetings --use-case summarization -o ./groundtruth
+
+# Step 3: Run experiments with multiple models
+gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Optional: If interrupted, resume with --skip-existing to avoid regenerating completed experiments
+# gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments --skip-existing
+
+# Step 4: Evaluate results and calculate scores
+gaia eval -d ./experiments -o ./evaluation
+
+# Step 5: Generate human-readable report
+gaia report -d ./evaluation -o ./reports/meeting_summarization_report.md
+
+# Step 6: Launch interactive visualizer for detailed analysis
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
+```
+
+**What you'll get:**
+- Synthetic meeting transcripts in `./test_data/meetings/`
+- Ground truth standards in `./groundtruth/`
+- Model responses in `./experiments/` (with embedded groundtruth for **Comparative Evaluation**)
+- Evaluation scores in `./evaluation/` (objective ratings based on groundtruth comparison)
+- Summary report in `./reports/meeting_summarization_report.md`
+- Interactive web interface for comparison
+
+### Workflow 2: Email Summarization
+
+**Complete example: Compare models on business email summarization**
+
+```bash
+# Step 1: Generate synthetic business emails
+gaia generate --email -o ./test_data/emails --email-types customer_support project_update meeting_request --count-per-type 2
+
+# Step 2: Create evaluation standards
+gaia groundtruth -d ./test_data/emails --use-case email -o ./groundtruth
+
+# Step 3: Run experiments
+gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_email_groundtruth.json -o ./experiments
+
+# Step 4: Evaluate and report
+gaia eval -d ./experiments -o ./evaluation
+gaia report -d ./evaluation -o ./reports/email_summarization_report.md
+
+# Step 5: View results interactively
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
+```
+
+### Workflow 3: Document Q&A
+
+**Complete example: Test question-answering capabilities on documents**
+
+```bash
+# Step 1: Prepare document data (using existing PDF)
+mkdir -p ./test_data/documents
+cp ./data/pdf/Oil-and-Gas-Activity-Operations-Manual-1-10.pdf ./test_data/documents/
+
+# Step 2: Create Q&A evaluation standards
+gaia groundtruth -d ./test_data/documents --use-case qa -o ./groundtruth
+
+# Step 3: Run experiments
+gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_qa_groundtruth.json -o ./experiments
+
+# Step 4: Evaluate and report
+gaia eval -d ./experiments -o ./evaluation
+gaia report -d ./evaluation -o ./reports/document_qa_report.md
+
+# Step 5: Analyze results
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
+```
+
+### Workflow 4: Third-Party Model Testing
+
+**Complete example: Test external models (OpenAI, etc.) that can't be integrated directly**
+
+```bash
+# Step 1: Generate test data and standards
+gaia generate --meeting-transcript -o ./test_data/meetings --meeting-types standup --count-per-type 2
+gaia groundtruth -d ./test_data/meetings --use-case summarization -o ./groundtruth
+
+# Step 2: Create template for manual testing
+gaia create-template -d ./groundtruth --use-case summarization -o ./templates/
+
+# Step 3: Manual step - Fill template with third-party responses
+# Edit ./templates/*.template.json - paste responses into "response" fields
+
+# Step 4: Evaluate completed template
+gaia eval -d ./templates -o ./evaluation
+gaia report -d ./evaluation -o ./reports/third_party_report.md
+```
+
+**Template structure for step 3:**
+```json
+{
+  "test_id": "meeting_001",
+  "input_text": "Full meeting transcript...",
+  "ground_truth": "Expected summary...",
+  "response": "", // <- Paste third-party LLM response here
+  "evaluation_criteria": {...}
+}
+```
+
+## Important: Two Evaluation Workflows
+
+The evaluation system supports **two different workflows** for handling groundtruth data:
+
+### Method 1: Embedded Groundtruth (Recommended)
+```bash
+# Use groundtruth files as input to batch-experiment
+gaia batch-experiment -i ./groundtruth/consolidated_*.json -o ./experiments
+gaia eval -d ./experiments -o ./evaluation  # No -g flag needed
+```
+**Advantages:** Self-contained experiment files, no risk of missing groundtruth, simpler eval command
+
+### Method 2: External Groundtruth
+```bash
+# Use test data as input to batch-experiment  
+gaia batch-experiment -i ./test_data -o ./experiments
+gaia eval -d ./experiments -g ./groundtruth/consolidated_*.json -o ./evaluation  # -g flag required
+```
+**Advantages:** Separate concerns, easier to swap different groundtruth files for comparison
+
+### ⚠️ Important: Q&A RAG Use Cases
+**For Q&A and RAG evaluations, you MUST use Method 1 (Embedded Groundtruth):**
+```bash
+# Required for Q&A - groundtruth contains the input queries
+gaia batch-experiment -i ./groundtruth/consolidated_qa_groundtruth.json -o ./experiments
+gaia eval -d ./experiments -o ./evaluation
+```
+
+**Why:** Q&A groundtruth files contain the specific questions that models need to answer. Batch-experiment must read these questions from the groundtruth file to ensure all models answer the exact same queries for fair comparison.
+
+**For summarization only:** Both methods work since the input (transcript) is independent of the expected output (summary).
+
+**⚠️ Important:** If you use Method 2, you **MUST** provide the `-g/--groundtruth` flag to the eval command, otherwise evaluation will fall back to standalone quality assessment (see Evaluation Modes below).
+
+## Evaluation Modes: Comparative vs Standalone
+
+The evaluation system operates in two distinct modes depending on groundtruth availability:
+
+### 🎯 Comparative Evaluation (Recommended)
+**When groundtruth data is available** (embedded or via `-g` flag):
+
+```bash
+# Example: Comparative evaluation with embedded groundtruth
+gaia batch-experiment -i ./groundtruth/consolidated_*.json -o ./experiments
+gaia eval -d ./experiments -o ./evaluation
+```
+
+**What it does:**
+- **Compares** generated summaries against known-correct reference summaries
+- **Measures accuracy** by checking if key facts, decisions, and action items match
+- **Provides objective scoring** based on how well the output matches the expected result
+- **Enables reliable model comparison** with consistent benchmarks
+
+**Evaluation criteria:**
+- Executive Summary **Accuracy**: How well does it match the reference?
+- **Completeness**: Are all important details from groundtruth covered?
+- Action Items **Accuracy**: Are action items correctly identified vs reference?
+- Key Decisions **Accuracy**: Are decisions properly captured vs reference?
+- Participant **Identification**: Are participants correctly identified vs reference?
+- Topic **Coverage**: Are all discussed topics included vs reference?
+
+### 🔍 Standalone Quality Assessment (Fallback)
+**When no groundtruth data is available**:
+
+```bash
+# Example: Standalone assessment (not recommended for production evaluation)
+gaia batch-experiment -i ./test_data -o ./experiments  # No groundtruth embedded
+gaia eval -d ./experiments -o ./evaluation              # No -g flag provided
+```
+
+**What it does:**
+- **Analyzes** summary quality based on general best practices
+- **Subjective assessment** using Claude's judgment alone
+- **No accuracy verification** (Claude doesn't know if facts are correct)
+- **Inconsistent standards** (Claude's judgment may vary between runs)
+
+**Evaluation criteria:**
+- Executive Summary **Quality**: Is it clear and high-level?
+- Detail **Completeness**: Does it provide sufficient context?
+- Action Items **Structure**: Are items specific and actionable?
+- Key Decisions **Clarity**: Are decisions clearly stated?
+- Participant **Information**: Are participants properly identified?
+- Topic **Organization**: Are topics well-organized and comprehensive?
+
+### 📊 Reliability Comparison
+
+| Aspect | Comparative Evaluation | Standalone Assessment |
+|--------|----------------------|---------------------|
+| **Accuracy Measurement** | ✅ Verified against known facts | ❌ No fact verification |
+| **Model Comparison** | ✅ Objective benchmarking | ⚠️ Subjective, inconsistent |
+| **Production Readiness** | ✅ Reliable for decisions | ❌ Not recommended |
+| **Consistency** | ✅ Repeatable results | ⚠️ May vary between runs |
+| **Cost** | 💰 Higher (groundtruth generation) | 💰 Lower (evaluation only) |
+
+### 💡 Best Practices
+
+**For Production Evaluation:**
+- Always use **Comparative Evaluation** with groundtruth data
+- Generate comprehensive groundtruth covering all expected use cases
+- Use consolidated groundtruth files for batch experiments
+
+**For Quick Quality Checks:**
+- Standalone assessment is acceptable for rapid prototyping
+- Useful for general quality validation during development
+- Not suitable for final model selection or production deployment decisions
+
+**Cost vs Quality Trade-off:**
+- Initial groundtruth generation has upfront cost but provides objective evaluation
+- Standalone assessment is cheaper but less reliable for critical decisions
+- Comparative evaluation pays for itself in model selection accuracy
+- Individual prompts (default) prioritize quality over cost for production reliability
+
 ## Command Reference
 
 ### Synthetic Data Generation
@@ -124,9 +399,9 @@ gaia groundtruth -d ./test_data -p "*.txt" --use-case email -o ./groundtruth
 ```
 
 **Use case options:**
-- `qa` - Question-answer pair generation
-- `summarization` - Summary generation tasks
-- `email` - Email processing tasks
+- `qa` - Question-answer pair generation (requires groundtruth input for batch-experiment)
+- `summarization` - Summary generation tasks (supports both embedded and external groundtruth)
+- `email` - Email processing tasks (supports both embedded and external groundtruth)
 
 ### Batch Experimentation
 
@@ -136,6 +411,37 @@ Run systematic model comparisons.
 # Create and run batch experiments, can also use your own config, see ./src/gaia/eval/configs for examples.
 gaia batch-experiment --create-sample-config experiment_config.json
 gaia batch-experiment -c experiment_config.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Alternative: Use test data directly (requires -g flag during eval)
+# gaia batch-experiment -c experiment_config.json -i ./test_data -o ./experiments
+
+# Skip experiments that have already been generated (useful for resuming interrupted runs)
+gaia batch-experiment -c experiment_config.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments --skip-existing
+```
+
+#### Resuming Interrupted Experiments
+
+The `--skip-existing` flag allows you to resume batch experiments without regenerating already completed experiments. This is particularly useful when:
+
+- **API Rate Limits**: Your batch run was interrupted due to rate limiting
+- **System Interruptions**: Power outage, network issues, or manual cancellation
+- **Incremental Testing**: Adding new models to an existing experiment set
+- **Cost Optimization**: Avoiding redundant API calls for expensive cloud models
+
+**How it works:**
+- Checks for existing `.experiment.json` files in the output directory
+- Skips experiments where the output file already exists
+- Includes skipped experiments in the consolidated report
+- Logs which experiments were skipped vs newly generated
+
+**Example workflow:**
+```bash
+# Initial run (gets interrupted after 3 of 5 experiments)
+gaia batch-experiment -c config.json -i ./data -o ./experiments
+
+# Resume with skip-existing (only runs the remaining 2 experiments)
+gaia batch-experiment -c config.json -i ./data -o ./experiments --skip-existing
+# Output: "Completed 2 new experiments, skipped 3 existing"
 ```
 
 **Sample configuration structure:**
@@ -183,93 +489,48 @@ gaia visualize --experiments-dir ./results --evaluations-dir ./evaluation
 
 #### Evaluation Options
 
-The `gaia eval` command supports two input modes:
+The `gaia eval` command supports multiple input modes and groundtruth handling:
 
 **Single File Mode (`-f`):**
 ```bash
-# Evaluate a single experiment file
+# Evaluate a single experiment file (with embedded groundtruth)
 gaia eval -f ./experiments/Claude-Sonnet-Basic-Summary.experiment.json -o ./evaluation
+
+# Or with external groundtruth
+gaia eval -f ./experiments/Claude-Sonnet-Basic-Summary.experiment.json -g ./groundtruth/file.json -o ./evaluation
 ```
 
 **Directory Mode (`-d`):**
 ```bash
-# Evaluate all JSON files in a directory 
+# Evaluate all JSON files in a directory (with embedded groundtruth)
 gaia eval -d ./experiments -o ./evaluation
+
+# Or with external groundtruth (if experiments were created from test_data)
+gaia eval -d ./experiments -g ./groundtruth/consolidated_summarization_groundtruth.json -o ./evaluation
 ```
+
+**Groundtruth Handling:**
+- **No `-g` flag**: Uses groundtruth embedded in experiment files (when batch-experiment input was groundtruth files)
+- **With `-g` flag**: Uses external groundtruth file (when batch-experiment input was test_data files)
+
+**Alternative Workflow - External Groundtruth:**
+You can also use external groundtruth files directly with the eval command:
+```bash
+# Generate experiments from test data (no embedded groundtruth)
+gaia batch-experiment -c config.json -i ./test_data -o ./experiments
+
+# Evaluate using external groundtruth file
+gaia eval -d ./experiments -g ./groundtruth/consolidated_summarization_groundtruth.json -o ./evaluation
+```
+
+**Advantages of External Groundtruth Approach:**
+- ✅ **Flexibility**: Easy to test different groundtruth versions against same experiments
+- ✅ **Separation of Concerns**: Keep experiments and evaluation standards separate
+- ✅ **Storage Efficiency**: No groundtruth duplication in experiment files
 
 The directory mode will automatically find and process all `.json` files in the specified directory, providing individual evaluation results for each file plus consolidated usage and cost information.
 
-## Evaluation Workflows
 
-### Meeting Transcripts Summarization
-
-```bash
-# 1. Generate test data (see Command Reference for full options)
-gaia generate --meeting-transcript -o ./test_data/meetings --meeting-types standup planning --count-per-type 2
-
-# 2. Create evaluation standards
-gaia groundtruth -d ./test_data/meetings --use-case summarization -o ./groundtruth
-
-# 3. Run batch experiment
-gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./test_data/meetings -o ./experiments
-
-# 4. Evaluate and report
-gaia eval -d ./experiments -o ./evaluation
-gaia report -d ./evaluation -o ./reports/meeting_summarization_report.md
-
-# 5. Launch interactive visualizer
-gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
-```
-
-### Email Summarization
-
-```bash
-# 1. Generate email test data
-gaia generate --email -o ./test_data/emails --email-types customer_support project_update --count-per-type 3
-
-# 2-4. Follow same groundtruth → batch-experiment → eval → report pattern as above
-```
-
-### Document Q&A
-
-```bash
-# 1. Prepare document data
-mkdir -p ./test_data/documents
-cp ./data/pdf/Oil-and-Gas-Activity-Operations-Manual-1-10.pdf ./test_data/documents/
-
-# 2-4. Follow same groundtruth → batch-experiment → eval → report pattern with --use-case qa
-```
-
-### Third-Party LLM Evaluation
-
-For testing external models (OpenAI, etc.) that can't be integrated directly:
-
-```bash
-# 1. Generate test data and standards
-gaia generate --meeting-transcript -o ./test_data/meetings --meeting-types standup --count-per-type 2
-gaia groundtruth -d ./test_data/meetings --use-case summarization -o ./groundtruth
-
-# 2. Create template for manual testing
-gaia create-template -f ./groundtruth/*.json -o ./templates/
-
-# 3. Manual step: Fill template with third-party LLM responses
-# Edit ./templates/*.template.json - paste responses into "response" fields
-
-# 4. Evaluate completed template
-gaia eval -d ./templates -o ./evaluation
-gaia report -d ./evaluation -o Third_Party_Report.md
-```
-
-**Template structure for manual testing:**
-```json
-{
-  "test_id": "meeting_001",
-  "input_text": "Full meeting transcript...",
-  "ground_truth": "Expected summary...",
-  "response": "", // <- Paste third-party LLM response here
-  "evaluation_criteria": {...}
-}
-```
 
 ## Interactive Results Visualizer
 
@@ -318,26 +579,11 @@ gaia visualize --port 8080 --host 0.0.0.0 --no-browser
 
 ### Integrated Workflow
 
-The visualizer integrates seamlessly with the evaluation pipeline:
+The visualizer integrates seamlessly with the evaluation pipeline. After running any of the Step-by-Step Workflows above, simply launch the visualizer to explore your results interactively:
 
 ```bash
-# 1. Generate test data
-gaia generate --meeting-transcript -o ./test_data --count-per-type 2
-
-# 2. Create evaluation standards  
-gaia groundtruth -d ./test_data --use-case summarization -o ./groundtruth
-
-# 3. Run batch experiments
-gaia batch-experiment -c config.json -i ./test_data -o ./experiments
-
-# 4. Evaluate results
-gaia eval -d ./experiments -o ./evaluation
-
-# 5. Launch visualizer for interactive analysis (includes test data and groundtruth)
+# Launch visualizer with all data directories
 gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation --test-data-dir ./test_data --groundtruth-dir ./groundtruth
-
-# 6. Generate static reports for documentation
-gaia report -d ./evaluation -o ./reports/comparison_report.md
 ```
 
 ### System Requirements
@@ -347,6 +593,50 @@ gaia report -d ./evaluation -o ./reports/comparison_report.md
 - **File System Access**: Read permissions for experiment and evaluation directories
 
 ## Configuration Options
+
+### Combined Prompt Optimization (Optional)
+
+The evaluation framework supports **combined prompt** as an optional optimization to reduce costs and execution time, but uses **individual prompts by default** for maximum reliability:
+
+**Individual Prompts (Default):**
+- **Higher Reliability**: Each summary style gets dedicated attention and analysis
+- **Better Quality**: More focused generation per style type
+- **Easier Debugging**: Can isolate issues to specific summary styles
+- **Production Recommended**: Default choice for critical evaluations
+
+**Combined Prompt (Optional Optimization):**
+- **Single API Call**: All requested summary styles generated in one call
+- **Cost Reduction**: ~83% cost savings for cloud APIs (1 call vs 6 for all styles)  
+- **Time Savings**: 3-5x faster execution (5-7 seconds vs 18-30 seconds)
+- **Quality Trade-off**: May produce less focused results for individual styles
+- **⚠️ Model Limitations**: Smaller LLMs (e.g., <3B parameters) may struggle with complex combined prompts, leading to incomplete outputs or format errors
+
+To enable combined prompt (for cost/speed optimization):
+```bash
+# CLI: Use --combined-prompt flag to enable optimization
+gaia summarize -i meeting.txt --styles all --combined-prompt
+
+# Config: Set "combined_prompt": true in parameters to enable
+{
+  "parameters": {
+    "combined_prompt": true
+  }
+}
+```
+
+**When to use Combined Prompt:**
+- ✅ **Development/Testing**: Quick iterations and prototyping
+- ✅ **Cost-Conscious Evaluation**: Budget constraints with acceptable quality trade-off
+- ✅ **High-Volume Experiments**: Processing many documents where speed matters
+- ✅ **Large Models Only**: Use with models ≥7B parameters (Claude, GPT-4, large Llama models)
+
+**When to use Individual Prompts (Default):**
+- ✅ **Production Evaluation**: Critical model selection decisions  
+- ✅ **Quality-First**: When accuracy and reliability are paramount
+- ✅ **Detailed Analysis**: Need to understand performance per summary style
+- ✅ **Smaller Models**: Required for models <7B parameters (Qwen3-0.6B, small Llama models) to avoid instruction-following issues
+
+**Note:** All provided configuration files (e.g., `basic_summarization.json`) use `"combined_prompt": false` by default to ensure maximum evaluation reliability.
 
 ### Model Providers
 
@@ -362,6 +652,68 @@ The framework evaluates responses across multiple dimensions:
 - **Conciseness** - Appropriate brevity while maintaining accuracy
 - **Relevance** - Direct alignment with query requirements
 
+### Model Performance Grading System
+
+The evaluation framework includes a comprehensive grading system that converts qualitative ratings into numerical quality scores and percentage grades for easy comparison across models.
+
+#### Grade Calculation Formula
+
+Quality scores are calculated using a weighted average approach:
+
+```python
+quality_score = (
+    (excellent_count * 4 + good_count * 3 + fair_count * 2 + poor_count * 1) 
+    / total_summaries - 1
+) * 100 / 3
+```
+
+**Formula breakdown:**
+1. **Weighting**: Excellent=4, Good=3, Fair=2, Poor=1 points
+2. **Average**: Divides by total summaries to get weighted average (1.0 to 4.0 scale)
+3. **Normalization**: Subtracts 1 to convert to 0-3 scale  
+4. **Percentage**: Multiplies by 100/3 to get 0-100% scale
+
+**Example calculations:**
+- All Excellent ratings: (4-1) × 100/3 = **100%**
+- All Good ratings: (3-1) × 100/3 = **66.7%**
+- All Fair ratings: (2-1) × 100/3 = **33.3%**
+- All Poor ratings: (1-1) × 100/3 = **0%**
+
+#### Model Performance Summary Table
+
+The system generates a consolidated Model Performance Summary table that displays:
+- **Model**: Model name and configuration
+- **Grade**: Calculated percentage score (0-100%)
+- **Individual Criteria**: Performance ratings across different evaluation aspects
+  - Executive Summary Quality
+  - Detail Completeness  
+  - Action Items Structure
+  - Key Decisions Clarity
+  - Participant Information
+  - Topic Organization
+
+#### Grade Display Locations
+
+Quality scores and grades are displayed in multiple locations:
+- **Web Interface**: Interactive visualizer (`gaia visualize`)
+- **Markdown Reports**: Generated evaluation reports
+- **JSON Files**: Raw evaluation data in `.eval.json` files
+- **Consolidated Reports**: Cross-model comparison summaries
+
+#### Interpreting Quality Scores
+
+**Quality Score Ranges:**
+- **85-100%**: Excellent performance, production ready
+- **67-84%**: Good performance, minor improvements needed
+- **34-66%**: Fair performance, significant improvements required  
+- **0-33%**: Poor performance, major revisions needed
+
+**Important Notes:**
+- Scores are based on qualitative ratings from Claude AI evaluation
+- Each model's score reflects performance across multiple test cases
+- Model consolidation may aggregate results from different experiments
+- Always review individual evaluation details alongside summary grades
+
 ### Output Formats
 
 Results are generated in multiple formats:
@@ -372,6 +724,18 @@ Results are generated in multiple formats:
 ## Troubleshooting
 
 ### Common Issues
+
+**Evaluation Mode Confusion:**
+If your `gaia eval` command runs successfully but produces inconsistent results:
+- ❓ **Check**: Are you using Comparative Evaluation or Standalone Assessment mode?
+- ✅ **Fix**: Ensure groundtruth data is either embedded (batch-experiment input was groundtruth files) or provided via `-g` flag
+- 🔍 **Verify**: Look for log message "Loaded ground truth data from:" vs "No ground truth file provided"
+
+**Q&A Experiments Failing:**
+If your Q&A batch-experiment fails with "No queries found" or similar errors:
+- ❓ **Check**: Are you using groundtruth files as input to batch-experiment?
+- ✅ **Fix**: Use `gaia batch-experiment -i ./groundtruth/consolidated_qa_groundtruth.json` (not test data)
+- 🔍 **Why**: Q&A groundtruth contains the specific questions models need to answer consistently
 
 **API Key Issues:**
 ```bash
@@ -402,6 +766,59 @@ lemonade-server serve
 - Use `--count-per-type 1` for initial testing
 - Monitor token usage and API costs during generation
 - Parallelize experiments when testing multiple models
+- Use `--skip-existing` to resume interrupted batch experiments without regenerating completed ones
+
+### Timing Metrics
+
+The evaluation system now captures detailed timing information:
+
+**Available Metrics:**
+- Total experiment execution time
+- Per-item processing times (with min/max/average)
+- Per-question evaluation times
+- Report generation time
+
+### Cost Tracking
+
+The system tracks inference costs with distinction between cloud and local models:
+
+**Cloud Inference (e.g., Claude):**
+- Tracks actual API costs per request
+- Shows cost breakdown by input/output tokens
+- Displays per-item cost analysis
+
+**Local Inference (e.g., Lemonade):**
+- Automatically set to $0.00 (FREE)
+- No token costs since it runs on your hardware
+- Clear visual indication in webapp that inference is local and free
+
+**Accessing Timing Data:**
+
+1. **Via Webapp Visualizer** (Recommended):
+```bash
+gaia visualize --experiments-dir ./experiments --evaluations-dir ./evaluation
+```
+The webapp displays:
+- **Inference Type**: Clear indicators for Cloud (☁️) vs Local (🖥️) models
+- **Cost Information**: 
+  - Cloud models show actual costs with breakdown
+  - Local models show "FREE" with celebratory banner
+- **Timing Metrics**:
+  - Main metrics grid (Total Time, Avg/Item, Eval Time)
+  - Dedicated "Performance Timing" section with detailed statistics
+  - Min/Max/Average breakdowns for each processing phase
+
+2. **Via JSON Files**:
+```bash
+# View timing in experiment files
+cat experiments/[filename].experiment.json | jq '.metadata.timing'
+
+# View timing in evaluation files
+cat evaluation/[filename].eval.json | jq '.timing'
+
+# Check consolidated report timing
+cat experiments/consolidated_experiments_report.json | jq '.metadata.total_execution_time_seconds'
+```
 
 ## Examples
 

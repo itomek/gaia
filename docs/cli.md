@@ -218,7 +218,7 @@ gaia chat [MESSAGE] [OPTIONS]
 - `--model`: Model name to use (default: Llama-3.2-3B-Instruct-Hybrid)
 - `--max-tokens`: Maximum tokens to generate (default: 512)
 - `--system-prompt`: Custom system prompt for the conversation
-- `--assistant-name`: Name to use for the assistant (default: "assistant")
+- `--assistant-name`: Name to use for the assistant (default: "gaia")
 - `--stats`: Show performance statistics (single message mode only)
 
 **Examples:**

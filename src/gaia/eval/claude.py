@@ -209,6 +209,7 @@ class ClaudeClient:
                 ".pdf": "application/pdf",
                 ".md": "text/markdown",
                 ".csv": "text/csv",
+                ".json": "application/json",
             }
 
             if media_type is None:
@@ -273,7 +274,7 @@ class ClaudeClient:
 
         try:
             # For text-based files, read content directly as text
-            if ext in [".html", ".htm", ".txt", ".md", ".csv"]:
+            if ext in [".html", ".htm", ".txt", ".md", ".csv", ".json"]:
                 if ext in [".html", ".htm"]:
                     text_content = self._convert_html_to_text(
                         file_path, save_text, output_dir
@@ -388,7 +389,7 @@ class ClaudeClient:
 
         try:
             # For text-based files, count tokens of extracted text
-            if ext in [".html", ".htm", ".txt", ".md", ".csv"]:
+            if ext in [".html", ".htm", ".txt", ".md", ".csv", ".json"]:
                 if ext in [".html", ".htm"]:
                     text_content = self._convert_html_to_text(
                         file_path, save_text=False, output_dir=output_dir

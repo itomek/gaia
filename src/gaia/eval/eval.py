@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import numpy as np
+import time
 from typing import Dict, List, Optional
 from gaia.logger import get_logger
 from gaia.eval.claude import ClaudeClient
@@ -235,6 +236,9 @@ class RagEvaluator:
         Returns:
             Dict containing Claude's analysis
         """
+        # Start timing
+        start_time = time.time()
+
         try:
             results = self.load_results(results_path)
 
@@ -264,6 +268,11 @@ class RagEvaluator:
                         "rating": "error",
                         "explanation": "No analyzable results found",
                     },
+                    "timing": {
+                        "total_processing_time_seconds": round(
+                            time.time() - start_time, 3
+                        )
+                    },
                 }
         except Exception as e:
             self.log.error(f"Error in analyze_with_claude: {e}")
@@ -275,10 +284,16 @@ class RagEvaluator:
                 "use_case_fit": "",
                 "per_question": [],
                 "overall_rating": {"rating": "error", "explanation": str(e)},
+                "timing": {
+                    "total_processing_time_seconds": round(time.time() - start_time, 3)
+                },
             }
 
     def _analyze_qa_results(self, results: Dict, qa_results: List) -> Dict:
         """Analyze QA results using Claude."""
+        # Start timing
+        analysis_start_time = time.time()
+
         # Initialize analysis structure
         analysis = {
             "overall_analysis": "",
@@ -288,6 +303,7 @@ class RagEvaluator:
             "use_case_fit": "",
             "per_question": [],
             "overall_rating": {"rating": "", "explanation": ""},
+            "timing": {},  # Add timing information
         }
 
         if not qa_results:
@@ -305,7 +321,37 @@ class RagEvaluator:
             }
 
         try:
+            per_question_timings = []  # Track timing for each question
+
+            # Set up intermediate output directory for crash recovery
+            intermediate_dir = None
+            experiment_name = results.get("metadata", {}).get(
+                "experiment_name", "qa_evaluation"
+            )
+            if hasattr(self, "intermediate_dir") and self.intermediate_dir:
+                # Use existing intermediate directory if set
+                intermediate_dir = (
+                    Path(self.intermediate_dir)
+                    / f"{experiment_name}_qa_analysis.intermediate"
+                )
+            else:
+                # Create in temp directory
+                import tempfile
+
+                temp_dir = Path(tempfile.gettempdir()) / "gaia_eval"
+                intermediate_dir = (
+                    temp_dir / f"{experiment_name}_qa_analysis.intermediate"
+                )
+
+            if intermediate_dir:
+                intermediate_dir.mkdir(parents=True, exist_ok=True)
+                self.log.info(
+                    f"Writing intermediate QA analysis results to: {intermediate_dir}"
+                )
+
             for qa_result in qa_results:
+                question_start_time = time.time()
+
                 # Calculate similarity score between ground truth and response
                 similarity_score = self.calculate_similarity(
                     qa_result["ground_truth"], qa_result["response"]
@@ -397,7 +443,86 @@ class RagEvaluator:
                         qa_analysis["qa_inputs"] = qa_inputs
                         qa_analysis["usage"] = usage
                         qa_analysis["cost"] = cost
+
+                        # Add timing for this question
+                        question_time = time.time() - question_start_time
+                        qa_analysis["processing_time_seconds"] = round(question_time, 3)
+                        per_question_timings.append(question_time)
+
                         analysis["per_question"].append(qa_analysis)
+
+                        # Write intermediate result immediately for crash recovery
+                        if intermediate_dir:
+                            try:
+                                intermediate_file = (
+                                    intermediate_dir
+                                    / f"qa_{len(analysis['per_question']):04d}_analysis.json"
+                                )
+                                intermediate_data = {
+                                    "question_index": len(analysis["per_question"]) - 1,
+                                    "experiment_name": experiment_name,
+                                    "qa_inputs": qa_inputs,
+                                    "analysis": qa_analysis,
+                                    "usage": qa_analysis.get("usage", {}),
+                                    "cost": qa_analysis.get("cost", {}),
+                                    "processing_time_seconds": qa_analysis.get(
+                                        "processing_time_seconds", 0
+                                    ),
+                                    "timestamp": datetime.now().isoformat(),
+                                }
+
+                                with open(
+                                    intermediate_file, "w", encoding="utf-8"
+                                ) as f:
+                                    json.dump(intermediate_data, f, indent=2)
+
+                                # Update progress file
+                                progress_file = (
+                                    intermediate_dir / "qa_analysis_progress.json"
+                                )
+                                progress_data = {
+                                    "experiment_name": experiment_name,
+                                    "total_questions": len(qa_results),
+                                    "completed_questions": len(
+                                        analysis["per_question"]
+                                    ),
+                                    "progress_percent": round(
+                                        len(analysis["per_question"])
+                                        / len(qa_results)
+                                        * 100,
+                                        1,
+                                    ),
+                                    "last_updated": datetime.now().isoformat(),
+                                    "estimated_remaining_time": None,
+                                }
+
+                                # Calculate estimated remaining time
+                                if len(per_question_timings) > 0:
+                                    avg_time_per_question = sum(
+                                        per_question_timings
+                                    ) / len(per_question_timings)
+                                    remaining_questions = len(qa_results) - len(
+                                        analysis["per_question"]
+                                    )
+                                    estimated_remaining = (
+                                        remaining_questions * avg_time_per_question
+                                    )
+                                    progress_data["estimated_remaining_time"] = round(
+                                        estimated_remaining, 1
+                                    )
+
+                                with open(progress_file, "w", encoding="utf-8") as f:
+                                    json.dump(progress_data, f, indent=2)
+
+                                self.log.info(
+                                    f"QA analysis progress: {len(analysis['per_question'])}/{len(qa_results)} questions completed ({progress_data['progress_percent']}%)"
+                                )
+
+                            except Exception as e:
+                                self.log.warning(
+                                    f"Failed to write intermediate QA analysis result {len(analysis['per_question'])}: {e}"
+                                )
+
                     else:
                         self.log.error(f"No JSON found in response for question")
 
@@ -407,6 +532,10 @@ class RagEvaluator:
                         )
                         qa_inputs.update(pass_fail_result)
 
+                        # Add timing even for failed parsing
+                        question_time = time.time() - question_start_time
+                        per_question_timings.append(question_time)
+
                         analysis["per_question"].append(
                             {
                                 "error": "Failed to parse analysis",
@@ -414,6 +543,7 @@ class RagEvaluator:
                                 "qa_inputs": qa_inputs,
                                 "usage": usage,
                                 "cost": cost,
+                                "processing_time_seconds": round(question_time, 3),
                             }
                         )
                 except Exception as e:
@@ -425,6 +555,10 @@ class RagEvaluator:
                     )
                     qa_inputs.update(pass_fail_result)
 
+                    # Add timing even for exceptions
+                    question_time = time.time() - question_start_time
+                    per_question_timings.append(question_time)
+
                     analysis["per_question"].append(
                         {
                             "error": str(e),
@@ -432,6 +566,7 @@ class RagEvaluator:
                             "qa_inputs": qa_inputs,
                             "usage": response_data.get("usage", {}),
                             "cost": response_data.get("cost", {}),
+                            "processing_time_seconds": round(question_time, 3),
                         }
                     )
 
@@ -456,6 +591,7 @@ class RagEvaluator:
             )
 
             # After analyzing all questions, get overall analysis
+            overall_start_time = time.time()
             overall_prompt = f"""
                 Review these RAG system test results and provide an overall analysis.
 
@@ -542,6 +678,13 @@ class RagEvaluator:
                     # Add overall usage and cost to the analysis
                     overall_analysis["overall_usage"] = overall_usage
                     overall_analysis["overall_cost"] = overall_cost
+
+                    # Add overall timing
+                    overall_time = time.time() - overall_start_time
+                    overall_analysis["overall_processing_time_seconds"] = round(
+                        overall_time, 3
+                    )
+
                     analysis.update(overall_analysis)
                 else:
                     self.log.error("No JSON found in overall analysis response")
@@ -594,6 +737,40 @@ class RagEvaluator:
             # Add total cost summary to analysis
             analysis["total_usage"] = total_usage
             analysis["total_cost"] = total_cost
+
+            # Add comprehensive timing information
+            total_time = time.time() - analysis_start_time
+            analysis["timing"] = {
+                "total_processing_time_seconds": round(total_time, 3),
+                "per_question_times_seconds": [
+                    round(t, 3) for t in per_question_timings
+                ],
+                "average_per_question_seconds": (
+                    round(np.mean(per_question_timings), 3)
+                    if per_question_timings
+                    else 0
+                ),
+                "max_per_question_seconds": (
+                    round(max(per_question_timings), 3) if per_question_timings else 0
+                ),
+                "min_per_question_seconds": (
+                    round(min(per_question_timings), 3) if per_question_timings else 0
+                ),
+            }
+
+            # Clean up intermediate files after successful completion
+            if intermediate_dir and intermediate_dir.exists():
+                try:
+                    import shutil
+
+                    shutil.rmtree(intermediate_dir)
+                    self.log.info(
+                        f"Cleaned up intermediate QA analysis files from: {intermediate_dir}"
+                    )
+                except Exception as e:
+                    self.log.warning(
+                        f"Failed to clean up intermediate directory {intermediate_dir}: {e}"
+                    )
 
             return analysis
         except Exception as api_error:
@@ -669,6 +846,9 @@ class RagEvaluator:
         groundtruth_path: Optional[str] = None,
     ) -> Dict:
         """Analyze summarization results using Claude."""
+        # Start timing
+        analysis_start_time = time.time()
+
         analysis = {
             "overall_analysis": "",
             "strengths": [],
@@ -677,6 +857,7 @@ class RagEvaluator:
             "use_case_fit": "",
             "per_question": [],
             "overall_rating": {"rating": "", "explanation": ""},
+            "timing": {},  # Add timing information
         }
 
         if not summarization_results:
@@ -718,8 +899,34 @@ class RagEvaluator:
 
             total_usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
             total_cost = {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}
+            per_summary_timings = []  # Track timing for each summary
+
+            # Set up intermediate output directory for crash recovery
+            intermediate_dir = None
+            experiment_name = results.get("metadata", {}).get(
+                "experiment_name", "evaluation"
+            )
+            if hasattr(self, "intermediate_dir") and self.intermediate_dir:
+                # Use existing intermediate directory if set
+                intermediate_dir = (
+                    Path(self.intermediate_dir)
+                    / f"{experiment_name}_analysis.intermediate"
+                )
+            else:
+                # Create in temp directory
+                import tempfile
+
+                temp_dir = Path(tempfile.gettempdir()) / "gaia_eval"
+                intermediate_dir = temp_dir / f"{experiment_name}_analysis.intermediate"
+
+            if intermediate_dir:
+                intermediate_dir.mkdir(parents=True, exist_ok=True)
+                self.log.info(
+                    f"Writing intermediate analysis results to: {intermediate_dir}"
+                )
 
             for i, summary_result in enumerate(summarization_results):
+                summary_start_time = time.time()
                 generated_summaries = summary_result.get("generated_summaries", {})
 
                 # Get ground truth summaries from embedded data or separate file
@@ -738,14 +945,18 @@ class RagEvaluator:
                             source_file = summary_result.get("source_file", "")
                             transcript_id = None
 
-                            # Try to match by source file name
-                            for tid, metadata in gt_analysis.get(
-                                "transcript_metadata", {}
-                            ).items():
-                                if source_file and source_file in metadata.get(
-                                    "source_file", ""
+                            # Try to match by source file name using metadata.source_files
+                            source_files = ground_truth_data.get("metadata", {}).get(
+                                "source_files", []
+                            )
+                            for source_mapping in source_files:
+                                mapped_source = source_mapping.get("source_file", "")
+                                if source_file and (
+                                    source_file == mapped_source
+                                    or source_file.replace("/", "\\") == mapped_source
+                                    or source_file.replace("\\", "/") == mapped_source
                                 ):
-                                    transcript_id = tid
+                                    transcript_id = source_mapping.get("transcript_id")
                                     break
 
                             # If no match found, use first available transcript
@@ -806,27 +1017,27 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
 
                     Return your analysis in this JSON format:
                     {{
-                        "executive_summary_accuracy": {{
+                        "executive_summary_quality": {{
                             "rating": "excellent/good/fair/poor",
                             "explanation": "detailed analysis"
                         }},
-                        "completeness": {{
+                        "detail_completeness": {{
                             "rating": "excellent/good/fair/poor", 
                             "explanation": "detailed analysis"
                         }},
-                        "action_items_accuracy": {{
+                        "action_items_structure": {{
                             "rating": "excellent/good/fair/poor",
                             "explanation": "detailed analysis"
                         }},
-                        "key_decisions_accuracy": {{
+                        "key_decisions_clarity": {{
                             "rating": "excellent/good/fair/poor",
                             "explanation": "detailed analysis"
                         }},
-                        "participant_identification": {{
+                        "participant_information": {{
                             "rating": "excellent/good/fair/poor",
                             "explanation": "detailed analysis"
                         }},
-                        "topic_coverage": {{
+                        "topic_organization": {{
                             "rating": "excellent/good/fair/poor",
                             "explanation": "detailed analysis"
                         }},
@@ -923,6 +1134,11 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                     summary_analysis["usage"] = usage
                     summary_analysis["cost"] = cost
 
+                    # Add timing for this summary
+                    summary_time = time.time() - summary_start_time
+                    summary_analysis["processing_time_seconds"] = round(summary_time, 3)
+                    per_summary_timings.append(summary_time)
+
                     # Accumulate totals
                     total_usage["input_tokens"] += usage.get("input_tokens", 0)
                     total_usage["output_tokens"] += usage.get("output_tokens", 0)
@@ -936,7 +1152,74 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                     summary_analysis["analysis"] = {"error": str(e)}
                     summary_analysis["overall_quality"] = "error"
 
+                    # Add timing even for errors
+                    summary_time = time.time() - summary_start_time
+                    summary_analysis["processing_time_seconds"] = round(summary_time, 3)
+                    per_summary_timings.append(summary_time)
+
                 analysis["per_question"].append(summary_analysis)
+
+                # Write intermediate result immediately for crash recovery
+                if intermediate_dir:
+                    try:
+                        intermediate_file = (
+                            intermediate_dir / f"summary_{i+1:04d}_analysis.json"
+                        )
+                        intermediate_data = {
+                            "summary_index": i,
+                            "experiment_name": experiment_name,
+                            "source_file": summary_result.get("source_file", ""),
+                            "analysis": summary_analysis,
+                            "usage": summary_analysis.get("usage", {}),
+                            "cost": summary_analysis.get("cost", {}),
+                            "processing_time_seconds": summary_analysis.get(
+                                "processing_time_seconds", 0
+                            ),
+                            "timestamp": datetime.now().isoformat(),
+                        }
+
+                        with open(intermediate_file, "w", encoding="utf-8") as f:
+                            json.dump(intermediate_data, f, indent=2)
+
+                        # Update progress file
+                        progress_file = intermediate_dir / "analysis_progress.json"
+                        progress_data = {
+                            "experiment_name": experiment_name,
+                            "total_summaries": len(summarization_results),
+                            "completed_summaries": i + 1,
+                            "progress_percent": round(
+                                (i + 1) / len(summarization_results) * 100, 1
+                            ),
+                            "total_usage": total_usage.copy(),
+                            "total_cost": total_cost.copy(),
+                            "last_updated": datetime.now().isoformat(),
+                            "estimated_remaining_time": None,
+                        }
+
+                        # Calculate estimated remaining time
+                        if i > 0:
+                            avg_time_per_summary = sum(per_summary_timings) / len(
+                                per_summary_timings
+                            )
+                            remaining_summaries = len(summarization_results) - (i + 1)
+                            estimated_remaining = (
+                                remaining_summaries * avg_time_per_summary
+                            )
+                            progress_data["estimated_remaining_time"] = round(
+                                estimated_remaining, 1
+                            )
+
+                        with open(progress_file, "w", encoding="utf-8") as f:
+                            json.dump(progress_data, f, indent=2)
+
+                        self.log.info(
+                            f"Analysis progress: {i+1}/{len(summarization_results)} summaries completed ({progress_data['progress_percent']}%)"
+                        )
+
+                    except Exception as e:
+                        self.log.warning(
+                            f"Failed to write intermediate analysis result {i+1}: {e}"
+                        )
 
             # Generate overall analysis
             quality_ratings = [
@@ -957,19 +1240,166 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
             else:
                 overall_rating = "poor"
 
+            # Send individual analyses to Claude for comprehensive overall analysis
+            overall_start_time = time.time()
+
+            # Get experiment/model information
+            experiment_name = results.get("metadata", {}).get(
+                "experiment_name", "Unknown Model"
+            )
+            model_type = results.get("metadata", {}).get("model", "")
+
+            overall_prompt = f"""
+                Review these summarization test results and provide a comprehensive overall analysis.
+
+                Model/Experiment: {experiment_name}
+                Number of summaries analyzed: {total_summaries}
+                Quality distribution:
+                - Excellent: {excellent_count} ({excellent_count/total_summaries*100:.1f}%)
+                - Good: {good_count} ({good_count/total_summaries*100:.1f}%)
+                - Fair: {fair_count} ({fair_count/total_summaries*100:.1f}%)
+                - Poor: {poor_count} ({poor_count/total_summaries*100:.1f}%)
+                
+                Overall quality rating: {overall_rating}
+
+                Individual summary analyses: {json.dumps(analysis['per_question'], indent=2)}
+
+                Based on the detailed analysis of each summary above, provide a comprehensive assessment including:
+                
+                1. Overall Analysis: General assessment of the summarization system's performance
+                2. Strengths: Specific aspects the model does well (be specific based on the individual analyses)
+                3. Weaknesses: Concrete areas needing improvement (based on patterns in the individual analyses)
+                4. Recommendations: Actionable suggestions for improvement
+                5. Use Case Fit: Types of meetings/content this model handles well or poorly
+                
+                Consider the following in your analysis:
+                - Patterns in accuracy, completeness, organization across summaries
+                - Consistency of performance
+                - Specific failure modes observed
+                - Model characteristics (e.g., if it's Claude, Llama, Qwen, etc.)
+                
+                Return your analysis in this exact JSON format:
+                {{
+                    "overall_analysis": "comprehensive assessment of overall performance",
+                    "strengths": ["specific strength 1", "specific strength 2", ...],
+                    "weaknesses": ["specific weakness 1", "specific weakness 2", ...],
+                    "recommendations": ["actionable recommendation 1", "actionable recommendation 2", ...],
+                    "use_case_fit": "detailed analysis of suitable use cases and limitations"
+                }}
+                """
+
+            try:
+                overall_response_data = self.claude.get_completion_with_usage(
+                    overall_prompt
+                )
+
+                # Extract JSON from overall response
+                overall_response = overall_response_data["content"]
+                overall_usage = overall_response_data["usage"]
+                overall_cost = overall_response_data["cost"]
+
+                if isinstance(overall_response, list):
+                    response_text = (
+                        overall_response[0].text
+                        if hasattr(overall_response[0], "text")
+                        else str(overall_response[0])
+                    )
+                else:
+                    response_text = (
+                        overall_response.text
+                        if hasattr(overall_response, "text")
+                        else str(overall_response)
+                    )
+
+                json_start = response_text.find("{")
+                json_end = response_text.rfind("}") + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_content = response_text[json_start:json_end]
+                    claude_analysis = json.loads(json_content)
+
+                    # Add Claude's analysis to our results
+                    overall_analysis_text = claude_analysis.get(
+                        "overall_analysis",
+                        f"Analyzed {total_summaries} summaries. Quality distribution: {excellent_count} excellent, {good_count} good, {fair_count} fair, {poor_count} poor.",
+                    )
+                    strengths = claude_analysis.get(
+                        "strengths", ["Summary generation completed"]
+                    )
+                    weaknesses = claude_analysis.get(
+                        "weaknesses", ["Areas for improvement identified"]
+                    )
+                    recommendations = claude_analysis.get(
+                        "recommendations", ["Continue monitoring performance"]
+                    )
+                    use_case_fit = claude_analysis.get(
+                        "use_case_fit", "Suitable for meeting summarization"
+                    )
+
+                    # Track Claude API usage for overall analysis
+                    analysis["overall_usage"] = overall_usage
+                    analysis["overall_cost"] = overall_cost
+                    analysis["overall_processing_time_seconds"] = round(
+                        time.time() - overall_start_time, 3
+                    )
+                else:
+                    self.log.warning(
+                        "Failed to parse Claude's overall analysis response, using fallback"
+                    )
+                    # Fallback to programmatic analysis
+                    overall_analysis_text = f"Analyzed {total_summaries} summaries. Quality distribution: {excellent_count} excellent, {good_count} good, {fair_count} fair, {poor_count} poor."
+                    strengths = ["Summary generation completed successfully"]
+                    weaknesses = ["Manual review recommended"]
+                    recommendations = ["Monitor performance over time"]
+                    use_case_fit = (
+                        "Suitable for meeting summarization with appropriate review"
+                    )
+
+            except Exception as e:
+                self.log.error(f"Error getting Claude overall analysis: {e}")
+                # Fallback to basic programmatic analysis if Claude fails
+                overall_analysis_text = f"Analyzed {total_summaries} summaries. Quality distribution: {excellent_count} excellent, {good_count} good, {fair_count} fair, {poor_count} poor."
+                strengths = []
+                weaknesses = []
+                recommendations = []
+
+                # Basic programmatic fallback analysis
+                if excellent_count > 0:
+                    strengths.append(
+                        f"Achieved excellent quality in {excellent_count}/{total_summaries} summaries"
+                    )
+                if good_count > 0:
+                    strengths.append(
+                        f"Produced good quality summaries in {good_count}/{total_summaries} cases"
+                    )
+
+                if poor_count > 0:
+                    weaknesses.append(
+                        f"Generated poor quality summaries in {poor_count}/{total_summaries} cases"
+                    )
+                if excellent_count == 0:
+                    weaknesses.append("No summaries achieved excellent quality rating")
+
+                if poor_count > 0 or fair_count > total_summaries * 0.3:
+                    recommendations.append("Review and improve prompt engineering")
+                if excellent_count == 0:
+                    recommendations.append("Consider using a more capable model")
+
+                if not strengths:
+                    strengths = ["Summary generation completed"]
+                if not weaknesses:
+                    weaknesses = ["Some areas for improvement"]
+                if not recommendations:
+                    recommendations = ["Continue monitoring performance"]
+
+                use_case_fit = "Suitable for meeting summarization with review"
+
             analysis.update(
                 {
-                    "overall_analysis": f"Analyzed {total_summaries} summaries. Quality distribution: {excellent_count} excellent, {good_count} good, {fair_count} fair, {poor_count} poor.",
-                    "strengths": [
-                        "Summary structure maintained",
-                        "Comprehensive analysis performed",
-                    ],
-                    "weaknesses": ["Manual review recommended for complex summaries"],
-                    "recommendations": [
-                        "Compare key details against original transcripts",
-                        "Validate action item accuracy",
-                    ],
-                    "use_case_fit": "Suitable for meeting summary evaluation and comparison",
+                    "overall_analysis": overall_analysis_text,
+                    "strengths": strengths,
+                    "weaknesses": weaknesses,
+                    "recommendations": recommendations,
+                    "use_case_fit": use_case_fit,
                     "overall_rating": {
                         "rating": overall_rating,
                         "explanation": f"Based on {total_summaries} summaries with {excellent_count + good_count} high-quality results",
@@ -997,10 +1427,63 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                             ),
                         },
                     },
-                    "total_usage": total_usage,
-                    "total_cost": total_cost,
                 }
             )
+
+            # Add overall analysis costs to totals if available
+            if "overall_usage" in analysis and "overall_cost" in analysis:
+                total_usage["input_tokens"] += analysis["overall_usage"].get(
+                    "input_tokens", 0
+                )
+                total_usage["output_tokens"] += analysis["overall_usage"].get(
+                    "output_tokens", 0
+                )
+                total_usage["total_tokens"] += analysis["overall_usage"].get(
+                    "total_tokens", 0
+                )
+                total_cost["input_cost"] += analysis["overall_cost"].get(
+                    "input_cost", 0.0
+                )
+                total_cost["output_cost"] += analysis["overall_cost"].get(
+                    "output_cost", 0.0
+                )
+                total_cost["total_cost"] += analysis["overall_cost"].get(
+                    "total_cost", 0.0
+                )
+
+            # Update with final totals
+            analysis["total_usage"] = total_usage
+            analysis["total_cost"] = total_cost
+
+            # Add comprehensive timing information
+            total_time = time.time() - analysis_start_time
+            analysis["timing"] = {
+                "total_processing_time_seconds": round(total_time, 3),
+                "per_summary_times_seconds": [round(t, 3) for t in per_summary_timings],
+                "average_per_summary_seconds": (
+                    round(np.mean(per_summary_timings), 3) if per_summary_timings else 0
+                ),
+                "max_per_summary_seconds": (
+                    round(max(per_summary_timings), 3) if per_summary_timings else 0
+                ),
+                "min_per_summary_seconds": (
+                    round(min(per_summary_timings), 3) if per_summary_timings else 0
+                ),
+            }
+
+            # Clean up intermediate files after successful completion
+            if intermediate_dir and intermediate_dir.exists():
+                try:
+                    import shutil
+
+                    shutil.rmtree(intermediate_dir)
+                    self.log.info(
+                        f"Cleaned up intermediate analysis files from: {intermediate_dir}"
+                    )
+                except Exception as e:
+                    self.log.warning(
+                        f"Failed to clean up intermediate directory {intermediate_dir}: {e}"
+                    )
 
             return analysis
 
@@ -1031,6 +1514,9 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
             output_dir: Optional dir path to save report. If None, returns the data.
             groundtruth_path: Optional path to groundtruth file for comparison (especially for summarization)
         """
+        # Start timing
+        report_start_time = time.time()
+
         try:
             if output_dir:
                 output_path = Path(output_dir)
@@ -1038,6 +1524,9 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
 
             # Get Claude analysis
             claude_analysis = self.analyze_with_claude(results_path, groundtruth_path)
+
+            # Calculate total report generation time
+            report_generation_time = time.time() - report_start_time
 
             # Create evaluation data without depending on threshold_metrics
             evaluation_data = {
@@ -1048,6 +1537,7 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                     "groundtruth_file": (
                         str(groundtruth_path) if groundtruth_path else None
                     ),
+                    "report_generation_time_seconds": round(report_generation_time, 3),
                 },
                 **claude_analysis,
             }
@@ -1184,6 +1674,7 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                 with open(eval_path, "r", encoding="utf-8") as f:
                     evaluation_data = json.load(f)
 
+                # For consolidated report, only include summary statistics
                 eval_info = {
                     "experiment_name": eval_path.stem.replace(".eval", ""),
                     "file_path": str(eval_path.relative_to(output_base_path)),
@@ -1196,8 +1687,138 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                         "original_results_file", ""
                     ),
                     "usage": evaluation_data.get("total_usage", {}),
-                    "cost": evaluation_data.get("total_cost", {}),
+                    "cost": evaluation_data.get(
+                        "total_cost", {}
+                    ),  # This is evaluation cost
                 }
+
+                # Load the corresponding experiment file to get inference cost
+                experiment_name = eval_path.stem.replace(".experiment.eval", "")
+
+                # Preserve the subdirectory structure when looking for experiment file
+                relative_eval_path = eval_path.relative_to(output_base_path)
+                relative_dir = relative_eval_path.parent
+
+                experiment_file = (
+                    Path(base_experiment_dir)
+                    / relative_dir
+                    / f"{experiment_name}.experiment.json"
+                )
+
+                if experiment_file.exists():
+                    try:
+                        with open(experiment_file, "r", encoding="utf-8") as f:
+                            experiment_data = json.load(f)
+                        # Add inference cost from experiment file
+                        eval_info["inference_cost"] = experiment_data.get(
+                            "metadata", {}
+                        ).get("total_cost", {})
+                        eval_info["inference_usage"] = experiment_data.get(
+                            "metadata", {}
+                        ).get("total_usage", {})
+                        eval_info["inference_type"] = experiment_data.get(
+                            "metadata", {}
+                        ).get("inference_type", "unknown")
+                    except Exception as e:
+                        self.log.warning(
+                            f"Could not load experiment file {experiment_file}: {e}"
+                        )
+                        # Set default values for missing experiment data
+                        eval_info["inference_cost"] = {
+                            "input_cost": 0.0,
+                            "output_cost": 0.0,
+                            "total_cost": 0.0,
+                        }
+                        eval_info["inference_usage"] = {
+                            "input_tokens": 0,
+                            "output_tokens": 0,
+                            "total_tokens": 0,
+                        }
+                        eval_info["inference_type"] = "unknown"
+                else:
+                    self.log.warning(f"Experiment file not found: {experiment_file}")
+                    # Set default values for missing experiment data
+                    eval_info["inference_cost"] = {
+                        "input_cost": 0.0,
+                        "output_cost": 0.0,
+                        "total_cost": 0.0,
+                    }
+                    eval_info["inference_usage"] = {
+                        "input_tokens": 0,
+                        "output_tokens": 0,
+                        "total_tokens": 0,
+                    }
+                    eval_info["inference_type"] = "unknown"
+
+                # Extract aspect summary if available (aggregate only)
+                if evaluation_data.get("per_question"):
+                    aspect_summary = {}
+                    # Define the aspects we want to extract (matching visualization expectations)
+                    # Map old aspect names to new ones for backwards compatibility
+                    aspect_mapping = {
+                        # Old names -> New names
+                        "executive_summary_accuracy": "executive_summary_quality",
+                        "completeness": "detail_completeness",
+                        "action_items_accuracy": "action_items_structure",
+                        "key_decisions_accuracy": "key_decisions_clarity",
+                        "participant_identification": "participant_information",
+                        "topic_coverage": "topic_organization",
+                        # New names (map to themselves)
+                        "executive_summary_quality": "executive_summary_quality",
+                        "detail_completeness": "detail_completeness",
+                        "action_items_structure": "action_items_structure",
+                        "key_decisions_clarity": "key_decisions_clarity",
+                        "participant_information": "participant_information",
+                        "topic_organization": "topic_organization",
+                    }
+
+                    aspects = [
+                        "executive_summary_quality",
+                        "detail_completeness",
+                        "action_items_structure",
+                        "key_decisions_clarity",
+                        "participant_information",
+                        "topic_organization",
+                    ]
+
+                    for aspect in aspects:
+                        aspect_ratings = []
+                        for question in evaluation_data.get("per_question", []):
+                            analysis = question.get("analysis", {})
+                            # Check for the aspect using both old and new names
+                            for old_name, new_name in aspect_mapping.items():
+                                if new_name == aspect and old_name in analysis:
+                                    rating = analysis[old_name].get("rating")
+                                    if rating:
+                                        aspect_ratings.append(rating)
+                                    break
+
+                        if aspect_ratings:
+                            # Count occurrences of each rating
+                            rating_counts = {}
+                            for rating in aspect_ratings:
+                                rating_counts[rating] = rating_counts.get(rating, 0) + 1
+
+                            # Find most common rating
+                            most_common = max(rating_counts.items(), key=lambda x: x[1])
+                            aspect_summary[aspect] = {
+                                "most_common_rating": most_common[0],
+                                "rating_distribution": rating_counts,
+                            }
+
+                    if aspect_summary:
+                        eval_info["aspect_summary"] = aspect_summary
+
+                # Include timing summary if available
+                if evaluation_data.get("timing"):
+                    eval_info["avg_processing_time_seconds"] = evaluation_data[
+                        "timing"
+                    ].get(
+                        "average_per_summary_seconds",
+                        evaluation_data["timing"].get(
+                            "total_processing_time_seconds", 0
+                        ),
+                    )
 
                 all_evaluations.append(eval_info)
 
@@ -1254,6 +1875,7 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
 
         # Summarization evaluations have specific analysis fields
         analysis = first_question.get("analysis", {})
+        # Check for new aspect names
         if any(
             key in analysis
             for key in [
@@ -1267,12 +1889,29 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
         ):
             return "summarization"
 
+        # Also check for old aspect names (for backwards compatibility)
+        if any(
+            key in analysis
+            for key in [
+                "executive_summary_accuracy",
+                "completeness",
+                "action_items_accuracy",
+                "key_decisions_accuracy",
+                "participant_identification",
+                "topic_coverage",
+            ]
+        ):
+            return "summarization"
+
         # RAG evaluations have similarity scores and different structure
         if "similarity_score" in first_question or "passed_threshold" in first_question:
             return "rag"
 
-        # Default to RAG for backward compatibility
-        return "rag"
+        # If we can't detect the evaluation type, log the issue for debugging
+        self.log.warning(
+            f"Could not detect evaluation type from data structure: {list(first_question.keys())}"
+        )
+        return "unknown"
 
     def _generate_summarization_report(self, models_data: List[Dict]) -> str:
         """Generate markdown content specifically for summarization evaluation reports."""
@@ -1556,6 +2195,43 @@ Performance ranking: {ranking_text}
                     metrics = overall_rating.get("metrics", {})
                     total_cost = eval_data.get("total_cost", {})
 
+                    # Calculate quality score for summarization evaluations
+                    quality_score = 0.0
+                    overall_rating_metrics = overall_rating.get("metrics", {})
+                    if overall_rating_metrics:
+                        # Use existing quality_score if available
+                        quality_score = overall_rating_metrics.get("quality_score", 0.0)
+                    else:
+                        # Calculate from per_question data if metrics not available
+                        excellent_count = 0
+                        good_count = 0
+                        fair_count = 0
+                        poor_count = 0
+
+                        for question in eval_data.get("per_question", []):
+                            analysis = question.get("analysis", {})
+                            overall_quality = analysis.get("overall_quality", "")
+                            if overall_quality == "excellent":
+                                excellent_count += 1
+                            elif overall_quality == "good":
+                                good_count += 1
+                            elif overall_quality == "fair":
+                                fair_count += 1
+                            elif overall_quality == "poor":
+                                poor_count += 1
+
+                        total_summaries = (
+                            excellent_count + good_count + fair_count + poor_count
+                        )
+                        if total_summaries > 0:
+                            quality_score_raw = (
+                                excellent_count * 4
+                                + good_count * 3
+                                + fair_count * 2
+                                + poor_count * 1
+                            ) / total_summaries
+                            quality_score = ((quality_score_raw - 1) / 3) * 100
+
                     model_info = {
                         "name": model_name,
                         "filename": eval_file.name,
@@ -1570,6 +2246,7 @@ Performance ranking: {ranking_text}
                         "num_failed": metrics.get("num_failed", 0),
                         "threshold": metrics.get("similarity_threshold", 0.7),
                         "rating": overall_rating.get("rating", "unknown"),
+                        "quality_score": quality_score,  # Add quality score to model info
                         "total_cost": total_cost.get("total_cost", 0),
                         "analysis": eval_data.get("overall_analysis", ""),
                         "strengths": eval_data.get("strengths", []),
@@ -1586,16 +2263,29 @@ Performance ranking: {ranking_text}
             if not models_data:
                 raise ValueError("No valid evaluation data found")
 
-            # Sort by pass rate (descending)
-            models_data.sort(key=lambda x: x["pass_rate"], reverse=True)
-
-            # Detect evaluation type
+            # Detect evaluation type first
             evaluation_type = self._detect_evaluation_type(models_data)
+
+            # Sort by appropriate metric based on evaluation type
+            if evaluation_type == "summarization":
+                # Sort by quality score (descending) for summarization
+                models_data.sort(key=lambda x: x["quality_score"], reverse=True)
+            else:
+                # Sort by pass rate (descending) for RAG and unknown types
+                models_data.sort(key=lambda x: x["pass_rate"], reverse=True)
 
             if evaluation_type == "summarization":
                 report_content = self._generate_summarization_report(models_data)
-            else:
+            elif evaluation_type == "rag":
                 report_content = self._generate_markdown_report(models_data)
+            else:
+                # Handle unknown evaluation type
+                self.log.error(
+                    f"Unknown evaluation type detected: {evaluation_type}. Cannot generate report."
+                )
+                raise ValueError(
+                    f"Unsupported evaluation type: {evaluation_type}. Expected 'summarization' or 'rag'."
+                )
 
             # Save report
             with open(output_path, "w", encoding="utf-8") as f:
@@ -1607,6 +2297,7 @@ Performance ranking: {ranking_text}
                 "models_analyzed": len(models_data),
                 "report_path": output_path,
                 "summary_data": models_data,
+                "evaluation_type": evaluation_type,
             }
 
         except Exception as e:
