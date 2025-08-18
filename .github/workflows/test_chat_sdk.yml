@@ -11,16 +11,14 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "src/gaia/agents/chat/**"
-      - "tests/test_chat_sdk.py"
-      - "src/gaia/llm/**"
+      - "src/**"
+      - "tests/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "src/gaia/agents/chat/**"
-      - "tests/test_chat_sdk.py"
-      - "src/gaia/llm/**"
+      - "src/**"
+      - "tests/**"
   merge_group:
   workflow_dispatch:
 
