@@ -950,6 +950,21 @@ Examples:
         action="store_true",
         help="Generate consolidated report from existing evaluation data without re-running evaluations",
     )
+    eval_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force regeneration of all evaluations, even if they already exist (default: skip existing)",
+    )
+    eval_parser.add_argument(
+        "--regenerate-report",
+        action="store_true",
+        help="Force full regeneration of consolidated report",
+    )
+    eval_parser.add_argument(
+        "--incremental-update",
+        action="store_true",
+        help="Update consolidated report incrementally with new evaluations only",
+    )
 
     # Add new subparser for generating summary reports from evaluation directories
     report_parser = subparsers.add_parser(
@@ -1224,9 +1239,9 @@ Examples:
         help="Create configuration from groundtruth file metadata (provide groundtruth file path)",
     )
     batch_exp_parser.add_argument(
-        "--skip-existing",
+        "--force",
         action="store_true",
-        help="Skip experiments that have already been generated in the output folder",
+        help="Force regeneration of all experiments, even if they already exist (default: skip existing)",
     )
 
     args = parser.parse_args()
@@ -2241,12 +2256,53 @@ Let me know your answer!
 
                 print(f"Found {len(json_files)} JSON files to process")
 
+                # Filter out existing evaluations if skip-existing is enabled
+                files_to_process = []
+                skipped_count = 0
+
+                for json_file in json_files:
+                    # By default skip existing evaluations, unless --force is specified
+                    if not args.force and evaluator.check_evaluation_exists(
+                        json_file, args.output_dir
+                    ):
+                        skipped_count += 1
+                        continue
+                    files_to_process.append(json_file)
+
+                if skipped_count > 0:
+                    print(f"Skipping {skipped_count} existing evaluations")
+                    print(f"Processing {len(files_to_process)} new evaluations")
+
+                if not files_to_process:
+                    print(
+                        "✅ All evaluations already exist. Use --regenerate-report to update consolidated report."
+                    )
+                    if args.regenerate_report or args.incremental_update:
+                        # Generate report from existing evaluations
+                        eval_dir = Path(args.output_dir)
+                        if eval_dir.exists():
+                            evaluation_files = [
+                                f.name for f in eval_dir.rglob("*.eval.json")
+                            ]
+                            if evaluation_files:
+                                consolidated_report_path = (
+                                    evaluator.create_consolidated_evaluation_report(
+                                        evaluation_files,
+                                        args.output_dir,
+                                        str(experiment_dir),
+                                    )
+                                )
+                                print(
+                                    f"✅ Updated Consolidated Report: {consolidated_report_path}"
+                                )
+                    return
+
                 total_files_processed = 0
                 total_usage = {"total_tokens": 0}
                 total_cost = {"total_cost": 0.0}
                 evaluation_files = []  # Track evaluation files for consolidated report
 
-                for json_file in sorted(json_files):
+                for json_file in sorted(files_to_process):
                     print(f"\n📄 Processing: {os.path.basename(json_file)}")
 
                     try:
@@ -2329,14 +2385,59 @@ Let me know your answer!
                 if not args.summary_only and total_files_processed > 0:
                     print(f"  Detailed Reports: {args.output_dir}")
 
-                    # Create consolidated evaluation report
-                    if len(evaluation_files) > 1:
-                        consolidated_report_path = (
-                            evaluator.create_consolidated_evaluation_report(
-                                evaluation_files, args.output_dir, str(experiment_dir)
+                    # Create or update consolidated evaluation report
+                    if len(evaluation_files) > 0:
+                        if args.regenerate_report:
+                            consolidated_report_path = (
+                                evaluator.create_consolidated_evaluation_report(
+                                    evaluation_files,
+                                    args.output_dir,
+                                    str(experiment_dir),
+                                )
                             )
-                        )
-                        print(f"  Consolidated Report: {consolidated_report_path}")
+                            print(
+                                f"  Regenerated Consolidated Report: {consolidated_report_path}"
+                            )
+                        elif args.incremental_update and len(evaluation_files) > 0:
+                            consolidated_report_path = (
+                                evaluator.update_consolidated_evaluation_report(
+                                    output_dir=args.output_dir,
+                                    new_eval_files=None,  # Auto-detect
+                                    regenerate=False,
+                                    base_experiment_dir=str(experiment_dir),
+                                )
+                            )
+                            print(
+                                f"  Updated Consolidated Report: {consolidated_report_path}"
+                            )
+                        elif (
+                            len(evaluation_files) > 1
+                            or not Path(args.output_dir)
+                            .joinpath("consolidated_evaluations_report.json")
+                            .exists()
+                        ):
+                            # Create new consolidated report for multiple files or if it doesn't exist
+                            consolidated_report_path = (
+                                evaluator.create_consolidated_evaluation_report(
+                                    evaluation_files,
+                                    args.output_dir,
+                                    str(experiment_dir),
+                                )
+                            )
+                            print(f"  Consolidated Report: {consolidated_report_path}")
+                        else:
+                            # Single new file - use incremental update
+                            consolidated_report_path = (
+                                evaluator.update_consolidated_evaluation_report(
+                                    output_dir=args.output_dir,
+                                    new_eval_files=None,  # Auto-detect
+                                    regenerate=False,
+                                    base_experiment_dir=str(experiment_dir),
+                                )
+                            )
+                            print(
+                                f"  Updated Consolidated Report: {consolidated_report_path}"
+                            )
 
                 # Print total cost information
                 if total_usage["total_tokens"] > 0:
@@ -2399,6 +2500,21 @@ Let me know your answer!
 
                 if not args.summary_only:
                     print(f"  Detailed Report: {args.output_dir}")
+
+                    # Auto-update consolidated report after single file evaluation
+                    try:
+                        consolidated_report_path = (
+                            evaluator.update_consolidated_evaluation_report(
+                                output_dir=output_dir,
+                                new_eval_files=None,  # Auto-detect
+                                regenerate=False,
+                            )
+                        )
+                        print(
+                            f"  Updated Consolidated Report: {consolidated_report_path}"
+                        )
+                    except Exception as e:
+                        print(f"  ⚠️  Could not update consolidated report: {e}")
 
                 # Print cost information if available
                 if evaluation_data.get("total_usage") and evaluation_data.get(
@@ -2631,12 +2747,13 @@ Let me know your answer!
         try:
             # Run batch experiments
             runner = BatchExperimentRunner(args.config)
+            # By default skip existing experiments, unless --force is specified
             result_files, skipped_count = runner.run_all_experiments(
                 input_path=args.input,
                 output_dir=args.output_dir,
                 delay_seconds=args.delay,
                 queries_source=args.queries_source,
-                skip_existing=args.skip_existing,
+                skip_existing=not args.force,
             )
 
             # Report results with skip information

@@ -324,6 +324,15 @@ gaia batch-experiment -c experiments.json -i ./data -o ./results
 gaia eval -f ./results/experiment.json
 gaia report -d ./eval_results
 
+# Default behavior: automatically skip existing evaluations 
+gaia eval -d ./experiments -o ./evaluation
+
+# Force regeneration of ALL evaluations (overrides skip behavior)
+gaia eval -d ./experiments -o ./evaluation --force
+
+# Update consolidated report incrementally
+gaia eval -d ./experiments -o ./evaluation --incremental-update
+
 # Launch interactive visualizer for results comparison
 gaia visualize
 ```

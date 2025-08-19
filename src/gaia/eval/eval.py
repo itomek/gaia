@@ -146,6 +146,43 @@ class RagEvaluator:
             self.log.error(f"Error loading results file: {e}")
             raise
 
+    def check_evaluation_exists(self, experiment_file: str, output_dir: str) -> bool:
+        """Check if evaluation already exists for experiment file.
+
+        Args:
+            experiment_file: Path to the experiment file
+            output_dir: Output directory for evaluations
+
+        Returns:
+            True if evaluation file already exists, False otherwise
+        """
+        experiment_path = Path(experiment_file)
+        output_base_path = Path(output_dir)
+
+        # Generate expected eval filename: <name>.experiment.eval.json
+        eval_filename = f"{experiment_path.stem}.eval.json"
+
+        # Check for hierarchical structure first
+        relative_path = None
+        if "experiments" in experiment_path.parts:
+            # Extract relative path from experiments directory
+            exp_idx = experiment_path.parts.index("experiments")
+            if exp_idx + 1 < len(experiment_path.parts):
+                relative_path = Path(*experiment_path.parts[exp_idx + 1 : -1])
+
+        # Check both locations: hierarchical and flat
+        eval_paths = []
+        if relative_path:
+            eval_paths.append(output_base_path / relative_path / eval_filename)
+        eval_paths.append(output_base_path / eval_filename)
+
+        for eval_path in eval_paths:
+            if eval_path.exists():
+                self.log.info(f"Evaluation already exists: {eval_path}")
+                return True
+
+        return False
+
     def evaluate(self, results_path: str) -> Dict:
         """
         Evaluate RAG results and generate metrics.
@@ -1225,13 +1262,38 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
             quality_ratings = [
                 s.get("overall_quality", "unknown") for s in analysis["per_question"]
             ]
-            excellent_count = quality_ratings.count("excellent")
-            good_count = quality_ratings.count("good")
-            fair_count = quality_ratings.count("fair")
-            poor_count = quality_ratings.count("poor")
-            total_summaries = len(quality_ratings)
 
-            if excellent_count >= total_summaries * 0.7:
+            # Filter out error and unknown ratings for scoring
+            valid_quality_ratings = [
+                rating
+                for rating in quality_ratings
+                if rating in ["excellent", "good", "fair", "poor"]
+            ]
+
+            excellent_count = valid_quality_ratings.count("excellent")
+            good_count = valid_quality_ratings.count("good")
+            fair_count = valid_quality_ratings.count("fair")
+            poor_count = valid_quality_ratings.count("poor")
+            total_summaries = len(valid_quality_ratings)
+            error_count = quality_ratings.count("error")
+
+            # Log information about errors if any
+            if error_count > 0:
+                self.log.warning(
+                    f"Excluded {error_count} error entries from quality scoring"
+                )
+
+            # Handle case where no valid summaries are available for scoring
+            if total_summaries == 0:
+                if error_count > 0:
+                    self.log.error(
+                        "All summaries failed analysis - cannot compute quality score"
+                    )
+                    overall_rating = "error"
+                else:
+                    self.log.warning("No summaries found for analysis")
+                    overall_rating = "unknown"
+            elif excellent_count >= total_summaries * 0.7:
                 overall_rating = "excellent"
             elif (excellent_count + good_count) >= total_summaries * 0.7:
                 overall_rating = "good"
@@ -1402,13 +1464,19 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                     "use_case_fit": use_case_fit,
                     "overall_rating": {
                         "rating": overall_rating,
-                        "explanation": f"Based on {total_summaries} summaries with {excellent_count + good_count} high-quality results",
+                        "explanation": f"Based on {total_summaries} valid summaries with {excellent_count + good_count} high-quality results"
+                        + (
+                            f" ({error_count} errors excluded)"
+                            if error_count > 0
+                            else ""
+                        ),
                         "metrics": {
                             "total_summaries": total_summaries,
                             "excellent_count": excellent_count,
                             "good_count": good_count,
                             "fair_count": fair_count,
                             "poor_count": poor_count,
+                            "error_count": error_count,
                             "quality_score": (
                                 (
                                     (
@@ -1423,7 +1491,7 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                                 * 100
                                 / 3  # Convert to percentage (0-100%)
                                 if total_summaries > 0
-                                else 0
+                                else None  # Return None instead of 0 when no valid summaries
                             ),
                         },
                     },
@@ -1835,16 +1903,39 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                 self.log.error(f"Error loading evaluation file {eval_path}: {e}")
                 continue
 
-        # Create consolidated report
+        # Create consolidated report with enhanced metadata tracking
+        evaluation_files_metadata = []
+        for eval_file in evaluation_files:
+            # Find the actual evaluation file (could be in subdirectory)
+            eval_paths = list(output_base_path.rglob(eval_file))
+            if eval_paths:
+                eval_path = eval_paths[0]
+                relative_path = str(eval_path.relative_to(output_base_path))
+                evaluation_files_metadata.append(
+                    {
+                        "file_path": relative_path,
+                        "added_at": datetime.now().isoformat(),
+                        "last_modified": datetime.fromtimestamp(
+                            eval_path.stat().st_mtime
+                        ).isoformat(),
+                        "fingerprint": self.get_evaluation_fingerprint(str(eval_path)),
+                    }
+                )
+
         consolidated_report = {
             "metadata": {
                 "report_type": "consolidated_evaluations",
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "created_at": datetime.now().isoformat(),
+                "last_updated": datetime.now().isoformat(),
+                "timestamp": datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),  # Keep for backwards compatibility
                 "experiment_directory": base_experiment_dir,
                 "output_directory": output_dir,
                 "total_evaluations": len(all_evaluations),
                 "total_usage": total_usage,
                 "total_cost": total_cost,
+                "evaluation_files": evaluation_files_metadata,
             },
             "evaluations": all_evaluations,
         }
@@ -1856,6 +1947,222 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
         with open(consolidated_path, "w", encoding="utf-8") as f:
             json.dump(consolidated_report, f, indent=2)
 
+        return str(consolidated_path)
+
+    def get_evaluation_fingerprint(self, eval_file: str) -> str:
+        """Generate fingerprint for evaluation file to detect changes.
+
+        Args:
+            eval_file: Path to the evaluation file
+
+        Returns:
+            Fingerprint string combining modification time and file size
+        """
+        eval_path = Path(eval_file)
+        if not eval_path.exists():
+            return ""
+
+        # Use file modification time + file size as fingerprint
+        stat = eval_path.stat()
+        return f"{stat.st_mtime}_{stat.st_size}"
+
+    def find_changed_evaluations(self, output_dir: str) -> List[str]:
+        """Find evaluations that have changed since last consolidation.
+
+        Args:
+            output_dir: Output directory containing evaluations
+
+        Returns:
+            List of paths to changed evaluation files
+        """
+        output_base_path = Path(output_dir)
+        consolidated_path = output_base_path / "consolidated_evaluations_report.json"
+
+        if not consolidated_path.exists():
+            return [str(f) for f in output_base_path.rglob("*.eval.json")]
+
+        # Load existing fingerprints
+        try:
+            with open(consolidated_path, "r", encoding="utf-8") as f:
+                existing_report = json.load(f)
+
+            existing_fingerprints = {}
+            if "evaluation_files" in existing_report.get("metadata", {}):
+                for item in existing_report["metadata"]["evaluation_files"]:
+                    existing_fingerprints[item["file_path"]] = item.get(
+                        "fingerprint", ""
+                    )
+        except Exception as e:
+            self.log.warning(f"Error reading existing consolidated report: {e}")
+            return [str(f) for f in output_base_path.rglob("*.eval.json")]
+
+        changed_files = []
+        for eval_file in output_base_path.rglob("*.eval.json"):
+            relative_path = str(eval_file.relative_to(output_base_path))
+            current_fingerprint = self.get_evaluation_fingerprint(str(eval_file))
+
+            if (
+                relative_path not in existing_fingerprints
+                or existing_fingerprints[relative_path] != current_fingerprint
+            ):
+                changed_files.append(str(eval_file))
+
+        return changed_files
+
+    def update_consolidated_evaluation_report(
+        self,
+        output_dir: str,
+        new_eval_files: List[str] = None,
+        regenerate: bool = False,
+        base_experiment_dir: str = None,
+    ) -> str:
+        """Update consolidated report with new evaluations or regenerate completely.
+
+        Args:
+            output_dir: Output directory containing evaluations
+            new_eval_files: List of new evaluation files to add (if None, auto-detect)
+            regenerate: Force full regeneration of the report
+            base_experiment_dir: Base experiment directory path
+
+        Returns:
+            Path to the consolidated report file
+        """
+        from datetime import datetime
+
+        output_base_path = Path(output_dir)
+        consolidated_filename = "consolidated_evaluations_report.json"
+        consolidated_path = output_base_path / consolidated_filename
+
+        if regenerate or not consolidated_path.exists():
+            # Full regeneration (use existing logic)
+            evaluation_files = [f.name for f in output_base_path.rglob("*.eval.json")]
+            return self.create_consolidated_evaluation_report(
+                evaluation_files, output_dir, base_experiment_dir or output_dir
+            )
+
+        # Load existing consolidated report
+        try:
+            with open(consolidated_path, "r", encoding="utf-8") as f:
+                existing_report = json.load(f)
+        except Exception as e:
+            self.log.error(f"Error loading existing consolidated report: {e}")
+            # Fallback to full regeneration
+            evaluation_files = [f.name for f in output_base_path.rglob("*.eval.json")]
+            return self.create_consolidated_evaluation_report(
+                evaluation_files, output_dir, base_experiment_dir or output_dir
+            )
+
+        # Initialize metadata structure if missing
+        if "evaluation_files" not in existing_report.get("metadata", {}):
+            existing_report["metadata"]["evaluation_files"] = []
+
+        # Find new evaluation files
+        if not new_eval_files:
+            all_eval_files = list(output_base_path.rglob("*.eval.json"))
+            existing_files = {
+                item["file_path"]
+                for item in existing_report["metadata"]["evaluation_files"]
+            }
+            new_eval_files = [
+                str(f)
+                for f in all_eval_files
+                if str(f.relative_to(output_base_path)) not in existing_files
+            ]
+
+        if not new_eval_files:
+            self.log.info(
+                "No new evaluations found - consolidated report is up to date"
+            )
+            return str(consolidated_path)
+
+        self.log.info(
+            f"Adding {len(new_eval_files)} new evaluations to consolidated report"
+        )
+
+        # Process new files and update report
+        new_evaluations = []
+        updated_usage = existing_report["metadata"].get(
+            "total_usage", {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+        )
+        updated_cost = existing_report["metadata"].get(
+            "total_cost", {"input_cost": 0.0, "output_cost": 0.0, "total_cost": 0.0}
+        )
+
+        for eval_file in new_eval_files:
+            eval_path = Path(eval_file)
+            relative_path = str(eval_path.relative_to(output_base_path))
+
+            # Add to metadata tracking
+            existing_report["metadata"]["evaluation_files"].append(
+                {
+                    "file_path": relative_path,
+                    "added_at": datetime.now().isoformat(),
+                    "last_modified": datetime.fromtimestamp(
+                        eval_path.stat().st_mtime
+                    ).isoformat(),
+                    "fingerprint": self.get_evaluation_fingerprint(str(eval_path)),
+                }
+            )
+
+            # Load and integrate evaluation data
+            try:
+                with open(eval_path, "r", encoding="utf-8") as f:
+                    eval_data = json.load(f)
+
+                # Create evaluation summary (similar to existing logic)
+                eval_info = {
+                    "experiment_name": eval_path.stem.replace(".eval", ""),
+                    "file_path": relative_path,
+                    "timestamp": eval_data.get("metadata", {}).get("timestamp", ""),
+                    "model": eval_data.get("metadata", {}).get("model", "unknown"),
+                }
+
+                # Add overall analysis if available
+                if "overall_analysis" in eval_data:
+                    eval_info["overall_analysis"] = (
+                        eval_data["overall_analysis"][:200] + "..."
+                        if len(eval_data["overall_analysis"]) > 200
+                        else eval_data["overall_analysis"]
+                    )
+
+                # Add timing info if available
+                if eval_data.get("timing"):
+                    eval_info["avg_processing_time_seconds"] = eval_data["timing"].get(
+                        "average_per_summary_seconds",
+                        eval_data["timing"].get("total_processing_time_seconds", 0),
+                    )
+
+                new_evaluations.append(eval_info)
+
+                # Accumulate usage and cost
+                usage = eval_data.get("total_usage", {})
+                for key in updated_usage:
+                    updated_usage[key] += usage.get(key, 0)
+
+                cost = eval_data.get("total_cost", {})
+                for key in updated_cost:
+                    updated_cost[key] += cost.get(key, 0.0)
+
+            except Exception as e:
+                self.log.error(f"Error processing new evaluation file {eval_path}: {e}")
+                continue
+
+        # Update the consolidated report
+        existing_report["evaluations"].extend(new_evaluations)
+        existing_report["metadata"]["last_updated"] = datetime.now().isoformat()
+        existing_report["metadata"]["total_evaluations"] = len(
+            existing_report["evaluations"]
+        )
+        existing_report["metadata"]["total_usage"] = updated_usage
+        existing_report["metadata"]["total_cost"] = updated_cost
+
+        # Save updated report
+        with open(consolidated_path, "w", encoding="utf-8") as f:
+            json.dump(existing_report, f, indent=2)
+
+        self.log.info(
+            f"Updated consolidated report with {len(new_evaluations)} new evaluations"
+        )
         return str(consolidated_path)
 
     def _detect_evaluation_type(self, models_data: List[Dict]) -> str:
@@ -1936,6 +2243,7 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                     fair_count += 1
                 elif overall_quality == "poor":
                     poor_count += 1
+                # Note: "error" and other invalid ratings are excluded from ranking
 
             total_summaries = excellent_count + good_count + fair_count + poor_count
             if total_summaries > 0:
@@ -1980,6 +2288,7 @@ Topics Discussed: {groundtruth_summaries.get('topics_discussed', [])}
                     fair_count += 1
                 elif overall_quality == "poor":
                     poor_count += 1
+                # Note: "error" and other invalid ratings are excluded from metrics
 
             total_summaries = excellent_count + good_count + fair_count + poor_count
             excellent_rate = (
@@ -2199,8 +2508,10 @@ Performance ranking: {ranking_text}
                     quality_score = 0.0
                     overall_rating_metrics = overall_rating.get("metrics", {})
                     if overall_rating_metrics:
-                        # Use existing quality_score if available
+                        # Use existing quality_score if available (could be None for error cases)
                         quality_score = overall_rating_metrics.get("quality_score", 0.0)
+                        if quality_score is None:
+                            quality_score = 0.0  # Treat None as 0 for ranking purposes
                     else:
                         # Calculate from per_question data if metrics not available
                         excellent_count = 0
@@ -2219,6 +2530,7 @@ Performance ranking: {ranking_text}
                                 fair_count += 1
                             elif overall_quality == "poor":
                                 poor_count += 1
+                            # Note: "error" and other invalid ratings are excluded from quality score calculation
 
                         total_summaries = (
                             excellent_count + good_count + fair_count + poor_count

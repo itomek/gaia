@@ -66,9 +66,15 @@ class TestSummarizer:
 
             print(f"🔧 Command: {' '.join(cmd)}")
 
-            # Execute the command
+            # Execute the command with environment variables
+            env = os.environ.copy()
+            env["PYTHONUTF8"] = "1"  # Ensure UTF-8 encoding on Windows
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=120  # 2 minute timeout
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env=env,  # 2 minute timeout
             )
 
             print(f"📤 Return code: {result.returncode}")
@@ -193,9 +199,15 @@ class TestSummarizer:
 
             print(f"🔧 Command: {' '.join(cmd)}")
 
-            # Execute the command
+            # Execute the command with environment variables
+            env = os.environ.copy()
+            env["PYTHONUTF8"] = "1"  # Ensure UTF-8 encoding on Windows
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=120  # 2 minute timeout
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                env=env,  # 2 minute timeout
             )
 
             print(f"📤 Return code: {result.returncode}")
@@ -316,12 +328,15 @@ class TestSummarizer:
 
             print(f"🔧 Command: {' '.join(cmd)}")
 
-            # Execute the command
+            # Execute the command with environment variables
+            env = os.environ.copy()
+            env["PYTHONUTF8"] = "1"  # Ensure UTF-8 encoding on Windows
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=180,  # 3 minute timeout for multiple styles
+                env=env,
             )
 
             print(f"📤 Return code: {result.returncode}")

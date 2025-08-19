@@ -1896,9 +1896,9 @@ Examples:
         help="Create configuration from groundtruth file metadata (provide groundtruth file path)",
     )
     parser.add_argument(
-        "--skip-existing",
+        "--force",
         action="store_true",
-        help="Skip experiments that have already been generated in the output folder",
+        help="Force regeneration of all experiments, even if they already exist (default: skip existing)",
     )
 
     args = parser.parse_args()
@@ -1941,12 +1941,14 @@ Examples:
 
     # Run batch experiments
     runner = BatchExperimentRunner(args.config)
+    # By default skip existing experiments, unless --force is specified
+    skip_existing = not args.force
     result_files, skipped_count = runner.run_all_experiments(
         input_path=args.input,
         output_dir=args.output_dir,
         delay_seconds=args.delay,
         queries_source=args.queries_source,
-        skip_existing=args.skip_existing,
+        skip_existing=skip_existing,
     )
 
     # Report results with skip information

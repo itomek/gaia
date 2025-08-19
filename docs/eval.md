@@ -138,8 +138,8 @@ gaia groundtruth -d ./test_data/meetings --use-case summarization -o ./groundtru
 # Step 3: Run experiments with multiple models
 gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
 
-# Optional: If interrupted, resume with --skip-existing to avoid regenerating completed experiments
-# gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments --skip-existing
+# Optional: If interrupted, resume (automatically skips completed experiments)
+# gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
 
 # Step 4: Evaluate results and calculate scores
 gaia eval -d ./experiments -o ./evaluation
@@ -415,13 +415,16 @@ gaia batch-experiment -c experiment_config.json -i ./groundtruth/consolidated_su
 # Alternative: Use test data directly (requires -g flag during eval)
 # gaia batch-experiment -c experiment_config.json -i ./test_data -o ./experiments
 
-# Skip experiments that have already been generated (useful for resuming interrupted runs)
-gaia batch-experiment -c experiment_config.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments --skip-existing
+# Default behavior: skip experiments that have already been generated 
+gaia batch-experiment -c experiment_config.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments
+
+# Force regeneration of ALL experiments (useful for testing configuration changes)
+gaia batch-experiment -c experiment_config.json -i ./groundtruth/consolidated_summarization_groundtruth.json -o ./experiments --force
 ```
 
 #### Resuming Interrupted Experiments
 
-The `--skip-existing` flag allows you to resume batch experiments without regenerating already completed experiments. This is particularly useful when:
+**Default Behavior**: Batch experiments automatically skip already completed experiments to avoid redundant processing. This is particularly useful when:
 
 - **API Rate Limits**: Your batch run was interrupted due to rate limiting
 - **System Interruptions**: Power outage, network issues, or manual cancellation
@@ -439,8 +442,8 @@ The `--skip-existing` flag allows you to resume batch experiments without regene
 # Initial run (gets interrupted after 3 of 5 experiments)
 gaia batch-experiment -c config.json -i ./data -o ./experiments
 
-# Resume with skip-existing (only runs the remaining 2 experiments)
-gaia batch-experiment -c config.json -i ./data -o ./experiments --skip-existing
+# Resume run (automatically skips existing 3, only runs remaining 2 experiments)
+gaia batch-experiment -c config.json -i ./data -o ./experiments
 # Output: "Completed 2 new experiments, skipped 3 existing"
 ```
 
@@ -483,9 +486,106 @@ Analyze experiment results and generate reports.
 gaia eval -d ./experiments -o ./evaluation
 gaia report -d ./evaluation -o ./reports/report.md
 
+# Default behavior: skip existing evaluations automatically
+gaia eval -d ./experiments -o ./evaluation
+
+# Force regeneration of ALL evaluations (overrides default skip behavior)
+gaia eval -d ./experiments -o ./evaluation --force
+
+# Update consolidated report incrementally with new evaluations only
+gaia eval -d ./experiments -o ./evaluation --incremental-update
+
+# Force regeneration of consolidated report (useful after manual changes)
+gaia eval -d ./experiments -o ./evaluation --regenerate-report
+
 # Launch interactive web visualizer for comparing results
 gaia visualize --experiments-dir ./results --evaluations-dir ./evaluation
 ```
+
+#### Skip Existing Evaluations and Incremental Updates
+
+The evaluation system supports skipping existing evaluations and incremental report consolidation to improve efficiency and reduce redundant processing.
+
+**CLI Options:**
+
+- `--force`: Force regeneration of all evaluations, even if they already exist (overrides default skip behavior)
+- `--incremental-update`: Update consolidated report incrementally with only new evaluations  
+- `--regenerate-report`: Force complete regeneration of the consolidated report
+
+**Default Behavior:** Evaluations automatically skip existing files to avoid redundant processing and API costs.
+
+**Usage Scenarios:**
+
+**Resume Interrupted Evaluation Run:**
+```bash
+# Default behavior: automatically skip any evaluations that already exist
+gaia eval -d ./experiments -o ./evaluation
+```
+
+**Add New Experiments Without Re-evaluating Existing Ones:**
+```bash
+# Default behavior: only evaluate new experiments, skip existing ones, and update consolidated report
+gaia eval -d ./experiments -o ./evaluation --incremental-update
+```
+
+**Force Re-evaluation of All Files:**
+```bash
+# Force regeneration of ALL evaluations (useful for testing configuration changes)
+gaia eval -d ./experiments -o ./evaluation --force
+```
+
+**Update Consolidated Report After Manual Changes:**
+```bash
+# Force regeneration of the entire consolidated report
+gaia eval -d ./experiments -o ./evaluation --regenerate-report
+```
+
+**Development/Testing Workflow:**
+```bash
+# Step 1: Run initial evaluation (skips existing files automatically)
+gaia eval -d ./experiments -o ./evaluation
+
+# Step 2: Add new experiments and only evaluate those (default behavior)
+gaia eval -d ./experiments -o ./evaluation
+
+# Step 3: Update consolidated report with new results
+gaia eval -d ./experiments -o ./evaluation --incremental-update
+```
+
+**Benefits:**
+- **Performance**: Skip redundant evaluations, avoiding expensive API calls
+- **Reliability**: Resume interrupted runs without losing progress  
+- **Efficiency**: Incremental updates process only new files vs regenerating entire reports
+- **Development Speed**: Faster iteration during experiment development
+
+**Enhanced Consolidated Report Structure:**
+
+The system maintains backwards compatibility while adding enhanced metadata tracking:
+
+```json
+{
+  "metadata": {
+    "report_type": "consolidated_evaluations",
+    "created_at": "2025-08-18T10:30:00",
+    "last_updated": "2025-08-18T11:45:00", 
+    "total_evaluations": 150,
+    "evaluation_files": [
+      {
+        "file_path": "Claude-Sonnet-Basic-Summary.experiment.eval.json",
+        "added_at": "2025-08-18T10:30:00", 
+        "last_modified": "2025-08-15T11:41:42",
+        "fingerprint": "1692179502.5_4532"
+      }
+    ]
+  },
+  "evaluations": [...]
+}
+```
+
+**Detection Logic:**
+- **Skip Logic**: Checks for existing `.eval.json` files in both flat and hierarchical structures
+- **Change Detection**: Uses file modification time + file size as fingerprint
+- **Incremental Updates**: Only processes files not present in consolidated report metadata
 
 #### Evaluation Options
 
@@ -766,7 +866,7 @@ lemonade-server serve
 - Use `--count-per-type 1` for initial testing
 - Monitor token usage and API costs during generation
 - Parallelize experiments when testing multiple models
-- Use `--skip-existing` to resume interrupted batch experiments without regenerating completed ones
+- Default behavior automatically skips existing experiments to avoid redundant processing
 
 ### Timing Metrics
 
