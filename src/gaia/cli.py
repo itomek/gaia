@@ -11,9 +11,22 @@ import os
 
 from gaia.logger import get_logger
 from gaia.version import version
-from gaia.agents.Blender.agent import BlenderAgent
-from gaia.mcp.blender_mcp_client import MCPClient
-from gaia.llm.lemonade_client import LemonadeClient, LemonadeClientError
+
+# Optional imports
+try:
+    from gaia.agents.Blender.agent import BlenderAgent
+    from gaia.mcp.blender_mcp_client import MCPClient
+
+    BLENDER_AVAILABLE = True
+except ImportError:
+    BlenderAgent = None
+    MCPClient = None
+    BLENDER_AVAILABLE = False
+from gaia.llm.lemonade_client import (
+    LemonadeClient,
+    LemonadeClientError,
+    DEFAULT_MODEL_NAME,
+)
 from gaia.llm.llm_client import LLMClient
 
 # Set debug level for the logger
@@ -128,7 +141,7 @@ class GaiaCliClient:
 
     def __init__(
         self,
-        model="Llama-3.2-3B-Instruct-Hybrid",
+        model=DEFAULT_MODEL_NAME,
         max_tokens=512,
         show_stats=False,
         logging_level="INFO",
@@ -200,7 +213,7 @@ class GaiaCliClient:
             if use_interactive:
                 # Interactive mode using ChatSDK
                 config = ChatConfig(
-                    model=model or "Llama-3.2-3B-Instruct-Hybrid",
+                    model=model or DEFAULT_MODEL_NAME,
                     max_tokens=max_tokens,
                     system_prompt=system_prompt,
                     assistant_name=assistant_name or "assistant",
@@ -209,17 +222,27 @@ class GaiaCliClient:
                 chat = ChatSDK(config)
                 asyncio.run(chat.start_interactive_session())
             else:
-                # Single message mode
+                # Single message mode with streaming
                 config = ChatConfig(
-                    model=model or "Llama-3.2-3B-Instruct-Hybrid",
+                    model=model or DEFAULT_MODEL_NAME,
                     max_tokens=max_tokens,
                     system_prompt=system_prompt,
                     assistant_name=assistant_name or "assistant",
-                    show_stats=False,
+                    show_stats=stats,
                 )
                 chat = ChatSDK(config)
-                response = chat.send(message)
-                return response.text
+                full_response = ""
+                for chunk in chat.send_stream(message):
+                    if not chunk.is_complete:
+                        print(chunk.text, end="", flush=True)
+                        full_response += chunk.text
+                    else:
+                        # Show stats if configured and available
+                        if stats and chunk.stats:
+                            print()  # Add newline before stats
+                            chat.display_stats(chunk.stats)
+                print()  # Add final newline
+                return full_response
 
         except Exception as e:
             # Check if it's a connection error and provide helpful message
@@ -268,7 +291,7 @@ async def async_main(action, **kwargs):
 
         # Create SDK configuration
         config = ChatConfig(
-            model=kwargs.get("model", "Llama-3.2-3B-Instruct-Hybrid"),
+            model=kwargs.get("model", DEFAULT_MODEL_NAME),
             max_tokens=kwargs.get("max_tokens", 512),
             system_prompt=kwargs.get("system_prompt"),
             assistant_name=kwargs.get("assistant_name", "assistant"),
@@ -280,13 +303,16 @@ async def async_main(action, **kwargs):
 
         message = kwargs.get("message")
         if message:
-            # Single message mode
-            response = chat_sdk.send(message)
-            print(response.text)
-
-            # Show stats if requested
-            if kwargs.get("stats", False):
-                chat_sdk.display_stats(response.stats)
+            # Single message mode with streaming
+            for chunk in chat_sdk.send_stream(message):
+                if not chunk.is_complete:
+                    print(chunk.text, end="", flush=True)
+                else:
+                    # Show stats if requested
+                    if kwargs.get("stats", False) and chunk.stats:
+                        print()  # Add newline before stats
+                        chat_sdk.display_stats(chunk.stats)
+            print()  # Add final newline
         else:
             # Interactive mode using ChatSDK
             await chat_sdk.start_interactive_session()
@@ -386,8 +412,8 @@ def main():
 
     prompt_parser.add_argument(
         "--model",
-        default="Llama-3.2-3B-Instruct-Hybrid",
-        help="Model to use for the agent (default: Llama-3.2-3B-Instruct-Hybrid)",
+        default=DEFAULT_MODEL_NAME,
+        help=f"Model to use for the agent (default: {DEFAULT_MODEL_NAME})",
     )
     prompt_parser.add_argument(
         "--max-tokens",
@@ -413,8 +439,8 @@ def main():
     )
     chat_parser.add_argument(
         "--model",
-        default="Llama-3.2-3B-Instruct-Hybrid",
-        help="Model name to use (default: Llama-3.2-3B-Instruct-Hybrid)",
+        default=DEFAULT_MODEL_NAME,
+        help=f"Model name to use (default: {DEFAULT_MODEL_NAME})",
     )
     chat_parser.add_argument(
         "--max-tokens",
@@ -438,8 +464,8 @@ def main():
 
     talk_parser.add_argument(
         "--model",
-        default="Llama-3.2-3B-Instruct-Hybrid",
-        help="Model to use for the agent (default: Llama-3.2-3B-Instruct-Hybrid)",
+        default=DEFAULT_MODEL_NAME,
+        help=f"Model to use for the agent (default: {DEFAULT_MODEL_NAME})",
     )
     talk_parser.add_argument(
         "--max-tokens",
@@ -510,8 +536,8 @@ def main():
     summarize_parser.add_argument(
         "-m",
         "--model",
-        default="Llama-3.2-3B-Instruct-Hybrid",
-        help="LLM model to use (default: Llama-3.2-3B-Instruct-Hybrid). Use gpt-4 for OpenAI",
+        default=DEFAULT_MODEL_NAME,
+        help=f"LLM model to use (default: {DEFAULT_MODEL_NAME}). Use gpt-4 for OpenAI",
     )
     summarize_parser.add_argument(
         "--styles",
@@ -576,8 +602,8 @@ def main():
     )
     blender_parser.add_argument(
         "--model",
-        default="Llama-3.2-3B-Instruct-Hybrid",
-        help="Model ID to use (default: Llama-3.2-3B-Instruct-Hybrid)",
+        default=DEFAULT_MODEL_NAME,
+        help=f"Model ID to use (default: {DEFAULT_MODEL_NAME})",
     )
     blender_parser.add_argument(
         "--example",
@@ -3175,6 +3201,12 @@ def handle_blender_command(args):
         args: Parsed command line arguments for the blender command
     """
     log = get_logger(__name__)
+
+    # Check if Blender components are available
+    if not BLENDER_AVAILABLE:
+        print("❌ Error: Blender agent components are not available")
+        print("Install blender dependencies with: pip install .[blender]")
+        sys.exit(1)
 
     # Check if Lemonade server is running
     log.info("Checking Lemonade server connectivity...")

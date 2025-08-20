@@ -303,7 +303,7 @@ class AudioClient:
                 self.log.debug("TTS initialized successfully")
             except Exception as e:
                 raise RuntimeError(
-                    f"Failed to initialize TTS:\n{e}\nYou can also use --no-tts option to disable TTS"
+                    f"Failed to initialize TTS:\n{e}\nInstall talk dependencies with: pip install .[talk]\nYou can also use --no-tts option to disable TTS"
                 )
 
     async def speak_text(self, text: str) -> None:

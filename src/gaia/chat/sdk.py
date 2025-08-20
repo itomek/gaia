@@ -13,6 +13,7 @@ from collections import deque
 
 from gaia.logger import get_logger
 from gaia.llm.llm_client import LLMClient
+from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
 from gaia.chat.prompts import Prompts
 
 
@@ -20,7 +21,7 @@ from gaia.chat.prompts import Prompts
 class ChatConfig:
     """Configuration for ChatSDK."""
 
-    model: str = "Llama-3.2-3B-Instruct-Hybrid"
+    model: str = DEFAULT_MODEL_NAME
     max_tokens: int = 512
     system_prompt: Optional[str] = None
     max_history_length: int = 4  # Number of conversation pairs to keep
@@ -52,7 +53,7 @@ class ChatSDK:
         from gaia.chat.sdk import ChatSDK, ChatConfig
 
         # Create SDK instance
-        config = ChatConfig(model="Llama-3.2-3B-Instruct-Hybrid", show_stats=True)
+        config = ChatConfig(model=DEFAULT_MODEL_NAME, show_stats=True)
         chat = ChatSDK(config)
 
         # Single message
@@ -441,11 +442,11 @@ class SimpleChat:
 
         Args:
             system_prompt: Optional system prompt for the AI
-            model: Model to use (defaults to Llama-3.2-3B-Instruct-Hybrid)
+            model: Model to use (defaults to DEFAULT_MODEL_NAME)
             assistant_name: Name to use for the assistant (defaults to "assistant")
         """
         config = ChatConfig(
-            model=model or "Llama-3.2-3B-Instruct-Hybrid",
+            model=model or DEFAULT_MODEL_NAME,
             system_prompt=system_prompt,
             assistant_name=assistant_name or "gaia",
             show_stats=False,
@@ -604,7 +605,7 @@ def quick_chat(
         AI response
     """
     config = ChatConfig(
-        model=model or "Llama-3.2-3B-Instruct-Hybrid",
+        model=model or DEFAULT_MODEL_NAME,
         system_prompt=system_prompt,
         assistant_name=assistant_name or "gaia",
         show_stats=False,
@@ -635,7 +636,7 @@ def quick_chat_with_memory(
         List of AI responses
     """
     config = ChatConfig(
-        model=model or "Llama-3.2-3B-Instruct-Hybrid",
+        model=model or DEFAULT_MODEL_NAME,
         system_prompt=system_prompt,
         assistant_name=assistant_name or "gaia",
         show_stats=False,

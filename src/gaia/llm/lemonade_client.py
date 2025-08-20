@@ -42,8 +42,8 @@ LEMONADE_API_VERSION = "v1"
 # Model Configuration Defaults
 # =========================================================================
 # Default model for text generation - lightweight CPU model for testing
-# DEFAULT_MODEL_NAME = "Qwen2.5-0.5B-Instruct-CPU"
-DEFAULT_MODEL_NAME = "Llama-3.2-3B-Instruct-Hybrid"
+DEFAULT_MODEL_NAME = "Qwen2.5-0.5B-Instruct-CPU"
+# DEFAULT_MODEL_NAME = "Llama-3.2-3B-Instruct-Hybrid"
 
 # =========================================================================
 # Request Configuration Defaults

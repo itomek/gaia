@@ -13,6 +13,10 @@ import tempfile
 import time
 from pathlib import Path
 
+# Import after sys.path.insert to get correct import
+sys.path.insert(0, "src")
+from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
+
 
 class TestSummarizer:
     """Integration tests for the summarizer application"""
@@ -25,7 +29,7 @@ class TestSummarizer:
     @pytest.fixture
     def test_model(self):
         """Get test model from environment or use default"""
-        return os.environ.get("GAIA_TEST_MODEL", "Llama-3.2-3B-Instruct-Hybrid")
+        return os.environ.get("GAIA_TEST_MODEL", DEFAULT_MODEL_NAME)
 
     def test_summarize_transcript(self, data_txt_path, test_model):
         """Integration test: summarize a real meeting transcript via CLI"""

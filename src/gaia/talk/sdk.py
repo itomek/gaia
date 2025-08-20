@@ -15,6 +15,7 @@ from enum import Enum
 from gaia.audio.audio_client import AudioClient
 from gaia.logger import get_logger
 from gaia.chat.sdk import ChatSDK, ChatConfig
+from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
 
 
 class TalkMode(Enum):
@@ -37,7 +38,7 @@ class TalkConfig:
     mode: TalkMode = TalkMode.VOICE_AND_TEXT
 
     # Chat settings (from ChatConfig)
-    model: str = "Llama-3.2-3B-Instruct-Hybrid"
+    model: str = DEFAULT_MODEL_NAME
     max_tokens: int = 512
     system_prompt: Optional[str] = None
     max_history_length: int = 4  # Number of conversation pairs to keep

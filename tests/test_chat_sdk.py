@@ -22,6 +22,7 @@ from gaia.chat.sdk import (
     quick_chat,
     quick_chat_with_memory,
 )
+from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
 
 
 class TestChatSDKIntegration(unittest.TestCase):
@@ -35,7 +36,7 @@ class TestChatSDKIntegration(unittest.TestCase):
         print(f"{'='*60}")
 
         cls.server_url = "http://localhost:8000"
-        cls.model = "Llama-3.2-3B-Instruct-Hybrid"
+        cls.model = DEFAULT_MODEL_NAME
         cls.timeout = 30  # seconds
 
         # Verify server is running

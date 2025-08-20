@@ -8,6 +8,9 @@ import requests
 from dotenv import load_dotenv
 from openai import OpenAI
 
+# Local imports
+from .lemonade_client import DEFAULT_MODEL_NAME
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,7 +41,7 @@ class LLMClient:
             self.client = OpenAI(base_url=base_url, api_key="None")
             self.endpoint = "completions"
             # self.endpoint = "responses" TODO: Put back once new Lemonade version is released.
-            self.default_model = "Llama-3.2-3B-Instruct-Hybrid"
+            self.default_model = DEFAULT_MODEL_NAME
             logger.debug(f"Using local LLM with model={self.default_model}")
         else:
             api_key = os.getenv("OPENAI_API_KEY")

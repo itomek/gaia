@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from gaia.logger import get_logger
 from gaia.chat.sdk import ChatSDK, ChatConfig
 from gaia.llm.llm_client import LLMClient
+from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
 
 
 def validate_email_address(email: str) -> bool:
@@ -60,7 +61,7 @@ SYSTEM_PROMPTS = {
 class SummaryConfig:
     """Configuration for summarization"""
 
-    model: str = "Llama-3.2-3B-Instruct-Hybrid"
+    model: str = DEFAULT_MODEL_NAME
     max_tokens: int = 1024
     input_type: Literal["transcript", "email", "auto"] = "auto"
     styles: List[str] = None

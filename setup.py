@@ -34,6 +34,7 @@ setup(
         "accelerate",
         "python-dotenv",
         "aiohttp",
+        "rich",
     ],
     extras_require={
         "audio": [
@@ -42,7 +43,6 @@ setup(
             "torchaudio",
         ],
         "blender": [
-            "rich",
             "bpy",
         ],
         "dev": [

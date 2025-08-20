@@ -21,6 +21,7 @@ from gaia.chat.sdk import (
     quick_chat,
     quick_chat_with_memory,
 )
+from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
 
 
 async def demo_basic_chat():
@@ -28,7 +29,7 @@ async def demo_basic_chat():
     print("=== Basic Chat Demo ===")
 
     config = ChatConfig(
-        model="Llama-3.2-3B-Instruct-Hybrid",
+        model=DEFAULT_MODEL_NAME,
         assistant_name="Gaia",  # Custom assistant name
         show_stats=True,
         max_history_length=3,  # Keep 3 conversation pairs
@@ -61,7 +62,7 @@ async def demo_streaming_chat():
     print("\n=== Streaming Chat Demo ===")
 
     config = ChatConfig(
-        model="Llama-3.2-3B-Instruct-Hybrid",
+        model=DEFAULT_MODEL_NAME,
         assistant_name="StreamBot",
         show_stats=True,
     )
@@ -179,7 +180,7 @@ async def demo_configuration():
 
     # Create chat with custom config
     config = ChatConfig(
-        model="Llama-3.2-3B-Instruct-Hybrid",
+        model=DEFAULT_MODEL_NAME,
         system_prompt="You are a helpful assistant that always responds enthusiastically!",
         max_history_length=2,
         show_stats=True,
@@ -218,7 +219,7 @@ Basic Integration:
 from gaia.chat.sdk import ChatSDK, ChatConfig
 
 # Create SDK instance
-config = ChatConfig(model="Llama-3.2-3B-Instruct-Hybrid", show_stats=True)
+config = ChatConfig(model=DEFAULT_MODEL_NAME, show_stats=True)
 chat = ChatSDK(config)
 
 # Send message with conversation memory
@@ -236,7 +237,7 @@ from gaia.chat.sdk import ChatSDK, ChatConfig
 
 # Create SDK with custom assistant name
 config = ChatConfig(
-    model="Llama-3.2-3B-Instruct-Hybrid",
+    model=DEFAULT_MODEL_NAME,
     assistant_name="Gaia"
 )
 chat = ChatSDK(config)
@@ -337,7 +338,7 @@ Demo Types:
 
     # Configuration options for demos
     parser.add_argument(
-        "--model", default="Llama-3.2-3B-Instruct-Hybrid", help="Model to use for demos"
+        "--model", default=DEFAULT_MODEL_NAME, help="Model to use for demos"
     )
     parser.add_argument("--system-prompt", help="Custom system prompt for the AI")
     parser.add_argument(
@@ -414,7 +415,7 @@ def cli_main(
     elif message:
         # Use SimpleChat for backward compatibility
         config = ChatConfig(
-            model=model or "Llama-3.2-3B-Instruct-Hybrid",
+            model=model or DEFAULT_MODEL_NAME,
             max_tokens=max_tokens,
             system_prompt=system_prompt,
         )
