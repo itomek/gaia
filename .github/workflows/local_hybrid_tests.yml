@@ -266,8 +266,11 @@ jobs:
                   }
               }
 
-              # List available models after server is ready
+              # Pull the model now that server is running
               if ($serverReady) {
+                  Write-Host "`n=== Pulling Llama-3.2-3B-Instruct-Hybrid model ==="
+                  lemonade-server pull Llama-3.2-3B-Instruct-Hybrid
+
                   Write-Host "`n=== Checking Available Models ==="
                   try {
                       $modelsResponse = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/models" -Method GET -TimeoutSec 10

@@ -144,6 +144,10 @@ jobs:
 
           Write-Host "Lemonade server started successfully"
 
+          # Pull the model now that server is running
+          Write-Host "Pulling Llama-3.2-3B-Instruct-Hybrid model..."
+          lemonade-server pull Llama-3.2-3B-Instruct-Hybrid
+
       - name: Run Unit Tests (Direct CMD - Full Error Visibility)
         shell: cmd
         env:

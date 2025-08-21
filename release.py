@@ -90,6 +90,8 @@ def main():
     exclude = [
         f".github{os.path.sep}workflows{os.path.sep}local_hybrid_tests.yml",
         f".github{os.path.sep}workflows{os.path.sep}test_installer_npu.yml",
+        f".github{os.path.sep}workflows{os.path.sep}test_chat_sdk.yml",
+        f".github{os.path.sep}workflows{os.path.sep}test_gaia_cli_windows.yml",
         f"docs{os.path.sep}nimbys.md",
         f"nda",  # Added the NDA directory itself
         f"notebooks",
