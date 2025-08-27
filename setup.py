@@ -72,6 +72,7 @@ setup(
             "bs4",
             "scikit-learn",
             "numpy",
+            "pypdf",
         ],
         "talk":[
             "pyaudio",
