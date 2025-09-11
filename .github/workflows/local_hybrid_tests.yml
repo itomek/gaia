@@ -10,6 +10,7 @@ on:
       - "src/**"
       - "installer/**"
       - "tests/**"
+      - "setup.py"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -17,6 +18,7 @@ on:
       - "src/**"
       - "installer/**"
       - "tests/**"
+      - "setup.py"
   merge_group:
   workflow_dispatch:
 
