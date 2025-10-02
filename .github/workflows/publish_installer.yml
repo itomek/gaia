@@ -26,10 +26,14 @@ jobs:
   build-installer:
     uses: ./.github/workflows/build_installer.yml
 
+  build-electron-apps:
+    uses: ./.github/workflows/build-electron-apps.yml
+    if: startsWith(github.ref, 'refs/tags/v')
+
   publish-installer:
     runs-on: windows-latest
-    needs: build-installer
-    if: always() && needs.build-installer.result == 'success'
+    needs: [build-installer, build-electron-apps]
+    if: always() && needs.build-installer.result == 'success' && (needs.build-electron-apps.result == 'success' || needs.build-electron-apps.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -59,11 +63,32 @@ jobs:
           name: gaia-windows-installer-${{ needs.build-installer.outputs.VERSION }}-${{ needs.build-installer.outputs.COMMIT_HASH }}
           path: installer
 
+      - name: Download Electron App Artifacts
+        if: needs.build-electron-apps.outputs.has_apps == 'true'
+        run: |
+          # Parse the app matrix and download each artifact
+          $apps = '${{ needs.build-electron-apps.outputs.matrix }}' | ConvertFrom-Json
+
+          foreach ($app in $apps.app) {
+            $appName = $app.name
+            Write-Host "Downloading artifacts for $appName..."
+
+            # Download Windows artifact
+            $windowsArtifact = "${appName}-windows-${{ github.sha }}"
+            gh run download ${{ github.run_id }} -n $windowsArtifact -D installer 2>$null || Write-Host "No Windows artifact for $appName"
+
+            # Download Linux artifact
+            $linuxArtifact = "${appName}-linux-${{ github.sha }}"
+            gh run download ${{ github.run_id }} -n $linuxArtifact -D installer 2>$null || Write-Host "No Linux artifact for $appName"
+          }
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: installer/gaia-windows-setup.exe
+          files: installer/*
           body: |
             ## What's Changed
             ${{ steps.release_notes.outputs.CHANGELOG }}

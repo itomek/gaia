@@ -217,7 +217,7 @@ gaia talk --audio-device-index 1 --whisper-model-size medium
 
 GAIA provides desktop applications with graphical interfaces for interacting with AI capabilities. These applications are built with Electron and provide native desktop experiences.
 
-For available applications and setup instructions, see the [Apps Documentation](./apps.md).
+For available applications and setup instructions, see the [Apps Documentation](./apps/).
 
 **Platform Availability**: Windows and Linux
 
