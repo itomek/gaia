@@ -63,26 +63,23 @@ jobs:
           name: gaia-windows-installer-${{ needs.build-installer.outputs.VERSION }}-${{ needs.build-installer.outputs.COMMIT_HASH }}
           path: installer
 
-      - name: Download Electron App Artifacts
+      - name: Download Electron App Artifacts (Windows)
         if: needs.build-electron-apps.outputs.has_apps == 'true'
-        run: |
-          # Parse the app matrix and download each artifact
-          $apps = '${{ needs.build-electron-apps.outputs.matrix }}' | ConvertFrom-Json
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-windows-${{ github.sha }}"
+          path: installer
+          merge-multiple: true
+        continue-on-error: true
 
-          foreach ($app in $apps.app) {
-            $appName = $app.name
-            Write-Host "Downloading artifacts for $appName..."
-
-            # Download Windows artifact
-            $windowsArtifact = "${appName}-windows-${{ github.sha }}"
-            gh run download ${{ github.run_id }} -n $windowsArtifact -D installer 2>$null || Write-Host "No Windows artifact for $appName"
-
-            # Download Linux artifact
-            $linuxArtifact = "${appName}-linux-${{ github.sha }}"
-            gh run download ${{ github.run_id }} -n $linuxArtifact -D installer 2>$null || Write-Host "No Linux artifact for $appName"
-          }
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Download Electron App Artifacts (Linux)
+        if: needs.build-electron-apps.outputs.has_apps == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-linux-${{ github.sha }}"
+          path: installer
+          merge-multiple: true
+        continue-on-error: true
 
       - name: Release
         uses: softprops/action-gh-release@v2
