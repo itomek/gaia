@@ -61,14 +61,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gaia-windows-installer-${{ needs.build-installer.outputs.VERSION }}-${{ needs.build-installer.outputs.COMMIT_HASH }}
-          path: installer
+          path: release-assets
 
       - name: Download Electron App Artifacts (Windows)
         if: needs.build-electron-apps.outputs.has_apps == 'true'
         uses: actions/download-artifact@v4
         with:
           pattern: "*-windows-${{ github.sha }}"
-          path: installer
+          path: release-assets
           merge-multiple: true
         continue-on-error: true
 
@@ -77,7 +77,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: "*-linux-${{ github.sha }}"
-          path: installer
+          path: release-assets
           merge-multiple: true
         continue-on-error: true
 
@@ -85,7 +85,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: installer/*
+          files: release-assets/*
           body: |
             ## What's Changed
             ${{ steps.release_notes.outputs.CHANGELOG }}
