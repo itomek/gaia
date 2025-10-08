@@ -1,6 +1,8 @@
 {
   "permissions": {
     "allow": [
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
       "Bash(gh pr list:*)",
       "Bash(gh release view:*)",
       "Bash(gh release list:*)",
@@ -28,7 +30,7 @@
       "mcp__memory__search_nodes",
       "mcp__sequential-thinking__sequentialthinking",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)"      
     ],
     "deny": []
   }
