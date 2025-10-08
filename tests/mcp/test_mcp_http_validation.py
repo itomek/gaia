@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 """
 Comprehensive test suite for HTTP-native MCP system validation.
 Tests all endpoints, protocols, and integration points.

@@ -11,6 +11,7 @@
       "Bash(git log:*)",
       "Bash(git ls-tree:*)",
       "Bash(grep:*)",
+      "Bash(while read file)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
       "mcp__github-gaia__get_issue",
@@ -22,13 +23,12 @@
       "mcp__github-gaia__get_pull_request_files",
       "mcp__perplexity-ask__perplexity_ask",
       "mcp__memory__add_observations",
-      "mcp__memory__read_graph",
       "mcp__memory__create_entities",
+      "mcp__memory__read_graph",
       "mcp__memory__search_nodes",
       "mcp__sequential-thinking__sequentialthinking",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(powershell:*)"
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
   }

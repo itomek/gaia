@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 """
 Simple LLM App using the existing LLMClient wrapper to call Lemonade localhost backend.
 """

@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 """
 Simple test to validate the MCP HTTP bridge is working.
 Run this after starting the bridge with: gaia mcp start

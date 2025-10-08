@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 # Requirement: `pip install black`
 # 
 # This script releases the approved sections of aigdat/gaia to the open source repo.

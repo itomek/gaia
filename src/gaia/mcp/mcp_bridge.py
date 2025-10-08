@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+
 """
 GAIA MCP Bridge - HTTP Native Implementation
 No WebSockets, just clean HTTP + JSON-RPC for maximum compatibility
