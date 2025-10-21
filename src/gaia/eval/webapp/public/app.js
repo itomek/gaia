@@ -2048,11 +2048,14 @@ class EvaluationVisualizer {
                 // Only count if this is a new unique model (avoid double counting)
                 if (!uniqueModelNames.has(modelName)) {
                     uniqueModelNames.add(modelName);
-                    
-                    // Count cloud vs local models using tested_model_inference field
+
+                    // Count cloud vs local models
+                    // Support both new format (tested_model_inference) and old format (inference from name)
                     const isCloud = evalData.tested_model_inference === 'cloud' ||
                                    evalData.tested_model_type === 'anthropic' ||
-                                   modelName.includes('Claude');
+                                   modelName.toLowerCase().includes('claude') ||
+                                   modelName.toLowerCase().includes('gpt-4') ||
+                                   modelName.toLowerCase().includes('gemini');
                     if (isCloud) {
                         cloudCount++;
                     } else {
