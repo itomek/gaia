@@ -1108,8 +1108,8 @@ Examples:
         "-o",
         "--output-file",
         type=str,
-        default="LLM_RAG_Evaluation_Report.md",
-        help="Output filename for the markdown report (default: LLM_RAG_Evaluation_Report.md)",
+        default="LLM_Evaluation_Report.md",
+        help="Output filename for the markdown report (default: LLM_Evaluation_Report.md)",
     )
     report_parser.add_argument(
         "--summary-only",

@@ -25,7 +25,8 @@ class EvaluationVisualizer {
         }
         
         // Check if file_path indicates it's in a subdirectory (meetings/ or emails/)
-        if (evalData.file_path && evalData.file_path.includes('/')) {
+        // Handle both forward slashes (Unix) and backslashes (Windows)
+        if (evalData.file_path && (evalData.file_path.includes('/') || evalData.file_path.includes('\\'))) {
             return false; // It's an individual file in a subdirectory
         }
         
@@ -1762,7 +1763,13 @@ class EvaluationVisualizer {
         const evaluations = data.evaluations || [];
         const fullPath = filename || 'consolidated_evaluations_report.json';
 
-
+        // Calculate unique models count from metadata.evaluation_files
+        // Filter out files in subdirectories (those with / or \ in path)
+        const evaluationFiles = metadata.evaluation_files || [];
+        const uniqueModelsCount = evaluationFiles.filter(file => {
+            const path = file.file_path || '';
+            return !path.includes('/') && !path.includes('\\');
+        }).length;
 
         // Group evaluations by model to combine results from different test sets
         const modelGroups = {};
@@ -1979,7 +1986,7 @@ class EvaluationVisualizer {
                 <div class="report-header">
                     <h3 title="${fullPath}">📊 Consolidated Evaluation Report</h3>
                     <div class="meta">
-                        ${consolidatedEvaluations.length} Unique Models | ${metadata.total_evaluations} Total Evaluations |
+                        ${uniqueModelsCount} Unique Models | ${metadata.total_evaluations} Total Evaluations |
                         ${metadata.timestamp || 'N/A'}
                     </div>
                     <div class="report-actions">
@@ -2031,9 +2038,13 @@ class EvaluationVisualizer {
                 fairCount += metrics.fair_count || 0;
                 poorCount += metrics.poor_count || 0;
 
-                // Use tested_model field directly from consolidated report
-                const modelName = evalData.tested_model || 'unknown';
-                
+                // Use tested_model field, but fall back to experiment_name if unknown
+                let modelName = evalData.tested_model || 'unknown';
+                if (modelName === 'unknown') {
+                    // Fall back to experiment_name and clean it up
+                    modelName = evalData.experiment_name.replace('.experiment', '');
+                }
+
                 // Only count if this is a new unique model (avoid double counting)
                 if (!uniqueModelNames.has(modelName)) {
                     uniqueModelNames.add(modelName);

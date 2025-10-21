@@ -2721,7 +2721,7 @@ Performance ranking: {ranking_text}
         return report
 
     def generate_summary_report(
-        self, eval_dir: str, output_path: str = "LLM_RAG_Evaluation_Report.md"
+        self, eval_dir: str, output_path: str = "LLM_Evaluation_Report.md"
     ) -> Dict:
         """
         Generate a comprehensive summary report from multiple evaluation files.
