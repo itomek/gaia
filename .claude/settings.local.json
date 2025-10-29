@@ -40,5 +40,18 @@
       "Bash(powershell -Command:*)"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/util/lint.ps1\""
+          }
+        ]
+      }
+    ]
   }
 }
