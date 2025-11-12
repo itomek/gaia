@@ -40,6 +40,9 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch"]
 
+  # Note: Electron framework (src/gaia/electron) is scanned via the root workspace
+  # configuration above, so no separate entry is needed.
+
   # JavaScript - Example app (monitor only, no PRs)
   - package-ecosystem: "npm"
     directory: "/src/gaia/apps/example/webui"
