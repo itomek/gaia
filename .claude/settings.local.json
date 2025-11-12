@@ -37,7 +37,7 @@
       "Bash(tree:*)",
       "Bash(python:*)",
       "Bash(timeout 30 python:*)",
-      "Bash(powershell -Command:*)"
+      "WebFetch(domain:code.claude.com)"
     ],
     "deny": []
   },
