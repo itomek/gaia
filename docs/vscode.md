@@ -25,11 +25,10 @@ The GAIA VSCode extension integrates GAIA agents as selectable language models i
 ### Prerequisites
 
 1. **GAIA Framework**: Install GAIA from [github.com/amd/gaia](https://github.com/amd/gaia)
-2. **Lemonade Server**: Ensure the LLM backend is running with extended context:
+2. **Lemonade Server**: Ensure the LLM backend is running with extended context (installed with GAIA):
    ```bash
    lemonade-server serve --ctx-size 32768
    ```
-3. **GAIA API Server**: The extension requires the GAIA API server to be running
 
 ### Getting Started
 
@@ -75,11 +74,10 @@ code --install-extension gaia-vscode-0.1.0.vsix
 #### 4. Select a GAIA Model
 
 1. Open the VSCode Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-2. Use any chat feature or open Copilot Chat
+2. Select "Chat: Manage Language Models..." or [follow this guide](https://code.visualstudio.com/docs/copilot/customization/language-models#_customize-the-model-picker).
 3. Click on the model picker
-4. Select a GAIA model:
-   - **GAIA code**: For Python development tasks
-   - **GAIA jira**: For Jira operations
+4. Select a GAIA model: ⚠️ GAIA API server must be running to see this; see step above.
+   - **gaia-code**: For GAIA Code tasks
 
 #### 5. Use GAIA in Chat
 
