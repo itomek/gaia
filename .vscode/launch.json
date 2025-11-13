@@ -137,162 +137,44 @@
             "stopOnEntry": false,
         },
         {
-            "name": "Code Agent Debug - Snake Game",
+            "name": "Code Agent Debug (CLI)",
             "type": "debugpy",
             "request": "launch",
             "module": "gaia.cli",
             "args": [
                 "code",
-                "create a snake game",
+                "${input:codeAgentPrompt}",
+                "--debug"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "subProcess": true,
+            "stopOnEntry": false
+        },
+        {
+            "name": "Code Agent Debug (API)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "gaia.cli",
+            "args": [
+                "code",
+                "${input:codeAgentPrompt}",
                 "--debug",
-                "--show-prompts"
+                "--use-api"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
-                "PYTHONPATH": "${workspaceFolder}"
+                "PYTHONPATH": "${workspaceFolder}",
+                "GAIA_API_URL": "${input:apiUrl}"
             },
             "console": "integratedTerminal",
             "justMyCode": false,
             "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - Interactive",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "--interactive",
-                "--debug"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - Init GAIA.md",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "/init",
-                "--debug"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - Todo App",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "Create a simple todo application",
-                "--debug",
-                "--show-prompts"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - Function Generation",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "Generate a function to calculate fibonacci numbers",
-                "--debug"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - REST API",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "Create a REST API for user management",
-                "--debug",
-                "--show-prompts",
-                "--max-steps",
-                "50"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - Test Generation",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "Generate unit tests for my_module.py",
-                "--debug"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": false,
-        },
-        {
-            "name": "Code Agent Debug - With Breakpoint",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "gaia.cli",
-            "args": [
-                "code",
-                "Create a calculator function",
-                "--debug"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}"
-            },
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "subProcess": true,
-            "stopOnEntry": true,
-            "purpose": "Use this to set breakpoints before execution starts"
+            "stopOnEntry": false
         },
         {
             "name": "GAIA Pytest Debug",
@@ -319,14 +201,23 @@
             "stopOnEntry": false
         },
         {
-            "name": "JIRA Dashboard - Web",
-            "type": "node",
+            "name": "API Server Debug",
+            "type": "debugpy",
             "request": "launch",
+            "module": "gaia.cli",
+            "args": [
+                "api",
+                "start"
+            ],
             "cwd": "${workspaceFolder}",
-            "runtimeExecutable": "npm",
-            "runtimeArgs": ["run", "app:jira:run:dev"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "GAIA_API_URL": "${input:apiServerUrl}"
+            },
             "console": "integratedTerminal",
-            "env": {}
+            "justMyCode": false,
+            "subProcess": true,
+            "stopOnEntry": false,
         },
         {
             "name": "JIRA Dashboard - Electron",
@@ -339,6 +230,49 @@
             "env": {
                 "GAIA_APP_MODE": "development"
             }
+        },
+        {
+            "name": "GAIA VSCode Extension (API)",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/src/vscode/gaia",
+                "--user-data-dir=${workspaceFolder}/.vscode-test-user-data"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/src/vscode/gaia/out/**/*.js"
+            ],
+            "preLaunchTask": "Compile GAIA Code Extension",
+            "env": {
+                "GAIA_API_URL": "${input:apiUrl}",
+                "VSCODE_DEBUG_MODE": "true"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "apiServerUrl",
+            "type": "promptString",
+            "description": "GAIA API Server URL",
+            "default": "http://localhost:8080"
+        },
+        {
+            "id": "apiUrl",
+            "type": "promptString",
+            "description": "GAIA API Server URL",
+            "default": "http://localhost:8080"
+        },
+        {
+            "id": "mcpUrl",
+            "type": "promptString",
+            "description": "GAIA MCP Server URL",
+            "default": "http://localhost:8765"
+        },
+        {
+            "id": "codeAgentPrompt",
+            "type": "promptString",
+            "description": "Code Agent task/prompt",
+            "default": "Create a simple calculator function"
         }
     ]
 }

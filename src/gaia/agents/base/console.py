@@ -4,6 +4,7 @@
 import json
 import threading
 import time
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 # Import Rich library for pretty printing and syntax highlighting
@@ -22,6 +23,154 @@ except ImportError:
     print(
         "Rich library not found. Install with 'pip install rich' for syntax highlighting."
     )
+
+
+class OutputHandler(ABC):
+    """
+    Abstract base class for handling agent output.
+
+    Defines the minimal interface that agents use to report their progress.
+    Each implementation handles the output differently:
+    - AgentConsole: Rich console output for CLI
+    - SilentConsole: Suppressed output for testing
+    - SSEOutputHandler: Server-Sent Events for API streaming
+
+    This interface focuses on WHAT agents need to report, not HOW
+    each handler chooses to display it.
+    """
+
+    # === Core Progress/State Methods (Required) ===
+
+    @abstractmethod
+    def print_processing_start(self, query: str, max_steps: int):
+        """Print processing start message."""
+        ...
+
+    @abstractmethod
+    def print_step_header(self, step_num: int, step_limit: int):
+        """Print step header."""
+        ...
+
+    @abstractmethod
+    def print_state_info(self, state_message: str):
+        """Print current execution state."""
+        ...
+
+    @abstractmethod
+    def print_thought(self, thought: str):
+        """Print agent's reasoning/thought."""
+        ...
+
+    @abstractmethod
+    def print_goal(self, goal: str):
+        """Print agent's current goal."""
+        ...
+
+    @abstractmethod
+    def print_plan(self, plan: List[Any], current_step: int = None):
+        """Print agent's plan with optional current step highlight."""
+        ...
+
+    # === Tool Execution Methods (Required) ===
+
+    @abstractmethod
+    def print_tool_usage(self, tool_name: str):
+        """Print tool being called."""
+        ...
+
+    @abstractmethod
+    def print_tool_complete(self):
+        """Print tool completion."""
+        ...
+
+    @abstractmethod
+    def pretty_print_json(self, data: Dict[str, Any], title: str = None):
+        """Print JSON data (tool args/results)."""
+        ...
+
+    # === Status Messages (Required) ===
+
+    @abstractmethod
+    def print_error(self, error_message: str):
+        """Print error message."""
+        ...
+
+    @abstractmethod
+    def print_warning(self, warning_message: str):
+        """Print warning message."""
+        ...
+
+    @abstractmethod
+    def print_info(self, message: str):
+        """Print informational message."""
+        ...
+
+    # === Progress Indicators (Required) ===
+
+    @abstractmethod
+    def start_progress(self, message: str):
+        """Start progress indicator."""
+        ...
+
+    @abstractmethod
+    def stop_progress(self):
+        """Stop progress indicator."""
+        ...
+
+    # === Completion Methods (Required) ===
+
+    @abstractmethod
+    def print_final_answer(self, answer: str):
+        """Print final answer/result."""
+        ...
+
+    @abstractmethod
+    def print_repeated_tool_warning(self):
+        """Print warning about repeated tool calls (loop detection)."""
+        ...
+
+    @abstractmethod
+    def print_completion(self, steps_taken: int, steps_limit: int):
+        """Print completion summary."""
+        ...
+
+    # === Optional Methods (with default no-op implementations) ===
+
+    def print_prompt(
+        self, prompt: str, title: str = "Prompt"
+    ):  # pylint: disable=unused-argument
+        """Print prompt (for debugging). Optional - default no-op."""
+        ...
+
+    def print_response(
+        self, response: str, title: str = "Response"
+    ):  # pylint: disable=unused-argument
+        """Print response (for debugging). Optional - default no-op."""
+        ...
+
+    def print_streaming_text(
+        self, text_chunk: str, end_of_stream: bool = False
+    ):  # pylint: disable=unused-argument
+        """Print streaming text. Optional - default no-op."""
+        ...
+
+    def display_stats(self, stats: Dict[str, Any]):  # pylint: disable=unused-argument
+        """Display performance statistics. Optional - default no-op."""
+        ...
+
+    def print_header(self, text: str):  # pylint: disable=unused-argument
+        """Print header. Optional - default no-op."""
+        ...
+
+    def print_separator(self, length: int = 50):  # pylint: disable=unused-argument
+        """Print separator. Optional - default no-op."""
+        ...
+
+    def print_tool_info(
+        self, name: str, params_str: str, description: str
+    ):  # pylint: disable=unused-argument
+        """Print tool info. Optional - default no-op."""
+        ...
 
 
 class ProgressIndicator:
@@ -122,10 +271,11 @@ class ProgressIndicator:
             print("\r" + " " * (len(self.message) + 5) + "\r", end="", flush=True)
 
 
-class AgentConsole:
+class AgentConsole(OutputHandler):
     """
     A class to handle all display-related functionality for the agent.
     Provides rich text formatting and progress indicators when available.
+    Implements OutputHandler for CLI-based output.
     """
 
     def __init__(self):
@@ -143,6 +293,8 @@ class AgentConsole:
         self._paused_preview = False  # Track if preview was paused for progress
         self._last_preview_update_time = 0  # Throttle preview updates
         self._preview_update_interval = 0.25  # Minimum seconds between updates
+
+    # Implementation of OutputHandler abstract methods
 
     def pretty_print_json(self, data: Dict[str, Any], title: str = None) -> None:
         """
@@ -948,136 +1100,83 @@ class AgentConsole:
         )
 
 
-class SilentConsole:
+class SilentConsole(OutputHandler):
     """
     A silent console that suppresses all output for JSON-only mode.
     Provides the same interface as AgentConsole but with no-op methods.
+    Implements OutputHandler for silent/suppressed output.
     """
 
     def __init__(self):
         """Initialize the silent console."""
         self.streaming_buffer = ""  # Maintain compatibility
 
-    def pretty_print_json(self, *_args, **_kwargs) -> None:
+    # Implementation of OutputHandler abstract methods - all no-ops
+
+    def print_processing_start(self, query: str, max_steps: int):
         """Silent no-op method."""
         ...
 
-    def print_header(self, *_args, **_kwargs) -> None:
+    def print_step_header(self, step_num: int, step_limit: int):
         """Silent no-op method."""
         ...
 
-    def print_processing_start(self, *_args, **_kwargs) -> None:
+    def print_state_info(self, state_message: str):
         """Silent no-op method."""
         ...
 
-    def print_separator(self, *_args, **_kwargs) -> None:
+    def print_thought(self, thought: str):
         """Silent no-op method."""
         ...
 
-    def print_step_header(self, *_args, **_kwargs) -> None:
+    def print_goal(self, goal: str):
         """Silent no-op method."""
         ...
 
-    def print_thought(self, *_args, **_kwargs) -> None:
+    def print_plan(self, plan: List[Any], current_step: int = None):
         """Silent no-op method."""
         ...
 
-    def print_goal(self, *_args, **_kwargs) -> None:
+    def print_tool_usage(self, tool_name: str):
         """Silent no-op method."""
         ...
 
-    def print_plan(self, *_args, **_kwargs) -> None:
+    def print_tool_complete(self):
         """Silent no-op method."""
         ...
 
-    def print_plan_progress(self, *_args, **_kwargs):
+    def pretty_print_json(self, data: Dict[str, Any], title: str = None):
         """Silent no-op method."""
         ...
 
-    def print_tool_usage(self, *_args, **_kwargs) -> None:
+    def print_error(self, error_message: str):
         """Silent no-op method."""
         ...
 
-    def print_tool_complete(self) -> None:
+    def print_warning(self, warning_message: str):
         """Silent no-op method."""
         ...
 
-    def print_error(self, *_args, **_kwargs) -> None:
+    def print_info(self, message: str):
         """Silent no-op method."""
         ...
 
-    def print_info(self, *_args, **_kwargs) -> None:
+    def start_progress(self, message: str):
         """Silent no-op method."""
         ...
 
-    def print_success(self, *_args, **_kwargs) -> None:
+    def stop_progress(self):
         """Silent no-op method."""
         ...
 
-    def print_diff(self, *_args, **_kwargs) -> None:
+    def print_final_answer(self, answer: str):
         """Silent no-op method."""
         ...
 
-    def print_repeated_tool_warning(self, *_args, **_kwargs) -> None:
+    def print_repeated_tool_warning(self):
         """Silent no-op method."""
         ...
 
-    def print_final_answer(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def print_completion(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def print_prompt(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def display_stats(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def start_progress(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def stop_progress(self) -> None:
-        """Silent no-op method."""
-        ...
-
-    def print_state_info(self, *_args, **_kwargs):
-        """Silent no-op method."""
-        ...
-
-    def print_warning(self, *_args, **_kwargs):
-        """Silent no-op method."""
-        ...
-
-    def print_streaming_text(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def get_streaming_buffer(self) -> str:
-        """Silent no-op method - returns empty string."""
-        return ""
-
-    def print_response(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def print_tool_info(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def start_file_preview(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def update_file_preview(self, *_args, **_kwargs) -> None:
-        """Silent no-op method."""
-        ...
-
-    def stop_file_preview(self, *_args, **_kwargs) -> None:
+    def print_completion(self, steps_taken: int, steps_limit: int):
         """Silent no-op method."""
         ...

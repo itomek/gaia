@@ -73,6 +73,8 @@ class Agent(abc.ABC):
         show_stats: bool = False,
         silent_mode: bool = False,
         debug: bool = False,
+        output_handler=None,
+        max_plan_iterations: int = 3,
     ):
         """
         Initialize the Agent with LLM client.
@@ -90,6 +92,8 @@ class Agent(abc.ABC):
             show_stats: If True, displays LLM performance stats after each response (default: False)
             silent_mode: If True, suppresses all console output for JSON-only usage (default: False)
             debug: If True, enables debug output for troubleshooting (default: False)
+            output_handler: Custom OutputHandler for displaying agent output (default: None, creates console based on silent_mode)
+            max_plan_iterations: Maximum number of plan-execute-replan cycles (default: 3, 0 = unlimited)
 
         Note: Uses local LLM server by default unless use_claude or use_chatgpt is True.
         """
@@ -103,15 +107,21 @@ class Agent(abc.ABC):
         self.silent_mode = silent_mode
         self.debug = debug
         self.last_result = None  # Store the most recent result
+        self.max_plan_iterations = max_plan_iterations
 
         # Initialize state management
         self.execution_state = self.STATE_PLANNING
         self.current_plan = None
         self.current_step = 0
         self.total_plan_steps = 0
+        self.plan_iterations = 0  # Track number of plan cycles
 
-        # Initialize the console for display
-        self.console = self._create_console()
+        # Initialize the console/output handler for display
+        # If output_handler is provided, use it; otherwise create based on silent_mode
+        if output_handler is not None:
+            self.console = output_handler
+        else:
+            self.console = self._create_console()
 
         # Initialize LLM client for local model
         self.system_prompt = self._get_system_prompt()
@@ -311,6 +321,46 @@ class Agent(abc.ABC):
         original_response = response_text
         json_was_modified = False
 
+        # Step 0: Sanitize control characters to ensure proper JSON format
+        def sanitize_json_string(text: str) -> str:
+            """
+            Ensure JSON strings have properly escaped control characters.
+
+            Args:
+                text: JSON text that may contain unescaped control characters
+
+            Returns:
+                Sanitized JSON text with properly escaped control characters
+            """
+
+            def escape_string_content(match):
+                """Ensure control characters are properly escaped in JSON string values."""
+                quote = match.group(1)
+                content = match.group(2)
+                closing_quote = match.group(3)
+
+                # Ensure proper escaping of control characters
+                content = content.replace("\n", "\\n")
+                content = content.replace("\r", "\\r")
+                content = content.replace("\t", "\\t")
+                content = content.replace("\b", "\\b")
+                content = content.replace("\f", "\\f")
+
+                return f"{quote}{content}{closing_quote}"
+
+            # Match JSON strings: "..." handling escaped quotes
+            pattern = r'(")([^"\\]*(?:\\.[^"\\]*)*)(")'
+
+            try:
+                return re.sub(pattern, escape_string_content, text)
+            except Exception as e:
+                logger.debug(
+                    f"[JSON] String sanitization encountered issue: {e}, using original"
+                )
+                return text
+
+        response_text = sanitize_json_string(response_text)
+
         # Step 1: Try to parse as-is
         try:
             json_response = json.loads(response_text)
@@ -443,10 +493,17 @@ class Agent(abc.ABC):
         if not response or not response.strip():
             logger.warning("Empty LLM response received")
             self.error_history.append("Empty LLM response")
+
+            # Provide more helpful error message based on context
+            if hasattr(self, "api_mode") and self.api_mode:  # pylint: disable=no-member
+                answer = "I encountered an issue processing your request. This might be due to a connection problem with the language model. Please try again."
+            else:
+                answer = "I apologize, but I received an empty response from the language model. Please try again."
+
             return {
                 "thought": "LLM returned empty response",
                 "goal": "Handle empty response error",
-                "answer": "I apologize, but I received an empty response from the language model. Please try again.",
+                "answer": answer,
             }
 
         # First try to validate and process the response using our robust JSON validation
@@ -847,6 +904,7 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
         self.current_plan = None
         self.current_step = 0
         self.total_plan_steps = 0
+        self.plan_iterations = 0  # Reset plan iteration counter
 
         # Add user query to the conversation history
         conversation.append({"role": "user", "content": user_input})
@@ -892,8 +950,14 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                 )
                 self.console.print_warning(max_steps_msg)
 
-                # Ask user if they want to continue (skip in silent mode)
-                if not hasattr(self, "silent_mode") or not self.silent_mode:
+                # Ask user if they want to continue (skip in silent mode OR if stdin is not available)
+                # IMPORTANT: Never call input() in API/CI contexts to avoid blocking threads
+                import sys
+
+                has_stdin = sys.stdin and sys.stdin.isatty()
+                if has_stdin and not (
+                    hasattr(self, "silent_mode") and self.silent_mode
+                ):
                     try:
                         response = (
                             input("\nContinue with 50 more steps? (y/n): ")
@@ -1034,6 +1098,18 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                                 "COMPLETION: Plan fully executed"
                             )
 
+                            # Increment plan iteration counter
+                            self.plan_iterations += 1
+                            logger.debug(
+                                f"Plan iteration {self.plan_iterations} completed"
+                            )
+
+                            # Check if we've reached max plan iterations
+                            reached_max_iterations = (
+                                self.max_plan_iterations > 0
+                                and self.plan_iterations >= self.max_plan_iterations
+                            )
+
                             # Prepare message for final answer - truncate if too large
                             # Truncate previous outputs if they're too large
 
@@ -1046,17 +1122,32 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                                 # Use compact JSON for small outputs to avoid unnecessary expansion
                                 truncated_outputs = original_str
 
-                            completion_message = (
-                                f"You have successfully completed all steps in the plan for: {user_input}\n"
-                                f"Previous outputs:\n{truncated_outputs}\n\n"
-                                f"Check if more work is needed:\n"
-                                f"- If you created a project, you MUST create a NEW PLAN to validate/test it\n"
-                                f"- If you fixed code, you MUST create a NEW PLAN to verify the fixes\n"
-                                f"- Only provide an 'answer' if ALL work (creation AND validation) is complete\n\n"
-                                f'If more work needed: Provide a NEW plan with {{"thought": "...", "goal": "...", "plan": [...]}}\n'
-                                f'If everything is complete: Provide {{"thought": "...", "goal": "...", "answer": "..."}}\n\n'
-                                f"{self._add_format_reminder()}"
-                            )
+                            if reached_max_iterations:
+                                # Force final answer after max iterations
+                                completion_message = (
+                                    f"Maximum plan iterations ({self.max_plan_iterations}) reached for task: {user_input}\n"
+                                    f"Previous outputs:\n{truncated_outputs}\n\n"
+                                    f"IMPORTANT: You MUST now provide a final answer with an honest assessment:\n"
+                                    f"- Summarize what was successfully accomplished\n"
+                                    f"- Clearly state if anything remains incomplete or if errors occurred\n"
+                                    f"- If the task is fully complete, state that clearly\n\n"
+                                    f'Provide {{"thought": "...", "goal": "...", "answer": "..."}}\n\n'
+                                    f"{self._add_format_reminder()}"
+                                )
+                            else:
+                                # Normal completion - allow for additional validation/testing plans if needed
+                                completion_message = (
+                                    f"You have successfully completed all steps in the plan for: {user_input}\n"
+                                    f"Previous outputs:\n{truncated_outputs}\n\n"
+                                    f"Plan iteration: {self.plan_iterations}/{self.max_plan_iterations if self.max_plan_iterations > 0 else 'unlimited'}\n"
+                                    f"Check if more work is needed:\n"
+                                    f"- If the task is complete and verified, provide a final answer\n"
+                                    f"- If critical validation/testing is needed, you may create ONE more plan\n"
+                                    f"- Only create additional plans if absolutely necessary\n\n"
+                                    f'If more work needed: Provide a NEW plan with {{"thought": "...", "goal": "...", "plan": [...]}}\n'
+                                    f'If everything is complete: Provide {{"thought": "...", "goal": "...", "answer": "..."}}\n\n'
+                                    f"{self._add_format_reminder()}"
+                                )
 
                             # Debug logging - only show if truncation happened
                             if self.debug and len(original_str) > 2000:

@@ -92,7 +92,7 @@ IMPORTANT: When creating any Python project, ALWAYS include:
 
 For project creation: Use create_project to generate files, then CONTINUE with validation.
 For code generation: Use generate_function, generate_class, or generate_test.
-For file operations: Use read_python_file, write_python_file, edit_python_file.
+For file operations: Use read_file, write_python_file, edit_python_file.
 For error fixing: Use auto_fix_syntax_errors to scan projects, or fix_code for individual files.
 
 CRITICAL: After creating any Python project or code:

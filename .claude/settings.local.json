@@ -1,6 +1,9 @@
 {
   "permissions": {
     "allow": [
+      "Bash(./util/lint.ps1:*)",
+      "Bash(./util/lint.sh:*)",
+      "Bash(gaia:*)",
       "Bash(dir:*)",
       "Bash(gh issue list:*)",
       "Bash(gh issue view:*)",
@@ -31,13 +34,7 @@
       "mcp__sequential-thinking__sequentialthinking",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(gaia code:*)",
-      "Bash(python -m pylint:*)",
-      "Bash(python migrate_agent.py:*)",
-      "Bash(tree:*)",
-      "Bash(python:*)",
-      "Bash(timeout 30 python:*)",
-      "WebFetch(domain:code.claude.com)"
+      "WebFetch(domain:lemonade-server.ai)"
     ],
     "deny": []
   },

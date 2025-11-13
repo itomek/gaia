@@ -54,7 +54,7 @@ class TestCodeAgent(unittest.TestCase):
         agent1 = CodeAgent()
         self.assertIsNotNone(agent1)
         self.assertFalse(agent1.silent_mode)
-        self.assertEqual(agent1.max_steps, 10)
+        self.assertEqual(agent1.max_steps, 100)  # Default is 100 for complex projects
 
         # Custom initialization
         agent2 = CodeAgent(
@@ -68,7 +68,7 @@ class TestCodeAgent(unittest.TestCase):
     def test_system_prompt(self):
         """Test that system prompt is properly generated."""
         prompt = self.agent._get_system_prompt()
-        self.assertIn("intelligent code assistant", prompt)
+        self.assertIn("expert Python developer", prompt)
         self.assertIn("Python", prompt)
         self.assertIn("JSON", prompt)
 
@@ -77,7 +77,7 @@ class TestCodeAgent(unittest.TestCase):
         tools = list(_TOOL_REGISTRY.keys())
 
         # Core tools
-        self.assertIn("read_python_file", tools)
+        self.assertIn("read_file", tools)  # Generic file reading
         self.assertIn("write_python_file", tools)
         self.assertIn("parse_python_code", tools)
         self.assertIn("validate_syntax", tools)
@@ -94,7 +94,6 @@ class TestCodeAgent(unittest.TestCase):
         # Editing tools
         self.assertIn("edit_python_file", tools)
         self.assertIn("generate_diff", tools)
-        self.assertIn("apply_diff", tools)
         self.assertIn("replace_function", tools)
 
         # Linting tools
@@ -119,7 +118,7 @@ class Greeter:
         Path(test_file).write_text(code)
 
         # Read the file
-        read_func = _TOOL_REGISTRY["read_python_file"]["function"]
+        read_func = _TOOL_REGISTRY["read_file"]["function"]
         result = read_func(file_path=test_file)
 
         self.assertEqual(result["status"], "success")
@@ -368,7 +367,8 @@ variable = "test"
         result = validate_func(code="def broken(\n    print('error'")
         self.assertEqual(result["status"], "error")
         self.assertFalse(result["is_valid"])
-        self.assertIn("line", result)
+        self.assertIn("errors", result)  # Check for errors list
+        self.assertGreater(len(result["errors"]), 0)  # Should have at least one error
 
     # ========== File Editing Tests ==========
 
@@ -587,7 +587,7 @@ def   calculate( x,y ):
     def test_error_handling(self):
         """Test error handling in various scenarios."""
         # Test reading non-existent file
-        read_func = _TOOL_REGISTRY["read_python_file"]["function"]
+        read_func = _TOOL_REGISTRY["read_file"]["function"]
         result = read_func(file_path="/nonexistent/path/file.py")
         self.assertEqual(result["status"], "error")
 
@@ -645,7 +645,7 @@ class TestCodeAgentIntegration(unittest.TestCase):
         self.assertTrue(os.path.exists(test_file))
 
         # Step 3: Read and parse the real file
-        read_func = _TOOL_REGISTRY["read_python_file"]["function"]
+        read_func = _TOOL_REGISTRY["read_file"]["function"]
         read_result = read_func(file_path=test_file)
         self.assertEqual(read_result["status"], "success")
         self.assertIn("calculate", [s["name"] for s in read_result["symbols"]])
@@ -699,7 +699,7 @@ class TestCodeAgentIntegration(unittest.TestCase):
         # Parse each file and verify symbols
         for filename in files.keys():
             file_path = os.path.join(project_dir, filename)
-            read_func = _TOOL_REGISTRY["read_python_file"]["function"]
+            read_func = _TOOL_REGISTRY["read_file"]["function"]
             result = read_func(file_path=file_path)
             self.assertEqual(result["status"], "success")
             self.assertTrue(result["is_valid"])
@@ -780,12 +780,12 @@ class TestCodeAgentIntegration(unittest.TestCase):
         # Replace one method with an improved version
         replace_func = _TOOL_REGISTRY["replace_function"]["function"]
         new_increment = """def increment(self, amount=1):
-        \"\"\"Increment counter by amount with logging.\"\"\"
-        import logging
-        old_count = self.count
-        self.count += amount
-        logging.info(f"Counter incremented from {old_count} to {self.count}")
-        return self.count"""
+    \"\"\"Increment counter by amount with logging.\"\"\"
+    import logging
+    old_count = self.count
+    self.count += amount
+    logging.info(f"Counter incremented from {old_count} to {self.count}")
+    return self.count"""
 
         replace_result = replace_func(
             file_path=test_file,
@@ -793,6 +793,8 @@ class TestCodeAgentIntegration(unittest.TestCase):
             new_implementation=new_increment,
             backup=True,
         )
+        if replace_result["status"] != "success":
+            print(f"Replace failed: {replace_result}")
         self.assertEqual(replace_result["status"], "success")
 
         # Verify the modification
@@ -855,35 +857,35 @@ class TestCodeAgentIntegration(unittest.TestCase):
             params="current_home_value: float, new_home_price: float, moving_distance: float = 100",
             docstring="Calculate total costs for home relocation including sale, purchase, and moving.",
             body="""# Selling costs
-    agent_fee = current_home_value * 0.06  # 6% agent commission
-    repairs = current_home_value * 0.02  # 2% for repairs/staging
-    selling_costs = agent_fee + repairs
+agent_fee = current_home_value * 0.06  # 6% agent commission
+repairs = current_home_value * 0.02  # 2% for repairs/staging
+selling_costs = agent_fee + repairs
 
-    # Buying costs
-    down_payment = new_home_price * 0.20  # 20% down
-    closing_costs = new_home_price * 0.03  # 3% closing costs
-    buying_costs = down_payment + closing_costs
+# Buying costs
+down_payment = new_home_price * 0.20  # 20% down
+closing_costs = new_home_price * 0.03  # 3% closing costs
+buying_costs = down_payment + closing_costs
 
-    # Moving costs (based on distance)
-    base_moving_cost = 2000
-    distance_cost = moving_distance * 10
-    moving_costs = base_moving_cost + distance_cost
+# Moving costs (based on distance)
+base_moving_cost = 2000
+distance_cost = moving_distance * 10
+moving_costs = base_moving_cost + distance_cost
 
-    # Tax implications (simplified)
-    capital_gains = max(0, current_home_value - new_home_price) * 0.15
+# Tax implications (simplified)
+capital_gains = max(0, current_home_value - new_home_price) * 0.15
 
-    # Total costs
-    total_costs = selling_costs + buying_costs + moving_costs + capital_gains
+# Total costs
+total_costs = selling_costs + buying_costs + moving_costs + capital_gains
 
-    # Return detailed breakdown
-    return {
-        'selling_costs': selling_costs,
-        'buying_costs': buying_costs,
-        'moving_costs': moving_costs,
-        'tax_implications': capital_gains,
-        'total_costs': total_costs,
-        'net_cash_needed': buying_costs + moving_costs - (current_home_value - selling_costs)
-    }""",
+# Return detailed breakdown
+return {
+    'selling_costs': selling_costs,
+    'buying_costs': buying_costs,
+    'moving_costs': moving_costs,
+    'tax_implications': capital_gains,
+    'total_costs': total_costs,
+    'net_cash_needed': buying_costs + moving_costs - (current_home_value - selling_costs)
+}""",
             return_type="Dict[str, float]",
         )
 
@@ -891,45 +893,41 @@ class TestCodeAgentIntegration(unittest.TestCase):
 
         # Generate a complete script with main function
         full_script = (
-            '''#!/usr/bin/env python
-"""Home Relocation Cost Calculator."""
-
-from typing import Dict
-
-'''
-            + calc_result["code"]
-            + '''
-
-def main():
-    """Main function to run the calculator."""
-    print("Home Relocation Cost Calculator")
-    print("=" * 40)
-
-    try:
-        current_value = float(input("Current home value ($): "))
-        new_price = float(input("New home price ($): "))
-        distance = float(input("Moving distance (miles): "))
-
-        results = calculate_relocation_costs(current_value, new_price, distance)
-
-        print("\nCost Breakdown:")
-        print("-" * 40)
-        for key, value in results.items():
-            label = key.replace('_', ' ').title()
-            print(f"{label}: ${value:,.2f}")
-
-        return 0
-    except ValueError as e:
-        print(f"Error: Invalid input - {e}")
-        return 1
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
-'''
+            "#!/usr/bin/env python\n"
+            '"""Home Relocation Cost Calculator."""\n'
+            "\n"
+            "from typing import Dict\n"
+            "\n" + calc_result["code"] + "\n"
+            "\n"
+            "def main():\n"
+            '    """Main function to run the calculator."""\n'
+            '    print("Home Relocation Cost Calculator")\n'
+            '    print("=" * 40)\n'
+            "\n"
+            "    try:\n"
+            '        current_value = float(input("Current home value ($): "))\n'
+            '        new_price = float(input("New home price ($): "))\n'
+            '        distance = float(input("Moving distance (miles): "))\n'
+            "\n"
+            "        results = calculate_relocation_costs(current_value, new_price, distance)\n"
+            "\n"
+            '        print("\\nCost Breakdown:")\n'
+            '        print("-" * 40)\n'
+            "        for key, value in results.items():\n"
+            "            label = key.replace('_', ' ').title()\n"
+            '            print(f"{label}: ${value:,.2f}")\n'
+            "\n"
+            "        return 0\n"
+            "    except ValueError as e:\n"
+            '        print(f"Error: Invalid input - {e}")\n'
+            "        return 1\n"
+            "    except Exception as e:\n"
+            '        print(f"Error: {e}")\n'
+            "        return 1\n"
+            "\n"
+            'if __name__ == "__main__":\n'
+            "    import sys\n"
+            "    sys.exit(main())\n"
         )
 
         # Step 2: Write to file
@@ -938,6 +936,15 @@ if __name__ == "__main__":
         write_result = write_func(
             file_path=test_file, content=full_script, validate=True
         )
+        if write_result["status"] != "success":
+            print(f"Write failed: {write_result}")
+            # Debug: Print lines around the error
+            lines = full_script.split("\n")
+            print(f"Total lines: {len(lines)}")
+            if len(lines) > 50:
+                print(f"Lines 48-55:")
+                for i in range(47, min(55, len(lines))):
+                    print(f"{i+1}: {repr(lines[i])}")
         self.assertEqual(write_result["status"], "success")
 
         # Step 3: Lint the file
@@ -1035,6 +1042,50 @@ if __name__ == "__main__":
             self.fail("Script execution timed out")
         except Exception as e:
             self.fail(f"Unexpected error during execution: {e}")
+
+
+class TestCodeAgentStdinHandling(unittest.TestCase):
+    """
+    Test that agents don't block on input() when stdin is not available.
+
+    This test verifies the fix for the issue where agents would block on input()
+    when reaching max_steps in API/CI contexts where stdin is not available.
+    """
+
+    def test_agent_doesnt_block_without_stdin(self):
+        """Test that agent doesn't call input() when stdin is not available"""
+        from unittest import mock
+
+        # Create agent with very low max_steps to trigger the limit quickly
+        agent = CodeAgent(
+            silent_mode=False,  # This would normally trigger input()
+            max_steps=1,  # Very low to trigger limit immediately
+            streaming=False,
+        )
+
+        # Mock stdin to simulate API/CI environment (not a TTY)
+        with mock.patch.object(sys.stdin, "isatty", return_value=False):
+            # This should complete without calling input()
+            result = agent.process_query("Write a hello world function")
+
+            # Should return a result even if max_steps was reached
+            self.assertIsNotNone(result)
+            self.assertTrue("result" in result or "error" in result)
+
+    def test_agent_respects_silent_mode(self):
+        """Test that agent never calls input() in silent_mode"""
+
+        agent = CodeAgent(
+            silent_mode=True,
+            max_steps=1,
+            streaming=False,
+        )
+
+        # Even with a TTY, silent_mode should prevent input()
+        result = agent.process_query("Write a hello world function")
+
+        self.assertIsNotNone(result)
+        self.assertTrue("result" in result or "error" in result)
 
 
 if __name__ == "__main__":

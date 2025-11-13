@@ -636,8 +636,8 @@ Respond with ONLY the new project name, nothing else."""
                         gen_thread.daemon = True
                         gen_thread.start()
                         gen_thread.join(
-                            timeout=60
-                        )  # 60 second timeout for test generation
+                            timeout=180
+                        )  # 180 second (3 min) timeout for test generation
 
                         if gen_thread.is_alive():
                             self.console.print_warning(

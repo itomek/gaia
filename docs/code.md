@@ -194,6 +194,42 @@ agent = CodeAgent()
 result = agent.process_query("Generate a function to sort a list")
 ```
 
+## Using Code Agent via API Server
+
+The Code Agent is available through the GAIA API Server as the `gaia-code` model, providing an OpenAI-compatible REST API for integration with VSCode, IDEs, and other tools.
+
+### Quick Start
+
+```bash
+# 1. Start Lemonade server with extended context (required for Code agent)
+lemonade-server serve --ctx-size 32768
+
+# 2. Start GAIA API server
+gaia api start
+
+# 3. Use with any OpenAI-compatible client
+curl -X POST http://localhost:8080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gaia-code",
+    "messages": [{"role": "user", "content": "Create a fibonacci function"}]
+  }'
+```
+
+### Key Features via API
+
+- **OpenAI Compatible**: Works with OpenAI Python client and other compatible tools
+- **Workspace Awareness**: Automatically detects workspace root from VSCode/IDEs
+- **Streaming Support**: Real-time progress updates during code generation
+- **Multi-Turn Conversations**: Maintains context across multiple requests
+
+### For More Information
+
+- **API Examples & Usage**: See [API Server - Using the Code Agent](./api.md#using-the-code-agent)
+- **OpenAI Client Integration**: See [API Server - Integration Examples](./api.md#integration-examples)
+- **VSCode Extension**: See [API Server - VSCode Integration](./api.md#vscode-integration)
+- **Troubleshooting**: See [API Troubleshooting Guide](./api.md#troubleshooting)
+
 ## Workflow Capabilities
 
 The Code Agent attempts to execute workflows with the following steps:

@@ -39,6 +39,7 @@ setup(
         "gaia.agents.docker",
         "gaia.agents.jira",
         "gaia.agents.code",
+        "gaia.api",
     ],
     package_data={
         "gaia.eval": [
@@ -60,6 +61,10 @@ setup(
         "rich",
     ],
     extras_require={
+        "api": [
+            "fastapi>=0.115.0",
+            "uvicorn>=0.32.0",
+        ],
         "audio": [
             "torch>=2.0.0,<2.4",
             "torchvision<0.19.0",

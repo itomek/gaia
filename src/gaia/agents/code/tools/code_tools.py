@@ -342,6 +342,7 @@ if __name__ == "__main__":
                     "status": "success",
                     "is_valid": validation["is_valid"],
                     "errors": validation.get("errors", []),
+                    "code": code,  # Always include generated code
                     "functions_tested": (
                         [f.name for f in functions_to_test] if functions_to_test else []
                     ),

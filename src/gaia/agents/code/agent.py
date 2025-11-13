@@ -11,9 +11,11 @@ modification, and validation.
 """
 
 import logging
+import os
 from pathlib import Path
 
 from gaia.agents.base.agent import Agent
+from gaia.agents.base.api_agent import ApiAgent
 from gaia.agents.base.console import AgentConsole, SilentConsole
 
 from .system_prompt import get_system_prompt
@@ -39,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 
 class CodeAgent(
+    ApiAgent,  # API support for VSCode integration
     Agent,
     CodeToolsMixin,  # Code generation, analysis, helpers
     ValidationAndParsingMixin,  # Validation, AST parsing, error fixing helpers
@@ -76,6 +79,7 @@ class CodeAgent(
                 - show_prompts: Display prompts sent to LLM (default: False)
                 - streaming: Enable real-time LLM response streaming (default: False)
                 - step_through: Enable step-through debugging mode (default: False)
+                - max_plan_iterations: Maximum plan cycles before forcing completion (default: 2 for API mode, 3 otherwise)
         """
         # Default to more steps for complex workflows
         if "max_steps" not in kwargs:
@@ -87,6 +91,15 @@ class CodeAgent(
         # Users can enable with --streaming flag if desired
         if "streaming" not in kwargs:
             kwargs["streaming"] = False
+        # Set more conservative max_plan_iterations for API mode to prevent infinite loops
+        # API mode is detected by presence of output_handler
+        if "max_plan_iterations" not in kwargs:
+            # If output_handler is provided (API mode), use 2 iterations
+            # Otherwise use 3 for interactive CLI mode where user can monitor
+            if "output_handler" in kwargs and kwargs["output_handler"] is not None:
+                kwargs["max_plan_iterations"] = 2
+            else:
+                kwargs["max_plan_iterations"] = 3
 
         # Step-through debugging mode
         self.step_through = kwargs.pop("step_through", False)
@@ -98,6 +111,12 @@ class CodeAgent(
         # Project planning state
         self.plan = None
         self.project_root = None
+
+        # Workspace root for API mode (passed from VSCode)
+        self.workspace_root = None
+
+        # Progress callback for real-time updates
+        self.progress_callback = None
 
         super().__init__(**kwargs)
 
@@ -142,20 +161,43 @@ class CodeAgent(
         self.register_testing_tools()  # TestingMixin
         self.register_error_fixing_tools()  # ErrorFixingMixin
 
-    def process_query(self, user_input: str, **kwargs):
-        """Process a query with optional step-through debugging.
+    def process_query(
+        self, user_input: str, workspace_root=None, progress_callback=None, **kwargs
+    ):
+        """Process a query with optional workspace root and progress callback.
 
         Args:
             user_input: The user's query
+            workspace_root: Optional workspace directory for file operations (from VSCode)
+            progress_callback: Optional callback function for progress updates
             **kwargs: Additional arguments passed to base process_query
 
         Returns:
             Result from processing the query
         """
-        if self.step_through:
-            return self._process_query_with_stepping(user_input, **kwargs)
-        else:
-            return super().process_query(user_input, **kwargs)
+        # Store workspace root and change to it if provided
+        if workspace_root:
+            self.workspace_root = workspace_root
+            original_cwd = os.getcwd()
+            os.chdir(workspace_root)
+            logger.info(f"Changed working directory to: {workspace_root}")
+
+        # Store progress callback for tools to use
+        if progress_callback:
+            self.progress_callback = progress_callback
+
+        try:
+            if self.step_through:
+                result = self._process_query_with_stepping(user_input, **kwargs)
+            else:
+                result = super().process_query(user_input, **kwargs)
+
+            return result
+        finally:
+            # Restore original working directory if we changed it
+            if workspace_root:
+                os.chdir(original_cwd)
+                logger.info(f"Restored working directory to: {original_cwd}")
 
     def _process_query_with_stepping(self, user_input: str, **kwargs):
         """Process query with step-through debugging enabled.
