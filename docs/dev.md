@@ -40,7 +40,9 @@ GAIA utilizes both NPU and iGPU on Ryzen AI systems for optimal performance on 3
 - [Miniforge](https://conda-forge.org/download/) (conda-forge's recommended installer)
 - [Lemonade Server](https://lemonade-server.ai/) (LLM backend server for GAIA)
 
-# Windows Prerequisites
+# Prerequisites
+
+## Windows Prerequisites
 
 1. Download and install Windows installer from [Miniforge](https://conda-forge.org/download/)
    1. Check _"Add Miniforge3 to my PATH environment variables"_ if you want it accessible in all terminals
@@ -49,13 +51,100 @@ GAIA utilizes both NPU and iGPU on Ryzen AI systems for optimal performance on 3
    2. Follow the installation instructions provided on the website
    3. Lemonade Server will be used as the backend for running LLMs with GAIA
 
+## Linux/Ubuntu Prerequisites
+
+1. Install Miniforge (includes conda):
+   ```bash
+   # Download the installer
+   wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+
+   # Make it executable
+   chmod +x Miniforge3-Linux-x86_64.sh
+
+   # Run the installer
+   bash Miniforge3-Linux-x86_64.sh
+   ```
+   - Press ENTER to review the license
+   - Press SPACE to scroll through the license
+   - Type `yes` to accept the license
+   - Press ENTER to accept the default installation location
+   - Type `yes` when asked to initialize Miniforge3
+
+2. Activate conda:
+   ```bash
+   # Reload shell configuration
+   source ~/.bashrc
+   # Or restart terminal
+   exec bash
+   ```
+
+3. Verify installation:
+   ```bash
+   conda --version
+   ```
+
+4. Install Lemonade Server:
+   1. Go to https://lemonade-server.ai/ and download the Linux version
+   2. Follow the Linux installation instructions provided on the website
+   3. Lemonade Server will be used as the backend for running LLMs with GAIA
+
+### WSL (Windows Subsystem for Linux) Note
+If you're using WSL, install the Linux version of Miniforge inside WSL rather than trying to use the Windows installation. This ensures better compatibility and performance.
+
+### Troubleshooting Conda Installation on Linux/WSL
+
+If `conda` command is not found after installation:
+
+1. **Check if Miniforge was installed**:
+   ```bash
+   ls ~/miniforge3
+   ```
+
+2. **Manually initialize conda** (most common fix):
+   ```bash
+   # Initialize conda for bash
+   ~/miniforge3/bin/conda init bash
+
+   # Reload your shell
+   source ~/.bashrc
+   ```
+
+3. **Verify conda is now available**:
+   ```bash
+   conda --version
+   ```
+
+4. **If still not working, add conda to PATH manually**:
+   ```bash
+   # Add to your ~/.bashrc file
+   echo 'export PATH="$HOME/miniforge3/bin:$PATH"' >> ~/.bashrc
+
+   # Reload
+   source ~/.bashrc
+   ```
+
+5. **For persistent issues, reinstall**:
+   ```bash
+   # Remove any partial installation
+   rm -rf ~/miniforge3
+
+   # Download and reinstall
+   wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+   bash Miniforge3-Linux-x86_64.sh
+   ```
+   **Important**: Answer `yes` when asked about conda init during installation.
+
 # Setup and Installation
 1. Clone GAIA repo: `git clone https://github.com/amd/gaia.git`
-1. Open a powershell prompt and go to the GAIA root: `cd ./gaia`
-1. Create and activate a conda environment:
-    1. `conda create -n gaiaenv python=3.10 -y`
-    1. `conda activate gaiaenv`
-1. Install GAIA dependencies:
+2. Navigate to the GAIA root directory:
+   - **Windows (PowerShell)**: `cd .\gaia`
+   - **Linux/Ubuntu/WSL**: `cd ./gaia`
+3. Create and activate a conda environment:
+   ```bash
+   conda create -n gaiaenv python=3.10 -y
+   conda activate gaiaenv
+   ```
+4. Install GAIA dependencies:
     ```bash
     pip install -e .[dev]
     ```

@@ -10,7 +10,7 @@ name: Code Quality (Lint)
 on:
   workflow_call:
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
       - "src/**"
       - "tests/**"
@@ -19,7 +19,7 @@ on:
       - "test_data/**"
       - "setup.py"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"
@@ -41,7 +41,10 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     steps:
       - uses: actions/checkout@v5
-      
+
+      - name: Free disk space
+        uses: ./.github/actions/free-disk-space
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:

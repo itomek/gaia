@@ -32,6 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Free disk space
+        uses: ./.github/actions/free-disk-space
+
       - name: Discover Electron apps
         id: discover
         run: |

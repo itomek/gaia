@@ -4,7 +4,8 @@
 # Standard library imports
 import logging
 import os
-from typing import Any, Dict, Iterator, Literal, Optional, Union
+import time
+from typing import Any, Callable, Dict, Iterator, Literal, Optional, TypeVar, Union
 
 import httpx
 
@@ -15,6 +16,9 @@ from openai import OpenAI
 
 # Local imports
 from .lemonade_client import DEFAULT_MODEL_NAME
+
+# Type variable for retry decorator
+T = TypeVar("T")
 
 # Conditional import for Claude
 try:
@@ -39,8 +43,10 @@ class LLMClient:
         use_claude: bool = False,
         use_openai: bool = False,
         system_prompt: Optional[str] = None,
-        base_url: Optional[str] = "http://localhost:8000/api/v0",
+        base_url: Optional[str] = "http://localhost:8000/api/v1",
         claude_model: str = "claude-sonnet-4-20250514",
+        max_retries: int = 3,
+        retry_base_delay: float = 1.0,
     ):
         """
         Initialize the LLM client.
@@ -51,6 +57,8 @@ class LLMClient:
             system_prompt: Default system prompt to use for all generation requests.
             base_url: Base URL for local LLM server.
             claude_model: Claude model to use (e.g., "claude-sonnet-4-20250514").
+            max_retries: Maximum number of retry attempts on connection errors.
+            retry_base_delay: Base delay in seconds for exponential backoff.
 
         Note: Uses local LLM server by default unless use_claude or use_openai is True.
               Context size is configured when starting the Lemonade server with --ctx-size parameter.
@@ -66,6 +74,8 @@ class LLMClient:
         self.use_openai = use_openai
         self.base_url = base_url
         self.system_prompt = system_prompt
+        self.max_retries = max_retries
+        self.retry_base_delay = retry_base_delay
 
         if use_local:
             # Configure timeout for local LLM server
@@ -116,6 +126,58 @@ class LLMClient:
         if system_prompt:
             logger.debug(f"System prompt set: {system_prompt[:100]}...")
 
+    def _retry_with_exponential_backoff(
+        self,
+        func: Callable[..., T],
+        *args,
+        **kwargs,
+    ) -> T:
+        """
+        Execute a function with exponential backoff retry on connection errors.
+
+        Args:
+            func: The function to execute
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+
+        Returns:
+            The result of the function call
+
+        Raises:
+            The last exception if all retries are exhausted
+        """
+        delay = self.retry_base_delay
+        max_delay = 60.0
+        exponential_base = 2.0
+
+        for attempt in range(self.max_retries + 1):
+            try:
+                return func(*args, **kwargs)
+            except (
+                ConnectionError,
+                httpx.ConnectError,
+                httpx.TimeoutException,
+                httpx.NetworkError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ) as e:
+                if attempt == self.max_retries:
+                    logger.error(
+                        f"Max retries ({self.max_retries}) reached for {func.__name__}. "
+                        f"Last error: {str(e)}"
+                    )
+                    raise
+
+                # Calculate next delay with exponential backoff
+                wait_time = min(delay, max_delay)
+                logger.warning(
+                    f"Connection error in {func.__name__} (attempt {attempt + 1}/{self.max_retries + 1}): {str(e)}. "
+                    f"Retrying in {wait_time:.1f}s..."
+                )
+
+                time.sleep(wait_time)
+                delay *= exponential_base
+
     def generate(
         self,
         prompt: str,
@@ -143,7 +205,7 @@ class LLMClient:
         model = model or self.default_model
         endpoint_to_use = endpoint or self.endpoint
         logger.debug(
-            f"Generating response with model={model}, endpoint={endpoint_to_use}, stream={stream}"
+            f"LLMClient.generate() called with model={model}, endpoint={endpoint_to_use}, stream={stream}"
         )
 
         # Use provided system_prompt, fall back to instance default if not provided
@@ -170,9 +232,13 @@ class LLMClient:
                         "Streaming not yet implemented for Claude API, falling back to non-streaming"
                     )
 
-                # Use Claude client
+                # Use Claude client with retry logic
                 logger.debug("Making request to Claude API")
-                result = self.claude_client.get_completion(full_prompt)
+
+                # Use retry logic for the API call
+                result = self._retry_with_exponential_backoff(
+                    self.claude_client.get_completion, full_prompt
+                )
 
                 # Claude returns a list of content blocks, extract text
                 if isinstance(result, list) and len(result) > 0:
@@ -215,9 +281,26 @@ class LLMClient:
                 # Set stream parameter in the API call
                 # Stop tokens should be provided by caller if needed
                 logger.debug(
-                    f"Making LLM request to {self.base_url} with timeout settings"
+                    f"📤 Sending to Lemonade: model={model}, prompt_length={len(effective_prompt)} chars"
                 )
-                response = self.client.completions.create(
+
+                # Log prompt tail for debugging empty responses
+                if len(effective_prompt) > 500:
+                    logger.debug(
+                        f"📜 Prompt tail (last 500 chars): ...{effective_prompt[-500:]}"
+                    )
+                    # Check for system message followed by assistant (the actual bug)
+                    if (
+                        "<|im_end|>\n<|im_start|>assistant\n" in effective_prompt[-100:]
+                        and "<|im_start|>system\n" in effective_prompt[-600:]
+                    ):
+                        logger.warning(
+                            "⚠️ Tool result added as system message - causes empty response with Qwen"
+                        )
+
+                # Use retry logic for the API call
+                response = self._retry_with_exponential_backoff(
+                    self.client.completions.create,
                     model=model,
                     prompt=effective_prompt,
                     temperature=0.1,  # Lower temperature for more consistent JSON output
@@ -237,7 +320,7 @@ class LLMClient:
 
                     return stream_generator()
                 else:
-                    # Return the complete response as before
+                    # Return the complete response
                     result = response.choices[0].text
 
                     # Check for empty responses
@@ -268,9 +351,13 @@ class LLMClient:
             logger.debug(f"OpenAI API messages: {messages}")
 
             try:
-                # Set stream parameter in the API call
-                response = self.client.chat.completions.create(
-                    model=model, messages=messages, stream=stream, **kwargs
+                # Use retry logic for the API call
+                response = self._retry_with_exponential_backoff(
+                    self.client.chat.completions.create,
+                    model=model,
+                    messages=messages,
+                    stream=stream,
+                    **kwargs,
                 )
 
                 if stream:
@@ -318,9 +405,11 @@ class LLMClient:
             }
 
         try:
-            # Extract the base URL from client configuration
+            # Use the Lemonade API v1 stats endpoint
+            # This returns both timing stats and token counts
             stats_url = f"{self.base_url}/stats"
             response = requests.get(stats_url)
+
             if response.status_code == 200:
                 stats = response.json()
                 # Remove decode_token_times as it's too verbose
@@ -353,7 +442,9 @@ class LLMClient:
 
         try:
             # Check the generating endpoint
-            generating_url = f"{self.base_url.replace('/api/v0', '')}/generating"
+            # Remove /api/v1 suffix to access root-level endpoints
+            base = self.base_url.replace("/api/v1", "")
+            generating_url = f"{base}/generating"
             response = requests.get(generating_url)
             if response.status_code == 200:
                 response_data = response.json()
@@ -386,7 +477,9 @@ class LLMClient:
 
         try:
             # Send halt request
-            halt_url = f"{self.base_url.replace('/api/v0', '')}/halt"
+            # Remove /api/v1 suffix to access root-level endpoints
+            base = self.base_url.replace("/api/v1", "")
+            halt_url = f"{base}/halt"
             response = requests.get(halt_url)
             if response.status_code == 200:
                 logger.debug("Successfully halted current generation")

@@ -10,14 +10,14 @@ name: GAIA CLI Tests (Linux)
 on:
   workflow_call:
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
       - "src/**"
       - "tests/**"
       - "setup.py"
       - "pyproject.toml"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"
@@ -39,6 +39,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Free disk space
+        uses: ./.github/actions/free-disk-space
 
       - name: Download and Install Miniforge
         run: |
@@ -75,8 +78,8 @@ jobs:
           
           # Install GAIA with basic dependencies
           pip install -e .
-          # Install evaluation dependencies for testing eval commands
-          pip install -e .[eval]
+          # Install evaluation and RAG dependencies for testing eval and RAG commands
+          pip install -e .[eval,rag]
 
       - name: Verify GAIA CLI installation
         run: |
@@ -212,6 +215,20 @@ jobs:
             echo "Note: Error details displayed above"
           fi
           
+          echo ""
+          echo "=== Testing RAG Functionality ==="
+          echo "Testing RAG (Retrieval-Augmented Generation) system"
+          
+          # Run the RAG tests
+          python -m pytest tests/test_rag.py -vs --tb=short || RAG_TEST_EXIT=$?
+          
+          if [ "${RAG_TEST_EXIT:-0}" -eq 0 ]; then
+            echo "✅ RAG tests passed successfully!"
+          else
+            echo "❌ RAG tests failed with exit code: ${RAG_TEST_EXIT}"
+            echo "Note: Error details displayed above"
+          fi
+          
           # Clean up: Stop the Lemonade server
           echo "Stopping Lemonade server..."
           kill $LEMONADE_PID 2>/dev/null || true
@@ -318,6 +335,7 @@ jobs:
           echo "   ✅ Core CLI commands using Qwen model (chat, prompt, llm)"
           echo "   ✅ Evaluation commands (eval, groundtruth, report, etc.)"
           echo "   ✅ Summarizer CLI integration (gaia summarize command)"
+          echo "   ✅ RAG (Retrieval-Augmented Generation) functionality"
           echo "   ✅ Cross-platform compatibility"
           echo "   ✅ Process management and cleanup"
           echo ""

@@ -10,14 +10,14 @@ name: GAIA CLI Tests (All Platforms)
 on:
   workflow_call:
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
       - "src/**"
       - "tests/**"
       - "setup.py"
       - "pyproject.toml"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"

@@ -10,14 +10,14 @@ name: GAIA CLI Tests (Windows)
 on:
   workflow_call: {}
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
       - "src/**"
       - "tests/**"
       - "setup.py"
       - "pyproject.toml"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"
@@ -67,7 +67,7 @@ jobs:
 
           Write-Host "Step 2: Install dependencies"
           python -m pip install --upgrade pip
-          pip install -e .[dev,talk]
+          pip install -e .[dev,talk,rag]
 
           Write-Host "Step 3: Verify installation"
           $gaiaPath = Get-Command gaia -ErrorAction SilentlyContinue
@@ -170,6 +170,7 @@ jobs:
           set test_llm_exit=0
           set test_asr_exit=0
           set test_tts_exit=0
+          set test_rag_exit=0
 
           REM ================================================================
           REM TEST_LLM.PY
@@ -244,6 +245,30 @@ jobs:
           echo.
 
           REM ================================================================
+          REM TEST_RAG.PY
+          REM ================================================================
+          echo ****************************************************************
+          echo                          TEST_RAG.PY
+          echo ****************************************************************
+          echo Starting test_rag.py at %TIME%...
+          echo.
+
+          python tests\test_rag.py
+          set test_rag_exit=%ERRORLEVEL%
+
+          echo.
+          echo ----------------------------------------------------------------
+          echo test_rag.py completed at %TIME% with exit code: %test_rag_exit%
+          if %test_rag_exit% equ 0 (
+              echo [SUCCESS] test_rag.py passed
+          ) else (
+              echo [FAILURE] test_rag.py failed with exit code %test_rag_exit%
+              echo Full error output displayed above - no truncation
+          )
+          echo ----------------------------------------------------------------
+          echo.
+
+          REM ================================================================
           REM FINAL SUMMARY
           REM ================================================================
           echo ================================================================
@@ -252,10 +277,11 @@ jobs:
           echo test_llm.py:  exit code %test_llm_exit%
           echo test_asr.py:  exit code %test_asr_exit%
           echo test_tts.py:  exit code %test_tts_exit%
+          echo test_rag.py:  exit code %test_rag_exit%
           echo ================================================================
 
           REM Calculate total failures
-          set /a total_failures=%test_llm_exit%+%test_asr_exit%+%test_tts_exit%
+          set /a total_failures=%test_llm_exit%+%test_asr_exit%+%test_tts_exit%+%test_rag_exit%
 
           if %total_failures% equ 0 (
               echo [OVERALL SUCCESS] All tests passed successfully
@@ -268,6 +294,7 @@ jobs:
               if %test_llm_exit% neq 0 echo   - test_llm.py ^(exit code %test_llm_exit%^)
               if %test_asr_exit% neq 0 echo   - test_asr.py ^(exit code %test_asr_exit%^)
               if %test_tts_exit% neq 0 echo   - test_tts.py ^(exit code %test_tts_exit%^)
+              if %test_rag_exit% neq 0 echo   - test_rag.py ^(exit code %test_rag_exit%^)
               echo ================================================================
               echo IMPORTANT: All error messages are displayed in full above
               echo No PowerShell wrapping or truncation - raw Python output preserved

@@ -88,7 +88,7 @@ class JiraApp:
         ...
 
     async def execute_command(
-        self, command: str, context: Optional[str] = None, output_to_file: bool = False
+        self, command: str, context: Optional[str] = None, trace: bool = False
     ) -> TaskResult:
         """
         Execute a natural language command.
@@ -96,7 +96,7 @@ class JiraApp:
         Args:
             command: Natural language command to execute
             context: Additional context (optional)
-            output_to_file: Whether to save output to file
+            trace: Whether to save detailed trace to file
 
         Returns:
             TaskResult with execution outcome
@@ -107,7 +107,7 @@ class JiraApp:
                 command = f"{command}\nContext: {context}"
 
             # Use the agent's process_query directly - single entry point
-            result = self.agent.process_query(command, output_to_file=output_to_file)
+            result = self.agent.process_query(command, trace=trace)
 
             # Base agent returns: status ("success", "failed", "incomplete"), result, conversation, etc.
             return TaskResult(

@@ -12,20 +12,16 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "src/gaia/eval/**"
-      - "src/gaia/eval/configs/**"
-      - "src/gaia/eval/webapp/**"
-      - "tests/test_eval*.py"
+      - "src/gaia/**"
+      - "tests/**"
       - "groundtruth/**"
       - "test_data/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "src/gaia/eval/**"
-      - "src/gaia/eval/configs/**"
-      - "src/gaia/eval/webapp/**"
-      - "tests/test_eval*.py"
+      - "src/gaia/**"
+      - "tests/**"
       - "groundtruth/**"
       - "test_data/**"
   workflow_dispatch:

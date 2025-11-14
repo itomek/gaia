@@ -112,7 +112,7 @@ class LemonadeClient:
         if model:
             self.log.info(f"Initial model set to: {model}")
 
-    def launch_server(self, log_level="info", background="none"):
+    def launch_server(self, log_level="info", background="none", ctx_size=None):
         """
         Launch the Lemonade server using subprocess.
 
@@ -123,6 +123,8 @@ class LemonadeClient:
                        - "terminal": Launch in a new terminal window
                        - "silent": Run in background with output to log file
                        - "none": Run in foreground (default)
+            ctx_size: Context size for the model (default: None, uses server default).
+                     For chat/RAG applications, use 32768 or higher.
 
         This method follows the approach in test_lemonade_server.py.
         """
@@ -135,6 +137,9 @@ class LemonadeClient:
         base_cmd = ["lemonade-server", "serve"]
         if log_level != "info":
             base_cmd.extend(["--log-level", log_level])
+        if ctx_size is not None:
+            base_cmd.extend(["--ctx-size", str(ctx_size)])
+            self.log.info(f"Context size set to: {ctx_size}")
 
         if background == "terminal":
             # Launch in a new terminal window
@@ -676,6 +681,42 @@ class LemonadeClient:
             self.log.error(f"Error in OpenAI completion streaming: {str(e)}")
             raise LemonadeClientError(f"Error in OpenAI completion streaming: {str(e)}")
 
+    def embeddings(
+        self,
+        input_texts: Union[str, List[str]],
+        model: Optional[str] = None,
+        timeout: int = DEFAULT_REQUEST_TIMEOUT,
+    ) -> Dict[str, Any]:
+        """
+        Generate embeddings for input text(s) using Lemonade server.
+
+        Args:
+            input_texts: Single string or list of strings to embed
+            model: Embedding model to use (defaults to self.model or nomic-embed-text-v2)
+            timeout: Request timeout in seconds
+
+        Returns:
+            Dict with 'data' containing list of embedding vectors
+        """
+        try:
+            # Ensure input is a list
+            if isinstance(input_texts, str):
+                input_texts = [input_texts]
+
+            # Use specified model or default
+            embedding_model = model or self.model or "nomic-embed-text-v2"
+
+            payload = {"model": embedding_model, "input": input_texts}
+
+            url = f"{self.base_url}/embeddings"
+            response = self._send_request("POST", url, data=payload, timeout=timeout)
+
+            return response
+
+        except Exception as e:
+            self.log.error(f"Error generating embeddings: {str(e)}")
+            raise LemonadeClientError(f"Error generating embeddings: {str(e)}")
+
     def list_models(self) -> Dict[str, Any]:
         """
         List available models from the server.
@@ -766,6 +807,82 @@ class LemonadeClient:
             message = f"Failed to delete {model_name}: {e}"
             self.log.error(message)
             raise LemonadeClientError(message)
+
+    def ensure_model_downloaded(
+        self,
+        model_name: str,
+        show_progress: bool = True,
+        timeout: int = 600,
+    ) -> bool:
+        """
+        Ensure a model is downloaded, downloading if necessary.
+
+        This method checks if the model is available on the server,
+        and if not, downloads it via the /api/v1/pull endpoint.
+
+        Args:
+            model_name: Model name to ensure is downloaded
+            show_progress: Show progress messages during download
+            timeout: Download timeout in seconds (default: 10 minutes)
+
+        Returns:
+            True if model is available (was already downloaded or successfully downloaded),
+            False if download failed
+
+        Example:
+            client = LemonadeClient()
+            if client.ensure_model_downloaded("Qwen3-0.6B-GGUF"):
+                client.load_model("Qwen3-0.6B-GGUF")
+        """
+        try:
+            # Check if model is already downloaded
+            models_response = self.list_models()
+            for model in models_response.get("data", []):
+                if model.get("id") == model_name:
+                    if model.get("downloaded", False):
+                        if show_progress:
+                            self.log.info(f"✅ Model already downloaded: {model_name}")
+                        return True
+
+            # Model not downloaded - attempt download
+            if show_progress:
+                self.log.info(f"📥 Downloading model: {model_name}")
+                self.log.info("   This may take several minutes...")
+
+            # Download via pull_model
+            self.pull_model(model_name, timeout=timeout)
+
+            # Wait and check if download completed
+            # Poll every 10 seconds for up to timeout duration
+            poll_interval = 10
+            elapsed = 0
+
+            while elapsed < timeout:
+                time.sleep(poll_interval)
+                elapsed += poll_interval
+
+                # Check if model is now downloaded
+                models_response = self.list_models()
+                for model in models_response.get("data", []):
+                    if model.get("id") == model_name:
+                        if model.get("downloaded", False):
+                            if show_progress:
+                                self.log.info(
+                                    f"✅ Model downloaded successfully: {model_name} ({elapsed}s)"
+                                )
+                            return True
+
+                if show_progress:
+                    self.log.info(f"   ⏳ Downloading... {elapsed}s elapsed")
+
+            # Timeout reached
+            if show_progress:
+                self.log.warning(f"⏰ Download timeout ({timeout}s) for {model_name}")
+            return False
+
+        except Exception as e:
+            self.log.error(f"Failed to ensure model downloaded: {e}")
+            return False
 
     def responses(
         self,

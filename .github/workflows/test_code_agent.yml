@@ -9,20 +9,16 @@ name: Code Agent Tests
 on:
   workflow_call:
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
-      - "src/gaia/agents/code/**"
-      - "tests/test_code_agent.py"
-      - "tests/test_code_agent_mixins.py"
-      - ".github/workflows/test_code_agent.yml"
+      - "src/gaia/**"
+      - "tests/**"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
-      - "src/gaia/agents/code/**"
-      - "tests/test_code_agent.py"
-      - "tests/test_code_agent_mixins.py"
-      - ".github/workflows/test_code_agent.yml"
+      - "src/gaia/**"
+      - "tests/**"
   workflow_dispatch:
 
 permissions:
@@ -36,6 +32,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+
+      - name: Free disk space
+        uses: ./.github/actions/free-disk-space
 
       - name: Set up Python
         uses: actions/setup-python@v6

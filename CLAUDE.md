@@ -44,43 +44,11 @@ SPDX-License-Identifier: MIT
 
 ## Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
-
-### User Guides
-- [`docs/apps/`](docs/apps/) - Desktop applications overview
-  - [`docs/apps/jira.md`](docs/apps/jira.md) - Jira app documentation
-- [`docs/cli.md`](docs/cli.md) - Command Line Interface guide and usage examples
-- [`docs/features.md`](docs/features.md) - Complete feature overview and platform support matrix
-- [`docs/chat.md`](docs/chat.md) - Interactive chat agent documentation
-- [`docs/code.md`](docs/code.md) - **Code Agent**: Autonomous Python development with architectural planning (PLAN.md), project scaffolding, GAIA.md context support, test generation, linting, and iterative error correction
-- [`docs/talk.md`](docs/talk.md) - Voice interaction and speech-to-speech features
-- [`docs/blender.md`](docs/blender.md) - Blender 3D agent for content creation
-- [`docs/jira.md`](docs/jira.md) - Jira agent for issue management with natural language interface
-- [`docs/ui.md`](docs/ui.md) - Web UI documentation and deployment guide
-- [`docs/n8n.md`](docs/n8n.md) - n8n workflow integration
-
-### Developer Resources
-- [`docs/dev.md`](docs/dev.md) - Development environment setup and contribution guidelines
-- [`docs/apps/dev.md`](docs/apps/dev.md) - App development guide (building GAIA desktop applications)
-- [`docs/eval.md`](docs/eval.md) - Evaluation framework for model testing and benchmarking
-- [`docs/mcp.md`](docs/mcp.md) - MCP server documentation and API reference
-
-### Installation & Setup
-- [`docs/installer.md`](docs/installer.md) - NSIS installer documentation and customization
-- [`docs/faq.md`](docs/faq.md) - Frequently asked questions and troubleshooting
+**See "Documentation Index" section below for complete list of available documentation.**
 
 ### GAIA + RAUX Integration
 
-GAIA works in conjunction with RAUX, an Electron-based desktop application that provides:
-- Enhanced user interface and experience layer
-- Installation management and progress tracking
-- Inter-process communication (IPC) for status updates
-- Unified "GAIA UI" branding across the platform
-
-RAUX serves as the frontend application layer while GAIA provides the core AI framework and backend services. The integration uses:
-- NSIS installer coordination between both systems
-- IPC channels for real-time installation and runtime status
-- Shared environment configuration and Python execution management
+GAIA works with RAUX (Electron-based desktop app) for enhanced UI and installation management. See [`docs/ui.md`](docs/ui.md) and [`docs/installer.md`](docs/installer.md) for details.
 
 ## Version Control Guidelines
 
@@ -139,167 +107,50 @@ This ensures:
 - Command-line argument parsing is validated
 - User experience matches test coverage
 
-## Development Commands
-
-### Windows PowerShell Commands
-When developing on Windows, use these PowerShell equivalents:
-
-```powershell
-# Search for files
-Get-ChildItem -Path src -Recurse -Filter "*.py" | Select-String -Pattern "CodeAgent"
-
-# Find specific patterns
-Select-String -Pattern "def \w+\(" -Path src\gaia\agents\code\*.py
-
-# Run tests with verbose output
-python -m pytest tests/test_code.py -xvs
-
-# Check file encoding
-Get-Content src\gaia\agents\code\agent.py -Encoding UTF8 | Out-Null
-
-# Count lines of code
-(Get-Content src\gaia\agents\code\agent.py | Measure-Object -Line).Lines
-```
+## Development Workflow
 
 ### Setup and Installation
+
+**See:** [`docs/dev.md`](docs/dev.md) for complete development setup instructions.
+
+Quick reference:
 ```bash
-# Install in development mode with all extras
-pip install -e .[audio,talk,dev,eval,youtube]
-
-# Install specific components
-pip install -e .[talk]     # Voice interaction
-pip install -e .[eval]     # Evaluation framework
-pip install -e .[youtube]  # YouTube transcript support
-pip install -e .[blender]  # Blender 3D integration (requires Blender)
-
-# Create conda environment (recommended)
 conda create -n gaiaenv python=3.10 -y
 conda activate gaiaenv
+pip install -e .[talk,dev,rag]
 ```
 
 ### Testing
-```powershell
-# Run all tests (Windows PowerShell)
+
+**See:** [`docs/dev.md`](docs/dev.md) for comprehensive testing guide.
+
+Quick reference:
+```bash
+conda activate gaiaenv
 python -m pytest tests/
-
-# Run specific test file
-python -m pytest tests/test_gaia.py
-
-# Run unit tests only
-python -m pytest tests/unit/
-
-# Run with hybrid configuration
-python -m pytest --hybrid
-
-# Run Code Agent tests
-python -m pytest tests/test_code.py -v
-python -m pytest tests/test_code_workflow.py -v
-python -m pytest tests/test_code_workflow_enhanced.py -v
-
-# Test specific Code Agent features
-python -m pytest tests/test_code.py::TestCodeAgent::test_generate_function -xvs
-python -m pytest tests/test_code.py::TestCodeAgent::test_generate_test -xvs
-
-# Run Jira agent tests
-python tests/test_jira.py
-python tests/test_jira.py --interactive  # Interactive mode with test selection
-python tests/test_jira.py --test test_basic_fetch_queries  # Run specific test
-python tests/test_jira.py --show-prompts  # Display LLM prompts
-python tests/test_jira.py --debug --show-prompts  # Full debug output
-python run_jira_tests.py  # Comprehensive Jira test suite
-
-# Run MCP tests
-python -m pytest tests/mcp/
-python tests/mcp/test_mcp_simple.py
-python tests/mcp/test_mcp_jira.py
-python tests/mcp/test_mcp_http_validation.py
-python validate_mcp.py  # Validate MCP protocol compliance
-
-# Run other integration tests
-python -m pytest tests/test_chat_sdk.py
-python -m pytest tests/test_eval.py
-python -m pytest tests/test_summarizer.py
-python -m pytest tests/test_lemonade_client.py
+.\util\lint.ps1  # Run all linting checks
 ```
 
 ### Linting and Formatting
-```powershell
-# Format code (Black is configured in pyproject.toml)
-python -m black src/ tests/
 
-# Run linting via PowerShell script
-.\util\lint.ps1
+**See:** [`docs/dev.md`](docs/dev.md) for linting and formatting guidelines.
 
-# Run specific linting tools
-.\util\lint.ps1 -RunBlack
-.\util\lint.ps1 -RunPylint
-
-# For Code Agent development
-python -m pylint src/gaia/agents/code/
-python -m black src/gaia/agents/code/ --check
-```
-
-### Running the Application
+Quick reference:
 ```bash
-# CLI interface
-gaia
-
-# Direct LLM queries (fastest, no server setup required)
-gaia llm "What is artificial intelligence?"
-
-# Interactive chat
-gaia chat
-
-# Code development with autonomous workflow
-# IMPORTANT: Code Agent requires larger context size
-# Start Lemonade server with: lemonade-server serve --ctx-size 32768
-
-# Initialize GAIA.md for existing project
-gaia code /init                                      # Analyze codebase and create GAIA.md
-
-# Create complete applications with architectural planning
-gaia code "Create a snake arcade game"              # Creates PLAN.md, folder structure, and implementation
-gaia code "Build a REST API for user management"    # Generates API structure with FastAPI
-gaia code "Create a data processing library"        # Scaffolds library with proper structure
-
-# Code generation and analysis
-gaia code "Generate unit tests for my_module.py"    # Analyze code and create tests
-gaia code "Fix linting issues in script.py"         # Run pylint and auto-fix
-gaia code --interactive                             # Interactive coding session
-gaia code --list-tools                              # Show available code operations
-
-# Use with cloud LLM (no server setup required)
-gaia code "Create a REST API" --use-claude
-gaia code "Create a REST API" --use-chatgpt
-
-# Note: Code Agent workflow:
-# 1. Creates PLAN.md with detailed architecture
-# 2. Generates project structure (folders/files)
-# 3. Implements all components
-# 4. Runs linting and formatting
-# 5. Tests and fixes errors
-
-# Voice interaction
-gaia talk
-
-# Blender agent for 3D tasks
-gaia blender
-
-# Jira agent for issue management (with automatic configuration discovery)
-gaia jira
-gaia jira "show my open issues"  # Direct query execution
-gaia jira --interactive  # Interactive mode for multiple queries
-
-# MCP bridge for external integrations
-gaia mcp start
-gaia mcp status
-gaia mcp stop
-
-# Summarization tool for documents and transcripts
-gaia summarize -i document.txt --styles executive action_items
-gaia summarize -i meeting_transcript.txt -o summary.json
-gaia summarize --list-configs  # View available summarization configurations
+.\util\lint.ps1           # Run all quality checks
+.\util\lint.ps1 -RunBlack -Fix  # Auto-fix formatting
 ```
+
+### Running GAIA Features
+
+**See feature-specific documentation:**
+- CLI commands: [`docs/cli.md`](docs/cli.md)
+- Chat: [`docs/chat.md`](docs/chat.md)
+- Code Agent: [`docs/code.md`](docs/code.md)
+- Talk (Voice): [`docs/talk.md`](docs/talk.md)
+- Blender: [`docs/blender.md`](docs/blender.md)
+- Jira: [`docs/jira.md`](docs/jira.md)
+- MCP: [`docs/mcp.md`](docs/mcp.md)
 
 ## Project Structure
 
@@ -480,6 +331,13 @@ gaia/
    - PDF formatting and HTML viewing capabilities
    - Configurable summarization templates and prompts
 
+6. **RAG System** (`src/gaia/rag/`): Document retrieval and Q&A
+   - PDF text extraction and chunking with overlap
+   - Vector embeddings using sentence-transformers
+   - FAISS similarity search for document retrieval
+   - Integration with Chat SDK for context-aware conversations
+   - Caching system for performance optimization
+
 ### Key Architecture Patterns
 
 - **Agent Pattern**: All domain-specific functionality implemented as agents inheriting from base `Agent` class
@@ -513,6 +371,20 @@ Tests are organized by component:
 
 When adding new agents, follow the pattern in existing agents with separate `app.py` and agent implementation files.
 
+## RAG (Retrieval-Augmented Generation)
+
+RAG enables document-based Q&A by integrating with the chat command.
+
+**For complete RAG documentation including:**
+- Installation and setup
+- CLI usage examples
+- Python SDK API reference
+- Configuration options
+- Troubleshooting guide
+- Advanced usage patterns
+
+**See:** [`docs/chat.md#document-qa-with-rag`](docs/chat.md#document-qa-with-rag)
+
 ### CI/CD Pipeline
 
 GitHub Actions workflows are configured for:
@@ -526,58 +398,28 @@ GitHub Actions workflows are configured for:
 - **Publishing**: `publish_installer.yml` - Release distribution
 - **Hybrid Testing**: `local_hybrid_tests.yml` - Local and cloud model testing
 
-## Quick Reference to Documentation
+## Documentation Index
 
-### Feature-Specific Documentation
-- **LLM Direct Usage**: See [`docs/features.md`](docs/features.md#llm-direct-usage) and [`docs/cli.md`](docs/cli.md#gaia-cli-llm-demo)
-- **Chat Interface**: See [`docs/chat.md`](docs/chat.md) for interactive conversation features
-- **Code Development**: Complete autonomous Python development workflow. Features include:
-  - Workflow planning from complex requirements
-  - Code generation with best practices (docstrings, type hints)
-  - **Automatic file saving**: All generated code is written to appropriately named files
-  - **Smart test generation**: Creates test_[module].py files with comprehensive test cases
-  - **Pylint integration**: Analyzes code and automatically fixes linting errors
-  - **Black formatting**: Ensures consistent code style with auto-fix
-  - **Iterative error correction**: Fixes runtime and syntax errors automatically
-  - **File operations**: Supports Git-style diffs and unified diff format
-  - **Cache management**: Uses ~/.gaia/cache for temporary files
-  - See [`docs/code.md`](docs/code.md) for full documentation
-- **Voice Interaction**: See [`docs/talk.md`](docs/talk.md) for speech-to-speech capabilities
-- **3D Content Creation**: See [`docs/blender.md`](docs/blender.md) for Blender automation
-- **Jira Integration**: Natural language interface with automatic configuration discovery, LLM-driven JQL generation, and JSON API for webapp integration. See [`docs/jira.md`](docs/jira.md)
-- **Document Summarization**: Multiple styles and output formats for document processing. See [`docs/features.md`](docs/features.md) for usage examples
-- **Model Evaluation**: See [`docs/eval.md`](docs/eval.md) for testing and benchmarking
-- **Web UI**: See [`docs/ui.md`](docs/ui.md) for browser-based interface
-- **MCP Integration**: See [`docs/mcp.md`](docs/mcp.md) and [`docs/cli.md`](docs/cli.md#mcp-command) for external client integration
+**User Documentation:**
+- [`docs/cli.md`](docs/cli.md) - CLI commands and usage
+- [`docs/chat.md`](docs/chat.md) - Chat and RAG (document Q&A)
+- [`docs/talk.md`](docs/talk.md) - Voice interaction
+- [`docs/code.md`](docs/code.md) - Code Agent
+- [`docs/blender.md`](docs/blender.md) - Blender 3D agent
+- [`docs/jira.md`](docs/jira.md) - Jira integration
+- [`docs/features.md`](docs/features.md) - Feature overview
+- [`docs/faq.md`](docs/faq.md) - Troubleshooting
 
-### Platform-Specific Guides
-- **Windows Installation**: See [`docs/cli.md`](docs/cli.md#windows-installation) and [`docs/installer.md`](docs/installer.md)
-- **Linux Installation**: See [`docs/cli.md`](docs/cli.md#linux-installation)
-- **Platform Support Matrix**: See [`docs/features.md`](docs/features.md#platform-support-overview)
+**Developer Documentation:**
+- [`docs/dev.md`](docs/dev.md) - Development setup and testing
+- [`docs/apps/dev.md`](docs/apps/dev.md) - Building desktop apps
+- [`docs/mcp.md`](docs/mcp.md) - MCP server development
+- [`docs/eval.md`](docs/eval.md) - Evaluation framework
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contribution guidelines
 
-### Development Resources
-- **Contributing Guidelines**: See [`docs/dev.md`](docs/dev.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- **Building Desktop Apps**: See [`docs/apps/dev.md`](docs/apps/dev.md) for creating GAIA Electron applications
-- **Troubleshooting**: See [`docs/faq.md`](docs/faq.md)
-- **Evaluation Framework**: See [`docs/eval.md`](docs/eval.md) for creating tests and benchmarks
-- **Test Documentation**: See [`tests/TEST_JIRA_GUIDE.md`](tests/TEST_JIRA_GUIDE.md) for Jira testing guide
-- **Workshop Materials**: Available in `workshop/` directory for tutorials and examples
-
-### Code Agent Troubleshooting
-
-#### Common Issues and Fixes:
-1. **"unexpected indent" errors**: Fixed - Code indentation logic now properly handles pre-indented lines
-2. **"'CodeSymbol' object has no attribute 'params'"**: Fixed - Uses `signature` attribute instead
-3. **"gaia code" command not recognized**: Fixed - Added `set_defaults(action="code")` to CLI parser
-4. **Generated code not saved**: Fixed - All generation tools now write to files by default
-5. **Test files naming**: Fixed - Tests are now properly named with `test_` prefix
-
-#### File Output Locations:
-- Generated functions: `[function_name]_generated.py` in current directory
-- Generated classes: `[class_name]_generated.py` in current directory
-- Generated tests: `test_[module_name].py` in current directory
-- Cache files: `~/.gaia/cache/` directory
-- stop apologizing!
+**Platform-Specific:**
+- [`docs/installer.md`](docs/installer.md) - Windows installer
+- [`docs/ui.md`](docs/ui.md) - Web UI deployment
 
 ## File Path Rules (Workaround for Claude Code v1.0.111 Bug)
 - When reading or editing a file, **ALWAYS use relative paths.**
@@ -585,3 +427,4 @@ GitHub Actions workflows are configured for:
 - **DO NOT use absolute paths.**
 - Example: `C:/Users/user/project/src/components/Component.tsx` ❌
 - Reason: This is a workaround for a known bug in Claude Code v1.0.111 (GitHub Issue
+- when you invoke a particular proactive agent from @.claude\agents\, make sure to indicate what agent you are invoking in your response back to the user

@@ -568,7 +568,7 @@ Step 3: Build with build_image
             query = " ".join(query_parts) + "."
 
             # Let the LLM orchestrate the workflow
-            result = self.process_query(user_input=query, output_to_file=False)
+            result = self.process_query(user_input=query, trace=False)
 
             # Extract the final result
             # process_query returns: {status: "success"/"failed"/"incomplete", result: ..., error_history: [...]}

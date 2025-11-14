@@ -131,6 +131,12 @@ gaia talk
 ```
 Have a voice-based conversation with AI (includes speech recognition and text-to-speech).
 
+**Option 2b: Voice + Document Q&A**
+```bash
+gaia talk --index manual.pdf
+```
+Ask questions about your documents using voice - hands-free document assistance!
+
 **Option 3: Web Interface**
 Double-click the **GAIA-GUI** desktop icon to launch the modern web interface in your browser.
 
@@ -249,14 +255,14 @@ gaia llm "Explain machine learning" --model llama3.2:3b --max-tokens 200
 
 **Interactive Chat Sessions**:
 ```bash
-gaia chat                        # Start text chat with default agent
-gaia chat --agent-name Blender   # Chat with Blender agent for 3D tasks
+gaia chat                     # Start text chat with the AI assistant
+gaia chat --index manual.pdf  # Chat with document Q&A support
 ```
 
-**Single Prompts to Agents**:
+**Single Prompts**:
 ```bash
-gaia prompt "Create a red cube" --agent-name Blender
 gaia prompt "What's the weather?" --stats
+gaia llm "Explain quantum computing"
 ```
 
 **Voice Interaction**:

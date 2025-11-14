@@ -260,7 +260,7 @@ jobs:
 
                   try {
                       $response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/health" -Method GET -TimeoutSec 5
-                      Write-Host "✅ Server is ready and responding to health checks"
+                      Write-Host "[OK] Server is ready and responding to health checks"
                       Write-Host "Health response: $($response | ConvertTo-Json -Compress)"
                       $serverReady = $true
                   } catch {
@@ -287,11 +287,11 @@ jobs:
                           }
                           Write-Host "Total models found: $($modelsResponse.data.Count)"
                       } else {
-                          Write-Host "⚠️  No models found in the registry"
+                          Write-Host "[WARN] No models found in the registry"
                           Write-Host "Raw response: $($modelsResponse | ConvertTo-Json -Compress)"
                       }
                   } catch {
-                      Write-Host "❌ Error listing models: $_"
+                      Write-Host "[ERROR] Error listing models: $_"
                                              Write-Host "This might indicate a server issue or missing models endpoint"
                    }
 
@@ -304,9 +304,9 @@ jobs:
 
                        Write-Host "Attempting to load model: Llama-3.2-3B-Instruct-Hybrid"
                        $loadResponse = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/load" -Method POST -Body $loadRequest -ContentType "application/json" -TimeoutSec 30
-                       Write-Host "✅ Model load successful: $($loadResponse | ConvertTo-Json -Compress)"
+                       Write-Host "[OK] Model load successful: $($loadResponse | ConvertTo-Json -Compress)"
                    } catch {
-                       Write-Host "❌ Model load failed: $($_.Exception.Message)"
+                       Write-Host "[ERROR] Model load failed: $($_.Exception.Message)"
                        if ($_.ErrorDetails) {
                            Write-Host "Error details: $($_.ErrorDetails.Message)"
                        }
@@ -318,7 +318,7 @@ jobs:
               if (-not $serverReady) {
                   # Server didn't come up - check job state and output
                   $jobState = Get-Job -Id $serverJob.Id
-                  Write-Host "❌ Server failed to start within $maxWaitTime seconds"
+                  Write-Host "[ERROR] Server failed to start within $maxWaitTime seconds"
                   Write-Host "Job state: $($jobState.State)"
 
                   # Always get job output to see what the server is doing
@@ -369,7 +369,7 @@ jobs:
               }
 
           } catch {
-              Write-Host "❌ Error starting lemonade-server: $_"
+              Write-Host "[ERROR] Error starting lemonade-server: $_"
               throw "Failed to start lemonade-server for tests: $_"
           }
 
@@ -400,10 +400,10 @@ jobs:
                       Write-Host "Stopping lemonade-server job..."
                       Stop-Job -Id $serverJob.Id -ErrorAction SilentlyContinue
                       Remove-Job -Id $serverJob.Id -ErrorAction SilentlyContinue
-                      Write-Host "✅ Lemonade server cleaned up successfully"
+                      Write-Host "[OK] Lemonade server cleaned up successfully"
                   }
               } catch {
-                  Write-Host "⚠️  Error cleaning up lemonade server: $_"
+                  Write-Host "[WARN] Error cleaning up lemonade server: $_"
               }
           }
 

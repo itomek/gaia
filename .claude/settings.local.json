@@ -34,7 +34,19 @@
       "mcp__sequential-thinking__sequentialthinking",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:lemonade-server.ai)"
+      "Bash(gaia code:*)",
+      "Bash(python -m pylint:*)",
+      "Bash(python migrate_agent.py:*)",
+      "Bash(tree:*)",
+      "Bash(python:*)",
+      "Bash(timeout 30 python:*)",
+      "WebFetch(domain:lemonade-server.ai)",
+      "WebFetch(domain:code.claude.com)",
+      "Bash(findstr:*)",
+      "Bash(gaia chat:*)",
+      "Bash(gaia jira --help:*)",
+      "Bash(gaia --help:*)",
+      "WebSearch"
     ],
     "deny": []
   },

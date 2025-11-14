@@ -9,13 +9,13 @@ name: Chat SDK Tests (Windows)
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
       - "src/**"
       - "tests/**"
       - "setup.py"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "src/**"

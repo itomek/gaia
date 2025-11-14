@@ -9,7 +9,6 @@ import sys
 import time
 from pathlib import Path
 
-from gaia.eval.config import DEFAULT_CLAUDE_MODEL
 from gaia.logger import get_logger
 from gaia.version import version
 
@@ -242,26 +241,24 @@ class GaiaCliClient:
             # Interactive mode if no message provided, single message mode if message provided
             use_interactive = message is None
 
+            # Build config dict, only include model if specified
+            config_kwargs = {
+                "max_tokens": max_tokens,
+                "system_prompt": system_prompt,
+                "assistant_name": assistant_name or "assistant",
+                "show_stats": stats,
+            }
+            if model:
+                config_kwargs["model"] = model
+
             if use_interactive:
                 # Interactive mode using ChatSDK
-                config = ChatConfig(
-                    model=model or DEFAULT_MODEL_NAME,
-                    max_tokens=max_tokens,
-                    system_prompt=system_prompt,
-                    assistant_name=assistant_name or "assistant",
-                    show_stats=stats,
-                )
+                config = ChatConfig(**config_kwargs)
                 chat = ChatSDK(config)
                 asyncio.run(chat.start_interactive_session())
             else:
                 # Single message mode with streaming
-                config = ChatConfig(
-                    model=model or DEFAULT_MODEL_NAME,
-                    max_tokens=max_tokens,
-                    system_prompt=system_prompt,
-                    assistant_name=assistant_name or "assistant",
-                    show_stats=stats,
-                )
+                config = ChatConfig(**config_kwargs)
                 chat = ChatSDK(config)
                 full_response = ""
                 for chunk in chat.send_stream(message):
@@ -286,23 +283,61 @@ class GaiaCliClient:
 async def async_main(action, **kwargs):
     log = get_logger(__name__)
 
-    # Check Lemonade health for all actions that require it
-    if action in ["prompt", "chat", "talk", "stats"]:
-        if not check_lemonade_health():
-            print_lemonade_error()
-            sys.exit(1)
+    # Check Lemonade health for actions that require LLM (unless using external APIs)
+    # Skip check when --use-claude or --use-chatgpt is specified (applies to ALL agents)
+    needs_lemonade = action in [
+        "prompt",
+        "chat",
+        "talk",
+        "stats",
+        "code",
+        "blender",
+        "jira",
+    ]
+    using_external_api = kwargs.get("use_claude") or kwargs.get("use_chatgpt")
 
-    # Create client for all actions - exclude parameters that aren't constructor arguments
-    # Filter out audio-related parameters that are no longer part of GaiaCliClient
-    audio_params = {
-        "whisper_model_size",
-        "audio_device_index",
-        "silence_threshold",
-        "no_tts",
-    }
-    excluded_params = {"message", "stats", "assistant_name"} | audio_params
-    client_params = {k: v for k, v in kwargs.items() if k not in excluded_params}
-    client = GaiaCliClient(**client_params)
+    if needs_lemonade and not using_external_api:
+        if not check_lemonade_health():
+            # Chat and Code agents both need large context (32768)
+            needs_large_context = action in ["chat", "code"]
+
+            # Auto-start lemonade server for chat and code
+            if needs_large_context:
+                print(
+                    "🚀 Starting Lemonade server with large context (32768 tokens)..."
+                )
+
+                try:
+                    client = LemonadeClient(verbose=True, keep_alive=True)
+                    client.launch_server(background="silent", ctx_size=32768)
+                    print("✅ Lemonade server started successfully")
+
+                    # Verify it's healthy
+                    time.sleep(2)  # Give it a moment to fully start
+                    if not check_lemonade_health():
+                        print_lemonade_error(for_code_agent=True)
+                        sys.exit(1)
+                except Exception as e:
+                    print(f"❌ Failed to start Lemonade server: {e}")
+                    print_lemonade_error(for_code_agent=True)
+                    sys.exit(1)
+            else:
+                print_lemonade_error(for_code_agent=needs_large_context)
+                sys.exit(1)
+
+    # Create client for actions that use GaiaCliClient (not chat - it uses ChatAgent)
+    client = None
+    if action in ["prompt", "stats"]:
+        # Filter out audio-related parameters that are no longer part of GaiaCliClient
+        audio_params = {
+            "whisper_model_size",
+            "audio_device_index",
+            "silence_threshold",
+            "no_tts",
+        }
+        excluded_params = {"message", "stats", "assistant_name"} | audio_params
+        client_params = {k: v for k, v in kwargs.items() if k not in excluded_params}
+        client = GaiaCliClient(**client_params)
 
     if action == "prompt":
         if not kwargs.get("message"):
@@ -318,43 +353,87 @@ async def async_main(action, **kwargs):
                 return {"response": response, "stats": stats}
         return {"response": response}
     elif action == "chat":
-        # Use ChatSDK for chat functionality
-        from gaia.chat.sdk import ChatConfig, ChatSDK
+        # Use Chat Agent with RAG, file search, and shell execution
+        from gaia.agents.chat.agent import ChatAgent, ChatAgentConfig
+        from gaia.agents.chat.app import interactive_mode
 
-        # Create SDK configuration
-        config = ChatConfig(
-            model=kwargs.get("model", DEFAULT_MODEL_NAME),
-            max_tokens=kwargs.get("max_tokens", 512),
-            system_prompt=kwargs.get("system_prompt"),
-            assistant_name=kwargs.get("assistant_name", "assistant"),
-            show_stats=kwargs.get("stats", False),
-            logging_level=kwargs.get("logging_level", "INFO"),
-        )
+        try:
+            # Use silent mode when debug is off to hide intermediate processing
+            # SilentConsole will still stream the final answer
+            query = kwargs.get("query")
+            debug_mode = kwargs.get("debug", False)
+            use_silent_mode = not debug_mode  # Hide processing steps unless debugging
 
-        chat_sdk = ChatSDK(config)
+            # Create configuration with CLI values
+            config = ChatAgentConfig(
+                use_claude=kwargs.get("use_claude", False),
+                use_chatgpt=kwargs.get("use_chatgpt", False),
+                claude_model=kwargs.get("claude_model", "claude-sonnet-4-20250514"),
+                base_url=kwargs.get("base_url", "http://localhost:8000/api/v1"),
+                model_id=kwargs.get("model", None),
+                max_steps=kwargs.get("max_steps", 100),
+                streaming=kwargs.get("stream", False),
+                show_prompts=kwargs.get("show_prompts", False),
+                show_stats=kwargs.get("show_stats", False),
+                silent_mode=use_silent_mode,
+                debug=debug_mode,
+                rag_documents=kwargs.get("index", []),
+                watch_directories=kwargs.get("watch", []),
+                chunk_size=kwargs.get("chunk_size", 500),
+                max_chunks=kwargs.get("max_chunks", 3),
+                allowed_paths=kwargs.get("allowed_paths", None),
+            )
 
-        message = kwargs.get("message")
-        if message:
-            # Single message mode with streaming
-            for chunk in chat_sdk.send_stream(message):
-                if not chunk.is_complete:
-                    print(chunk.text, end="", flush=True)
-                else:
-                    # Show stats if requested
-                    if kwargs.get("stats", False) and chunk.stats:
-                        print()  # Add newline before stats
-                        chat_sdk.display_stats(chunk.stats)
-            print()  # Add final newline
-        else:
-            # Interactive mode using ChatSDK
-            await chat_sdk.start_interactive_session()
+            # Create Chat Agent with configuration
+            agent = ChatAgent(config)
 
-        return
+            # Create initial session if not loading one
+            if not agent.current_session:
+                agent.current_session = agent.session_manager.create_session()
+                log.debug(f"Created new session: {agent.current_session.session_id}")
+
+            # List tools if requested
+            if kwargs.get("list_tools", False):
+                agent.list_tools(verbose=True)
+                return
+
+            # Single query mode
+            query = kwargs.get("query")
+            if query:
+                result = agent.process_query(query, trace=kwargs.get("trace", False))
+                # The console (either AgentConsole or SilentConsole) already handles printing
+
+                if kwargs.get("show_stats", False) and result.get("duration"):
+                    agent.console.display_stats(result)
+
+                return 0 if result["status"] == "success" else 1
+
+            # Interactive mode
+            interactive_mode(agent)
+            return
+
+        except KeyboardInterrupt:
+            print("\n\nInterrupted by user")
+            return
+        except Exception as e:
+            log.error(f"Error in chat: {e}", exc_info=True)
+            print(f"❌ Error: {e}")
+            return
+        finally:
+            # Cleanup
+            try:
+                if "agent" in locals():
+                    agent.stop_watching()
+            except Exception:  # pylint: disable=broad-except
+                pass
     elif action == "talk":
         # Use TalkSDK for voice functionality
         from gaia.talk.sdk import TalkConfig, TalkSDK
 
         # Create SDK configuration from CLI arguments
+        index_file = kwargs.get("index")
+        rag_documents = [index_file] if index_file else None
+
         config = TalkConfig(
             whisper_model_size=kwargs.get("whisper_model_size", "base"),
             audio_device_index=kwargs.get(
@@ -367,6 +446,8 @@ async def async_main(action, **kwargs):
             logging_level=kwargs.get(
                 "logging_level", "INFO"
             ),  # Back to INFO now that issues are fixed
+            # RAG configuration
+            rag_documents=rag_documents,
         )
 
         # Create SDK instance
@@ -426,6 +507,61 @@ def main():
         help="Set the logging level (default: INFO)",
     )
 
+    # Generic LLM backend options (available to all agents)
+    parent_parser.add_argument(
+        "--use-claude",
+        action="store_true",
+        help="Use Claude API instead of local Lemonade server",
+    )
+    parent_parser.add_argument(
+        "--use-chatgpt",
+        action="store_true",
+        help="Use ChatGPT/OpenAI API instead of local Lemonade server",
+    )
+    parent_parser.add_argument(
+        "--claude-model",
+        default="claude-sonnet-4-20250514",
+        help="Claude model to use when --use-claude is specified (default: claude-sonnet-4-20250514)",
+    )
+    parent_parser.add_argument(
+        "--base-url",
+        default="http://localhost:8000/api/v1",
+        help="Lemonade LLM server base URL (default: http://localhost:8000/api/v1)",
+    )
+    parent_parser.add_argument(
+        "--model",
+        default=None,
+        help="Model ID to use (default: auto-selected by each agent)",
+    )
+    parent_parser.add_argument(
+        "--trace",
+        action="store_true",
+        help="Save detailed JSON trace of agent execution (default: disabled)",
+    )
+    parent_parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=100,
+        help="Maximum conversation steps (default: 100)",
+    )
+    parent_parser.add_argument(
+        "--list-tools",
+        action="store_true",
+        help="List available tools and exit",
+    )
+    parent_parser.add_argument(
+        "--stats",
+        "--show-stats",
+        action="store_true",
+        dest="show_stats",
+        help="Show performance statistics",
+    )
+    parent_parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="Enable real-time streaming of LLM responses (shows raw JSON)",
+    )
+
     # Create subparsers for different commands
     subparsers = parser.add_subparsers(dest="action", help="Action to perform")
 
@@ -440,63 +576,59 @@ def main():
         "message",
         help="Message to send to Gaia",
     )
-
-    prompt_parser.add_argument(
-        "--model",
-        default=DEFAULT_MODEL_NAME,
-        help=f"Model to use for the agent (default: {DEFAULT_MODEL_NAME})",
-    )
     prompt_parser.add_argument(
         "--max-tokens",
         type=int,
         default=512,
         help="Maximum number of tokens to generate (default: 512)",
     )
-    prompt_parser.add_argument(
-        "--stats",
-        action="store_true",
-        help="Show performance statistics after generation",
-    )
 
     chat_parser = subparsers.add_parser(
         "chat",
-        help="Start interactive chat session with conversation history",
+        help="Interactive chat with RAG, file search, and shell execution",
         parents=[parent_parser],
     )
     chat_parser.add_argument(
-        "message",
-        nargs="?",
-        help="Message to send to the chatbot (defaults to interactive mode if not provided)",
+        "--query",
+        "-q",
+        type=str,
+        help="Single query to execute (defaults to interactive mode if not provided)",
+    )
+
+    # Agent configuration
+    chat_parser.add_argument(
+        "--show-prompts", action="store_true", help="Display prompts sent to LLM"
+    )
+    chat_parser.add_argument("--debug", action="store_true", help="Enable debug output")
+
+    # RAG configuration
+    chat_parser.add_argument(
+        "--index",
+        "-i",
+        nargs="+",
+        metavar="FILE",
+        help="PDF document(s) to index for RAG (space-separated)",
     )
     chat_parser.add_argument(
-        "--model",
-        default=DEFAULT_MODEL_NAME,
-        help=f"Model name to use (default: {DEFAULT_MODEL_NAME})",
+        "--watch", "-w", nargs="+", help="Directories to monitor for new documents"
     )
     chat_parser.add_argument(
-        "--max-tokens",
+        "--chunk-size", type=int, default=500, help="Document chunk size (default: 500)"
+    )
+    chat_parser.add_argument(
+        "--max-chunks",
         type=int,
-        default=512,
-        help="Maximum tokens to generate (default: 512)",
-    )
-    chat_parser.add_argument("--system-prompt", help="Custom system prompt to use")
-    chat_parser.add_argument(
-        "--assistant-name",
-        default="gaia",
-        help="Name to use for the assistant (default: gaia)",
+        default=3,
+        help="Maximum chunks to retrieve (default: 3)",
     )
     chat_parser.add_argument(
-        "--stats", action="store_true", help="Show performance statistics"
+        "--allowed-paths",
+        nargs="+",
+        help="Allowed directory paths for file operations (default: current directory)",
     )
 
     talk_parser = subparsers.add_parser(
         "talk", help="Start voice conversation with Gaia", parents=[parent_parser]
-    )
-
-    talk_parser.add_argument(
-        "--model",
-        default=DEFAULT_MODEL_NAME,
-        help=f"Model to use for the agent (default: {DEFAULT_MODEL_NAME})",
     )
     talk_parser.add_argument(
         "--max-tokens",
@@ -528,11 +660,12 @@ def main():
         default=0.5,
         help="Silence threshold in seconds (default: 0.5)",
     )
+
+    # RAG configuration for talk (document Q&A with voice)
     talk_parser.add_argument(
-        "--stats",
-        action="store_true",
-        help="Show performance statistics during voice chat",
+        "--index", "-i", type=str, help="Index a PDF document for voice Q&A"
     )
+    talk_parser.set_defaults(action="talk")
 
     # Add summarize command
     summarize_parser = subparsers.add_parser(
@@ -563,12 +696,6 @@ def main():
         choices=["json", "pdf", "email", "both"],
         default="json",
         help="Output format (default: json). 'both' generates json and pdf",
-    )
-    summarize_parser.add_argument(
-        "-m",
-        "--model",
-        default=DEFAULT_MODEL_NAME,
-        help=f"LLM model to use (default: {DEFAULT_MODEL_NAME}). Use gpt-4 for OpenAI",
     )
     summarize_parser.add_argument(
         "--styles",
@@ -632,11 +759,6 @@ def main():
         parents=[parent_parser],
     )
     blender_parser.add_argument(
-        "--model",
-        default=DEFAULT_MODEL_NAME,
-        help=f"Model ID to use (default: {DEFAULT_MODEL_NAME})",
-    )
-    blender_parser.add_argument(
         "--example",
         type=int,
         choices=range(1, 7),
@@ -650,15 +772,6 @@ def main():
         type=str,
         default="output",
         help="Directory to save output files",
-    )
-    blender_parser.add_argument(
-        "--stream", action="store_true", help="Enable streaming mode for LLM responses"
-    )
-    blender_parser.add_argument(
-        "--stats",
-        action="store_true",
-        default=True,
-        help="Display performance statistics",
     )
     blender_parser.add_argument(
         "--query", type=str, help="Custom query to run instead of examples"
@@ -716,10 +829,6 @@ def main():
         help="MCP bridge port (default: 8765)",
     )
     jira_parser.add_argument(
-        "--model",
-        help="LLM model to use (default: Qwen3-Coder-30B-A3B-Instruct-GGUF)",
-    )
-    jira_parser.add_argument(
         "-v",
         "--verbose",
         action="store_true",
@@ -765,37 +874,7 @@ def main():
         action="store_true",
         help="Display prompts sent to LLM",
     )
-    code_parser.add_argument(
-        "--output",
-        "-o",
-        help="Output file for results (JSON format)",
-    )
-    code_parser.add_argument(
-        "--max-steps",
-        type=int,
-        default=100,
-        help="Maximum conversation steps (default: 100)",
-    )
-    code_parser.add_argument(
-        "--list-tools",
-        action="store_true",
-        help="List all available tools and exit",
-    )
-    code_parser.add_argument(
-        "--use-claude",
-        action="store_true",
-        help="Use Claude API instead of local Lemonade server",
-    )
-    code_parser.add_argument(
-        "--use-chatgpt",
-        action="store_true",
-        help="Use ChatGPT/OpenAI API instead of local Lemonade server",
-    )
-    code_parser.add_argument(
-        "--streaming",
-        action="store_true",
-        help="Enable real-time streaming of LLM responses (shows raw JSON)",
-    )
+    # Note: --use-claude, --use-chatgpt, --max-steps, --list-tools, --stream, --stats inherited from parent_parser
     code_parser.add_argument(
         "--step-through",
         action="store_true",
@@ -829,10 +908,6 @@ def main():
         "--debug",
         action="store_true",
         help="Enable debug logging",
-    )
-    docker_parser.add_argument(
-        "--model",
-        help="LLM model to use (default: Qwen3-Coder-30B-A3B-Instruct-GGUF)",
     )
     docker_parser.set_defaults(action="docker")
 
@@ -966,9 +1041,6 @@ def main():
     )
     llm_parser.add_argument("query", help="The query/prompt to send to the LLM")
     llm_parser.add_argument(
-        "--model", help="Model name to use (optional, uses client default)"
-    )
-    llm_parser.add_argument(
         "--max-tokens",
         type=int,
         default=512,
@@ -1016,7 +1088,7 @@ Examples:
   gaia groundtruth -f ./data/html/intro.html -o ./output/gt
 
   # Use custom Claude model
-  gaia groundtruth -f ./data/doc.html -m claude-3-opus-20240229
+  gaia groundtruth -f ./data/doc.html --claude-model claude-3-opus-20240229
 
   # Generate 10 Q&A pairs per document (RAG only)
   gaia groundtruth -d ./data/html/blender --num-samples 10
@@ -1060,13 +1132,6 @@ Examples:
         help="Use case for ground truth generation: 'rag' for document Q&A pairs, 'summarization' for transcript summaries, 'qa' for transcript Q&A pairs, 'email' for email processing analysis (default: summarization)",
     )
     gt_parser.add_argument(
-        "-m",
-        "--model",
-        type=str,
-        default=DEFAULT_CLAUDE_MODEL,
-        help=f"Claude model to use (default: {DEFAULT_CLAUDE_MODEL})",
-    )
-    gt_parser.add_argument(
         "--max-tokens",
         type=int,
         default=4096,
@@ -1093,7 +1158,6 @@ Examples:
     template_parser = subparsers.add_parser(
         "create-template",
         help="Create a template results file from ground truth data for manual RAG evaluation",
-        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1150,7 +1214,7 @@ Examples:
   gaia eval -f ./output/experiments/meetings/design_review_meeting.Claude-Sonnet-Basic-Summary.experiment.json -g ./output/groundtruth/meetings/design_review_meeting.summarization.groundtruth.json
 
   # Evaluate directory with specific Claude model
-  gaia eval -d ./output/experiments -m claude-3-opus-20240229
+  gaia eval -d ./output/experiments --claude-model claude-3-opus-20240229
 
   # Evaluate and display summary only (no detailed report file)
   gaia eval -d ./output/experiments --summary-only
@@ -1178,13 +1242,6 @@ Examples:
         type=str,
         default=f"./{DEFAULT_EVALUATIONS_DIR}",
         help=f"Output directory for evaluation report (default: ./{DEFAULT_EVALUATIONS_DIR})",
-    )
-    eval_parser.add_argument(
-        "-m",
-        "--model",
-        type=str,
-        default=DEFAULT_CLAUDE_MODEL,
-        help=f"Claude model to use for evaluation (default: {DEFAULT_CLAUDE_MODEL})",
     )
     eval_parser.add_argument(
         "-g",
@@ -1222,7 +1279,6 @@ Examples:
     report_parser = subparsers.add_parser(
         "report",
         help="Generate summary report from evaluation results directory",
-        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1261,7 +1317,6 @@ Examples:
     visualize_parser = subparsers.add_parser(
         "visualize",
         help="Launch web-based evaluation results visualizer",
-        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1346,7 +1401,6 @@ Examples:
     generate_parser = subparsers.add_parser(
         "generate",
         help="Generate synthetic test data for evaluation (meeting transcripts or business emails)",
-        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1366,7 +1420,6 @@ Examples:
     batch_exp_parser = subparsers.add_parser(
         "batch-experiment",
         help="Run batch experiments with different LLM configurations on transcript data",
-        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1432,12 +1485,7 @@ Examples:
         default=1,
         help="Number items to generate per type (default: 1)",
     )
-    generate_parser.add_argument(
-        "--claude-model",
-        type=str,
-        default=DEFAULT_CLAUDE_MODEL,
-        help=f"Claude model to use for generation (default: {DEFAULT_CLAUDE_MODEL})",
-    )
+    # Note: --claude-model inherited from parent_parser
 
     # Add type-specific arguments
     generate_parser.add_argument(
@@ -1541,8 +1589,8 @@ Examples:
     )
     mcp_start_parser.add_argument(
         "--base-url",
-        default="http://localhost:8000/api/v0",
-        help="GAIA LLM server base URL",
+        default="http://localhost:8000/api/v1",
+        help="LLM server URL (default: http://localhost:8000/api/v1)",
     )
     mcp_start_parser.add_argument(
         "--auth-token", help="Optional authentication token for secure connections"
@@ -2380,7 +2428,7 @@ Let me know your answer!
         # Initialize generator
         try:
             generator = GroundTruthGenerator(
-                model=args.model, max_tokens=args.max_tokens
+                model=args.claude_model, max_tokens=args.max_tokens
             )
         except Exception as e:
             log.error(f"Error initializing generator: {e}")
@@ -2590,7 +2638,7 @@ Let me know your answer!
             return
 
         try:
-            evaluator = Evaluator(model=args.model)
+            evaluator = Evaluator(model=args.claude_model)
 
             # If summary_only is True, don't save to output_dir (None)
             output_dir = None if args.summary_only else args.output_dir
@@ -3388,7 +3436,7 @@ def run_blender_examples(agent, selected_example=None, print_result=True):
     for idx, example in examples.items():
         console.print_header(f"=== Example {idx}: {example['name']} ===")
         console.print_header(example["description"])
-        agent.process_query(example["query"], output_to_file=True)
+        agent.process_query(example["query"], trace=True)
         agent.display_result(print_result=print_result)
 
         # Wait for user input between examples, except the last one
@@ -3501,8 +3549,7 @@ def handle_code_command(args):
                     result = agent.process_query(
                         query,
                         max_steps=getattr(args, "max_steps", 100),
-                        output_to_file=bool(getattr(args, "output", None)),
-                        filename=getattr(args, "output", None),
+                        trace=args.trace,
                     )
 
                     # Display result
@@ -3527,8 +3574,7 @@ def handle_code_command(args):
             result = agent.process_query(
                 args.query,
                 max_steps=args.max_steps,
-                output_to_file=bool(getattr(args, "output", None)),
-                filename=getattr(args, "output", None),
+                trace=args.trace,
             )
 
             # Output result
@@ -3571,8 +3617,7 @@ def handle_code_command(args):
                     result = agent.process_query(
                         query,
                         max_steps=getattr(args, "max_steps", 100),
-                        output_to_file=bool(getattr(args, "output", None)),
-                        filename=getattr(args, "output", None),
+                        trace=args.trace,
                     )
 
                     # Display result

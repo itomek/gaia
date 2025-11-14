@@ -5,9 +5,9 @@ name: Test MCPAgent and AgentMCPServer
 
 on:
   push:
-    branches: [main, tmi/copilot-code, tmi/831-mcpagent-tests]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   test-mcp-agent:
@@ -26,6 +26,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Free disk space
+        if: matrix.os == 'ubuntu-latest'
+        uses: ./.github/actions/free-disk-space
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5

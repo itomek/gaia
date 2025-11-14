@@ -217,28 +217,41 @@ gaia chat [MESSAGE] [OPTIONS]
 - **Message provided**: Sends single message and exits
 
 **Available options:**
-- `--model`: Model name to use (default: Llama-3.2-3B-Instruct-Hybrid)
-- `--max-tokens`: Maximum tokens to generate (default: 512)
-- `--system-prompt`: Custom system prompt for the conversation
-- `--assistant-name`: Name to use for the assistant (default: "gaia")
-- `--stats`: Show performance statistics (single message mode only)
+- `--query, -q`: Single query to execute (defaults to interactive mode if not provided)
+- `--model`: Model name to use (default: Qwen3-Coder-30B-A3B-Instruct-GGUF)
+- `--max-steps`: Maximum conversation steps (default: 10)
+- `--index, -i`: PDF document(s) to index for RAG (space-separated)
+- `--watch, -w`: Directories to monitor for new documents
+- `--chunk-size`: Document chunk size for RAG (default: 500)
+- `--max-chunks`: Maximum chunks to retrieve for RAG (default: 3)
+- `--stats`, `--show-stats`: Show performance statistics
+- `--streaming`: Enable streaming responses
+- `--show-prompts`: Display prompts sent to LLM
+- `--debug`: Enable debug output
+- `--list-tools`: List available tools and exit
 
 **Examples:**
 ```bash
 # Start interactive chat session (default behavior when no message provided)
 gaia chat
 
-# Send a single message
-gaia chat "What is machine learning?"
+# Send a single message (using --query)
+gaia chat --query "What is machine learning?"
 
-# Use specific model with custom system prompt for single message
-gaia chat "Help me code" --system-prompt "You are a helpful coding assistant"
+# Chat with single document
+gaia chat --index manual.pdf
 
-# Use custom assistant name
-gaia chat "Hello" --assistant-name "Gaia"
+# Chat with multiple documents
+gaia chat --index doc1.pdf doc2.pdf doc3.pdf
 
-# Interactive mode with custom settings and assistant name
-gaia chat --max-tokens 1000 --model Llama-3.2-3B-Instruct-Hybrid --assistant-name "Gaia"
+# Index and query in one command
+gaia chat --index report.pdf --query "Summarize the report"
+
+# Interactive mode with custom settings
+gaia chat --model Llama-3.2-3B-Instruct-Hybrid --streaming --show-stats
+
+# List available tools
+gaia chat --list-tools
 ```
 
 **Interactive Commands:**
@@ -256,18 +269,28 @@ During an interactive chat session, you can use these special commands:
 
 ## Talk Command
 
-Start a voice-based conversation:
+Start a voice-based conversation with optional document Q&A:
 
 ```bash
 gaia talk [OPTIONS]
+
+# Examples
+gaia talk                        # Basic voice chat
+gaia talk --index manual.pdf     # Voice + document Q&A
+gaia talk -i guide.pdf --no-tts  # Document Q&A, no TTS
 ```
 
-**Available options:**
+**Voice options:**
 - `--model`: Model to use for the agent (default: "Llama-3.2-3B-Instruct-Hybrid")
-- `--max-new-tokens`: Maximum number of new tokens to generate (default: 512)
+- `--max-tokens`: Maximum number of tokens to generate (default: 512)
 - `--no-tts`: Disable text-to-speech in voice chat mode
-- `--audio-device-index`: Index of the audio input device to use (default: 1)
+- `--audio-device-index`: Index of the audio input device to use (default: auto-detect)
 - `--whisper-model-size`: Size of the Whisper model [tiny, base, small, medium, large] (default: base)
+- `--silence-threshold`: Silence threshold in seconds (default: 0.5)
+- `--stats`: Show performance statistics during voice chat
+
+**RAG option (for document Q&A):**
+- `--index, -i`: PDF document to index for voice Q&A
 
 For detailed voice interaction instructions, see the [Voice Interaction Guide](./talk.md).
 

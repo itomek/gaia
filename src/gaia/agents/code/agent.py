@@ -163,7 +163,7 @@ class CodeAgent(
 
     def process_query(
         self, user_input: str, workspace_root=None, progress_callback=None, **kwargs
-    ):
+    ):  # pylint: disable=arguments-differ
         """Process a query with optional workspace root and progress callback.
 
         Args:

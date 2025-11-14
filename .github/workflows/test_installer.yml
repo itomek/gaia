@@ -5,13 +5,13 @@ name: GAIA Installer Test
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main ]
     paths:
       - "installer/**"
       - "src/**"
       - "setup.py"
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "installer/**"
