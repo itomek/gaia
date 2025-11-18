@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import subprocess
+import uuid
 from typing import Any, Dict, List, Optional
 
 from gaia.agents.base.console import AgentConsole, SilentConsole
@@ -765,14 +766,20 @@ class Agent(abc.ABC):
         return os.path.abspath(file_path)
 
     def _handle_large_tool_result(
-        self, tool_result: Any, conversation: List[Dict[str, Any]]
+        self,
+        tool_name: str,
+        tool_result: Any,
+        conversation: List[Dict[str, Any]],
+        tool_args: Optional[Dict[str, Any]] = None,
     ) -> Any:
         """
         Handle large tool results by truncating them if necessary.
 
         Args:
+            tool_name: Name of the executed tool
             tool_result: The result from tool execution
             conversation: The conversation list to append to
+            tool_args: Arguments passed to the tool (optional)
 
         Returns:
             The truncated result or original if within limits
@@ -799,16 +806,37 @@ class Agent(abc.ABC):
                 if self.debug:
                     print(f"[DEBUG] Tool result truncated from {len(result_str)} chars")
 
-        llm_result = truncated_result
+        # Add to conversation
+        tool_entry: Dict[str, Any] = {
+            "role": "tool",
+            "name": tool_name,
+            "content": truncated_result,
+        }
+        if tool_args is not None:
+            tool_entry["tool_args"] = tool_args
+        conversation.append(tool_entry)
+        return truncated_result
 
-        # Add to conversation as "user" message (not "system") for proper chat flow
-        # This ensures Qwen format works correctly: user → assistant → user → assistant
-        # Instead of: user → assistant → system → assistant (which causes empty responses)
-        tool_result_message = f"Tool result: {json.dumps(llm_result) if isinstance(llm_result, dict) else llm_result}"
-        conversation.append({"role": "user", "content": tool_result_message})
-        return llm_result
+    def _create_tool_message(self, tool_name: str, tool_output: Any) -> Dict[str, Any]:
+        """
+        Build a message structure representing a tool output for downstream LLM calls.
+        """
+        if isinstance(tool_output, str):
+            text_content = tool_output
+        else:
+            text_content = self._truncate_large_content(tool_output, max_chars=2000)
 
-    def _truncate_large_content(self, content: Any, max_chars: int = 20000) -> str:
+        if not isinstance(text_content, str):
+            text_content = json.dumps(tool_output)
+
+        return {
+            "role": "tool",
+            "name": tool_name,
+            "tool_call_id": uuid.uuid4().hex,
+            "content": [{"type": "text", "text": text_content}],
+        }
+
+    def _truncate_large_content(self, content: Any, max_chars: int = 2000) -> str:
         """
         Truncate large content to prevent overwhelming the LLM.
         Defaults to 20000 chars which is appropriate for 32K token context window.
@@ -935,7 +963,7 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
 
         logger.debug(f"Processing query: {user_input}")
         conversation = []
-        # Build messages array for chat completions (user/assistant only, system passed separately)
+        # Build messages array for chat completions
         messages = []
         steps_taken = 0
         final_answer = None
@@ -1091,7 +1119,7 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
 
                     # Handle large tool results
                     truncated_result = self._handle_large_tool_result(
-                        tool_result, conversation
+                        tool_name, tool_result, conversation, tool_args
                     )
 
                     # Add tool result to messages array so LLM can see it in next turn
@@ -1111,6 +1139,11 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                             "args": tool_args,
                             "result": truncated_result,
                         }
+                    )
+
+                    # Share tool output with subsequent LLM calls
+                    messages.append(
+                        self._create_tool_message(tool_name, truncated_result)
                     )
 
                     # Check for error
@@ -1157,35 +1190,37 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                                 and self.plan_iterations >= self.max_plan_iterations
                             )
 
-                            # Prepare message for final answer - truncate if too large
-                            # Truncate previous outputs if they're too large
-
-                            original_str = json.dumps(previous_outputs)
-                            if len(original_str) > 20000:
-                                truncated_outputs = self._truncate_large_content(
-                                    previous_outputs, max_chars=20000
+                            # Prepare message for final answer with the completed plan context
+                            plan_context = {
+                                "completed_plan": self.current_plan,
+                                "total_steps": self.total_plan_steps,
+                            }
+                            plan_context_raw = json.dumps(plan_context)
+                            if len(plan_context_raw) > 20000:
+                                plan_context_str = self._truncate_large_content(
+                                    plan_context, max_chars=20000
                                 )
                             else:
-                                # Use compact JSON for small outputs to avoid unnecessary expansion
-                                truncated_outputs = original_str
+                                plan_context_str = plan_context_raw
 
                             if reached_max_iterations:
                                 # Force final answer after max iterations
                                 completion_message = (
                                     f"Maximum plan iterations ({self.max_plan_iterations}) reached for task: {user_input}\n"
-                                    f"Previous outputs:\n{truncated_outputs}\n\n"
-                                    "IMPORTANT: You MUST now provide a final answer with an honest assessment:\n"
-                                    "- Summarize what was successfully accomplished\n"
-                                    "- Clearly state if anything remains incomplete or if errors occurred\n"
-                                    "- If the task is fully complete, state that clearly\n\n"
-                                    'Provide {{"thought": "...", "goal": "...", "answer": "..."}}\n\n'
+                                    f"Task: {user_input}\n"
+                                    f"Plan information:\n{plan_context_str}\n\n"
+                                    f"IMPORTANT: You MUST now provide a final answer with an honest assessment:\n"
+                                    f"- Summarize what was successfully accomplished\n"
+                                    f"- Clearly state if anything remains incomplete or if errors occurred\n"
+                                    f"- If the task is fully complete, state that clearly\n\n"
+                                    f'Provide {{"thought": "...", "goal": "...", "answer": "..."}}\n\n'
                                     f"{self._add_format_reminder()}"
                                 )
                             else:
-                                # Normal completion - allow for additional validation/testing plans if needed
                                 completion_message = (
-                                    f"You have successfully completed all steps in the plan for: {user_input}\n"
-                                    f"Previous outputs:\n{truncated_outputs}\n\n"
+                                    "You have successfully completed all steps in the plan.\n"
+                                    f"Task: {user_input}\n"
+                                    f"Plan information:\n{plan_context_str}\n\n"
                                     f"Plan iteration: {self.plan_iterations}/{self.max_plan_iterations if self.max_plan_iterations > 0 else 'unlimited'}\n"
                                     "Check if more work is needed:\n"
                                     "- If the task is complete and verified, provide a final answer\n"
@@ -1197,9 +1232,9 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                                 )
 
                             # Debug logging - only show if truncation happened
-                            if self.debug and len(original_str) > 2000:
+                            if self.debug and len(plan_context_raw) > 2000:
                                 print(
-                                    f"\n[DEBUG] Large completion context truncated: {len(original_str)} → {len(truncated_outputs)} chars"
+                                    "\n[DEBUG] Plan context truncated for completion message"
                                 )
 
                             # Add completion request to messages
@@ -1722,14 +1757,8 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
 
                 # Handle large tool results
                 truncated_result = self._handle_large_tool_result(
-                    tool_result, conversation
+                    tool_name, tool_result, conversation, tool_args
                 )
-
-                # Add tool result to messages array so LLM can see it in next turn
-                # Format as user message for proper chat flow (user → assistant → user → assistant)
-                # Note: debug_info is already captured in _handle_large_tool_result
-                tool_result_content = f"Tool result: {json.dumps(truncated_result) if isinstance(truncated_result, dict) else truncated_result}"
-                messages.append({"role": "user", "content": tool_result_content})
 
                 # Display the tool result in real-time (show full result to user)
                 self.console.print_tool_complete()
@@ -1740,6 +1769,9 @@ CONTINUING WORK: When a plan completes, evaluate if more work is needed:
                 previous_outputs.append(
                     {"tool": tool_name, "args": tool_args, "result": truncated_result}
                 )
+
+                # Share tool output with subsequent LLM calls
+                messages.append(self._create_tool_message(tool_name, truncated_result))
 
                 # Update last tool call
                 last_tool_call = (tool_name, str(tool_args))

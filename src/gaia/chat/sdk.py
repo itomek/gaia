@@ -6,6 +6,7 @@
 Gaia Chat SDK - Unified text chat integration with conversation history
 """
 
+import json
 import logging
 from collections import deque
 from dataclasses import dataclass
@@ -120,9 +121,30 @@ class ChatSDK:
             self.config.system_prompt,
         )
 
+    def _normalize_message_content(self, content: Any) -> str:
+        """
+        Convert message content into a string for prompt construction, handling structured payloads.
+        """
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for entry in content:
+                if isinstance(entry, dict):
+                    if entry.get("type") == "text":
+                        parts.append(entry.get("text", ""))
+                    else:
+                        parts.append(json.dumps(entry))
+                else:
+                    parts.append(str(entry))
+            return "\n".join(part for part in parts if part)
+        if isinstance(content, dict):
+            return json.dumps(content)
+        return str(content)
+
     def send_messages(
         self,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, Any]],
         system_prompt: Optional[str] = None,
         **kwargs,
     ) -> ChatResponse:
@@ -130,7 +152,7 @@ class ChatSDK:
         Send a full conversation history and get a response.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys (user/assistant only)
+            messages: List of message dicts with 'role' and 'content' keys
             system_prompt: Optional system prompt to use (overrides config)
             **kwargs: Additional arguments for LLM generation
 
@@ -143,12 +165,15 @@ class ChatSDK:
 
             for msg in messages:
                 role = msg.get("role", "")
-                content = msg.get("content", "")
+                content = self._normalize_message_content(msg.get("content", ""))
 
                 if role == "user":
                     chat_history.append(f"user: {content}")
                 elif role == "assistant":
                     chat_history.append(f"assistant: {content}")
+                elif role == "tool":
+                    tool_name = msg.get("name", "tool")
+                    chat_history.append(f"assistant: [tool:{tool_name}] {content}")
                 # Skip system messages since they're passed separately
 
             # Use provided system prompt or fall back to config default
@@ -200,7 +225,7 @@ class ChatSDK:
 
     def send_messages_stream(
         self,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, Any]],
         system_prompt: Optional[str] = None,
         **kwargs,
     ):
@@ -208,7 +233,7 @@ class ChatSDK:
         Send a full conversation history and get a streaming response.
 
         Args:
-            messages: List of message dicts with 'role' and 'content' keys (user/assistant only)
+            messages: List of message dicts with 'role' and 'content' keys
             system_prompt: Optional system prompt to use (overrides config)
             **kwargs: Additional arguments for LLM generation
 
@@ -221,12 +246,15 @@ class ChatSDK:
 
             for msg in messages:
                 role = msg.get("role", "")
-                content = msg.get("content", "")
+                content = self._normalize_message_content(msg.get("content", ""))
 
                 if role == "user":
                     chat_history.append(f"user: {content}")
                 elif role == "assistant":
                     chat_history.append(f"assistant: {content}")
+                elif role == "tool":
+                    tool_name = msg.get("name", "tool")
+                    chat_history.append(f"assistant: [tool:{tool_name}] {content}")
                 # Skip system messages since they're passed separately
 
             # Use provided system prompt or fall back to config default
