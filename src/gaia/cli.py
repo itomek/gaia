@@ -1158,6 +1158,7 @@ Examples:
     template_parser = subparsers.add_parser(
         "create-template",
         help="Create a template results file from ground truth data for manual RAG evaluation",
+        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1279,6 +1280,7 @@ Examples:
     report_parser = subparsers.add_parser(
         "report",
         help="Generate summary report from evaluation results directory",
+        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1317,6 +1319,7 @@ Examples:
     visualize_parser = subparsers.add_parser(
         "visualize",
         help="Launch web-based evaluation results visualizer",
+        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1401,6 +1404,7 @@ Examples:
     generate_parser = subparsers.add_parser(
         "generate",
         help="Generate synthetic test data for evaluation (meeting transcripts or business emails)",
+        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1420,6 +1424,7 @@ Examples:
     batch_exp_parser = subparsers.add_parser(
         "batch-experiment",
         help="Run batch experiments with different LLM configurations on transcript data",
+        parents=[parent_parser],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
