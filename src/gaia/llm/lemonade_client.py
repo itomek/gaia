@@ -49,9 +49,11 @@ DEFAULT_MODEL_NAME = "Qwen2.5-0.5B-Instruct-CPU"
 # Request Configuration Defaults
 # =========================================================================
 # Default timeout in seconds for regular API requests
-DEFAULT_REQUEST_TIMEOUT = 120
+# Increased to accommodate long-running coding and evaluation tasks
+DEFAULT_REQUEST_TIMEOUT = 900
 # Default timeout in seconds for model loading operations
-DEFAULT_MODEL_LOAD_TIMEOUT = 180
+# Increased for large model downloads and loading
+DEFAULT_MODEL_LOAD_TIMEOUT = 1200
 
 
 class LemonadeClientError(Exception):
