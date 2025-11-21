@@ -17,7 +17,12 @@ The Gaia Chat SDK provides a programmable interface for text chat with conversat
 
 ```bash
 conda activate gaiaenv
+
+# Linux/Windows:
 pip install -e .[rag]  # Include RAG for document Q&A
+
+# macOS:
+pip install -e ".[rag]"  # Include RAG for document Q&A
 ```
 
 ### Simple Chat
@@ -296,7 +301,11 @@ agent = ChatAgent(
 
 **Missing dependencies:**
 ```bash
+# Linux/Windows:
 pip install -e .[rag]
+
+# macOS:
+pip install -e ".[rag]"
 ```
 
 **PDF issues:**

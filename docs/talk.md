@@ -181,7 +181,7 @@ Use the `--output-audio-file` option to specify the output file path.
 - Speaking clearly and at a moderate pace will improve transcription quality
 
 ### RAG Issues
-- **Missing RAG dependencies**: Install with `pip install -e .[rag]`
+- **Missing RAG dependencies**: Install with `pip install -e .[rag]` (Linux/Windows) or `pip install -e ".[rag]"` (macOS)
 - **PDF processing errors**: Ensure PDFs have extractable text (not scanned images)
 - **Slow document indexing**: Use `--stats` to monitor progress; larger documents take time
 - **Document context not used**: Verify documents are indexed successfully at startup

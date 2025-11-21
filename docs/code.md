@@ -30,7 +30,11 @@ The GAIA Code Agent is an autonomous agent that attempts to handle coding tasks 
 
 ```bash
 # Install GAIA with development dependencies
+# Linux/Windows:
 pip install -e .[dev]
+
+# macOS:
+pip install -e ".[dev]"
 ```
 
 ## Prerequisites
@@ -397,7 +401,7 @@ If you experience incomplete code generation or truncated responses:
 ### Other Common Issues
 
 - **LLM timeout errors**: Ensure Lemonade server is running with `--ctx-size 32768`
-- **Import errors**: Install with `pip install -e .[dev]`
+- **Import errors**: Install with `pip install -e .[dev]` (Linux/Windows) or `pip install -e ".[dev]"` (macOS)
 - **File not found**: Check working directory and file paths
 - **Incomplete code generation**: Restart Lemonade server with larger context size
 - **Pylint not found**: Ensure pylint is installed (`pip install pylint`)

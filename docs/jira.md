@@ -15,7 +15,9 @@ The GAIA Jira Agent provides a natural language interface for interacting with A
 
    - Clone the repository
    - Create conda environment
-   - Install GAIA: `pip install -e .` (or `pip install -e .[dev]` for development)
+   - Install GAIA:
+     - Linux/Windows: `pip install -e .` (or `pip install -e .[dev]` for development)
+     - macOS: `pip install -e .` (or `pip install -e ".[dev]"` for development)
 
    The base installation includes all dependencies needed for the Jira agent.
 

@@ -382,7 +382,11 @@ The MCP (Model Context Protocol) command provides integration with MCP-compatibl
 
 ```bash
 # Install MCP support
+# Linux/Windows:
 pip install -e .[mcp]
+
+# macOS:
+pip install -e ".[mcp]"
 
 # Start the MCP bridge
 gaia mcp start

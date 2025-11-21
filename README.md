@@ -6,6 +6,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/amd/gaia?include_prereleases)](https://github.com/amd/gaia/releases/latest "Download the latest release")
 [![OS - Windows](https://img.shields.io/badge/OS-Windows-blue)](https://github.com/amd/gaia/blob/main/docs/installer.md "Windows installer")
 [![OS - Linux](https://img.shields.io/badge/OS-Linux-green)](https://github.com/amd/gaia/blob/main/README.md#linux-installation "Linux support")
+[![OS - macOS](https://img.shields.io/badge/OS-macOS-black)](https://github.com/amd/gaia/blob/main/docs/dev.md "macOS support")
 [![Made with Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)](https://github.com/amd/gaia/blob/main/docs/install.md "Check out our instructions")
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
@@ -22,6 +23,7 @@
 **Platform Support:**
 - **Windows 11 Home/Pro**: Full GUI and CLI support with installer
 - **Linux (Ubuntu/Debian)**: Full GUI and CLI support via source installation
+- **macOS**: CLI support via source installation (see [Development Guide](docs/dev.md))
 
 - 🏠 **Local LLM Processing**: Easily run powerful language models directly on your device without cloud dependencies
 - ⚡ **Direct LLM Access**: Query models instantly with the new `gaia llm` command - no server setup required
@@ -80,10 +82,15 @@ For more details and setup instructions, see the [UI Documentation](docs/ui.md).
 - **16GB RAM minimum** (32GB recommended)
 - **AMD Ryzen processor** (any generation)
 
-**Linux (CLI Only):**
+**Linux:**
 - **Ubuntu 20.04+** or **Debian 11+**
 - **16GB RAM minimum** (32GB recommended)
 - **x86_64 architecture**
+
+**macOS:**
+- **macOS 11 (Big Sur)** or newer
+- **16GB RAM minimum** (32GB recommended)
+- **Intel or Apple Silicon (M1/M2/M3)**
 
 **Performance Tiers:**
 - **🚀 Hybrid Mode** (NPU + iGPU): Requires AMD Ryzen AI 9 HX 300 series or newer

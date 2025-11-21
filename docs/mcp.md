@@ -315,7 +315,9 @@ To use the Docker tool, start the Docker MCP server: `gaia mcp docker --port 808
 4. **No tools available**
    - Check server logs: `gaia mcp start --verbose`
    - Verify GAIA installation: `pip show gaia`
-   - Reinstall MCP dependencies: `pip install -e .[mcp]`
+   - Reinstall MCP dependencies:
+     - Linux/Windows: `pip install -e .[mcp]`
+     - macOS: `pip install -e ".[mcp]"`
 
 ### CLI Testing & Debugging
 

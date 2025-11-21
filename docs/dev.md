@@ -139,20 +139,70 @@ If `conda` command is not found after installation:
 2. Navigate to the GAIA root directory:
    - **Windows (PowerShell)**: `cd .\gaia`
    - **Linux/Ubuntu/WSL**: `cd ./gaia`
-3. Create and activate a conda environment:
+3. Create and activate a virtual environment:
+
+   **Option A: Using Conda (Recommended)**
    ```bash
    conda create -n gaiaenv python=3.10 -y
    conda activate gaiaenv
    ```
+
+   **Option B: Using Python venv (Alternative)**
+
+   First, install venv if not already installed:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt update
+   sudo apt install python3.10-venv python3-pip -y
+
+   # Or for default Python 3
+   sudo apt install python3-venv python3-pip -y
+   ```
+
+   Then create and activate the virtual environment:
+   ```bash
+   # Create virtual environment
+   python3 -m venv gaiaenv
+
+   # Activate virtual environment
+   # Linux/Ubuntu/WSL/macOS:
+   source gaiaenv/bin/activate
+
+   # Windows (PowerShell):
+   .\gaiaenv\Scripts\Activate.ps1
+
+   # Windows (Command Prompt):
+   gaiaenv\Scripts\activate.bat
+   ```
+
+   You should see `(gaiaenv)` prefix in your terminal prompt when activated.
+
+   To deactivate when done:
+   ```bash
+   deactivate
+   ```
+
+   **Note for venv users**: The `gaiaenv/` directory should not be committed to git. It's already included in `.gitignore`.
+
 4. Install GAIA dependencies:
     ```bash
+    # Linux/Windows
     pip install -e .[dev]
+
+    # macOS (zsh shell requires quotes)
+    pip install -e ".[dev]"
     ```
     ⚠️ NOTE: If actively developing, use `-e` switch to enable editable mode and create links to sources instead.
 
-    ⚠️ NOTE: Make sure you are in the correct virtual environment when installing dependencies. If not, run `conda activate gaiaenv`.
+    ⚠️ NOTE: **macOS users**: If you get an error like `zsh: no matches found`, you need to quote the package specification: `pip install -e ".[dev]"`
 
-    ⚠️ NOTE: Check `./setup.py` for additional packages that support extra features in the CLI tool, e.g. `pip install -e .[dev,eval,talk]`
+    ⚠️ NOTE: Make sure you are in the correct virtual environment when installing dependencies. If not, activate it:
+    - **Conda**: `conda activate gaiaenv`
+    - **venv**: `source gaiaenv/bin/activate` (Linux/macOS) or `.\gaiaenv\Scripts\Activate.ps1` (Windows PowerShell)
+
+    ⚠️ NOTE: Check `./setup.py` for additional packages that support extra features in the CLI tool:
+    - Linux/Windows: `pip install -e .[dev,eval,talk]`
+    - macOS: `pip install -e ".[dev,eval,talk]"`
 
 5. For detailed information about using the Chat SDK and CLI chat features, see the [Chat SDK Documentation](./chat.md).
 
@@ -222,11 +272,21 @@ If GAIA is not working correctly:
 
 1. Verify the installation completed successfully by checking the log files
 2. Ensure all dependencies are installed correctly
-3. Check that you're using the correct conda environment:
-   ```bash
-   conda activate gaiaenv
-   ```
-4. Try restarting your terminal or command prompt
+3. Check that you're using the correct virtual environment:
+   - **Conda**:
+     ```bash
+     conda activate gaiaenv
+     ```
+   - **venv**:
+     ```bash
+     # Linux/Ubuntu/WSL/macOS
+     source gaiaenv/bin/activate
+
+     # Windows PowerShell
+     .\gaiaenv\Scripts\Activate.ps1
+     ```
+4. Verify the virtual environment is activated (you should see `(gaiaenv)` in your terminal prompt)
+5. Try restarting your terminal or command prompt
 
 # Support
 

@@ -59,11 +59,26 @@ flowchart TD
     style F fill:#1976d2
 ```
 
+## Prerequisites
+
+Before using the evaluation framework, ensure you have completed the initial GAIA setup:
+
+1. **Initial Setup**: Follow the [GAIA Development Guide](./dev.md) to:
+   - Install prerequisites (Miniforge/conda or Python venv)
+   - Create and activate the virtual environment (`gaiaenv`)
+   - Install base GAIA dependencies
+
+2. **Continue below** to add evaluation-specific dependencies
+
 ## Installation
 
 ```bash
 # Install evaluation capabilities
+# Linux/Windows:
 pip install .[eval]
+
+# macOS:
+pip install ".[eval]"
 
 # Set up Claude API for synthetic data generation
 export ANTHROPIC_API_KEY=your_key_here
@@ -893,7 +908,10 @@ If you encounter numpy/pandas/sklearn import errors after installation:
 - ✅ **Fix**: Reinstall dependencies to rebuild against current numpy version:
   ```bash
   pip uninstall -y numpy pandas scikit-learn
+  # Linux/Windows:
   pip install -e .[eval]
+  # macOS:
+  pip install -e ".[eval]"
   ```
 - 🔍 **Why**: Binary incompatibility between numpy 2.x and older pandas/sklearn versions
 
