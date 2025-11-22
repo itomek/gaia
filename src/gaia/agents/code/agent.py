@@ -13,6 +13,7 @@ modification, and validation.
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 from gaia.agents.base.agent import Agent
 from gaia.agents.base.api_agent import ApiAgent
@@ -27,8 +28,13 @@ from .tools import (
     FileIOToolsMixin,
     ProjectManagementMixin,
     TestingMixin,
+    TypeScriptToolsMixin,
     ValidationAndParsingMixin,
+    WebToolsMixin,
 )
+
+# Import CLI tools
+from .tools.cli_tools import CLIToolsMixin
 
 # Import refactored modules
 from .validators import (
@@ -51,6 +57,9 @@ class CodeAgent(
     ProjectManagementMixin,  # Project/workspace management
     TestingMixin,  # Testing tools
     ErrorFixingMixin,  # Error fixing tools
+    TypeScriptToolsMixin,  # TypeScript runtime tools (npm, template fetching, validation)
+    WebToolsMixin,  # Next.js full-stack web development tools (replaces frontend/backend)
+    CLIToolsMixin,  # Universal CLI execution with process management
 ):
     """
     Intelligent autonomous code agent for comprehensive Python development workflows.
@@ -68,10 +77,12 @@ class CodeAgent(
         # Agent will plan, generate, lint, fix, test, and verify automatically
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, language="python", project_type="script", **kwargs):
         """Initialize the Code agent.
 
         Args:
+            language: Programming language ('python' or 'typescript', default: 'python')
+            project_type: Project type ('frontend', 'backend', 'fullstack', or 'script', default: 'script')
             **kwargs: Agent initialization parameters:
                 - max_steps: Maximum conversation steps (default: 100)
                 - model_id: LLM model to use (default: Qwen3-Coder-30B-A3B-Instruct-GGUF)
@@ -82,6 +93,9 @@ class CodeAgent(
                 - step_through: Enable step-through debugging mode (default: False)
                 - max_plan_iterations: Maximum plan cycles before forcing completion (default: 2 for API mode, 3 otherwise)
         """
+        # Store language and project type for prompt selection
+        self.language = language
+        self.project_type = project_type
         # Default to more steps for complex workflows
         if "max_steps" not in kwargs:
             kwargs["max_steps"] = 100  # Increased for complex project generation
@@ -125,6 +139,10 @@ class CodeAgent(
 
         super().__init__(**kwargs)
 
+        # Store the tools description for later prompt reconstruction
+        # (base Agent's __init__ already appended tools to self.system_prompt)
+        self.tools_description = self._format_tools_for_prompt()
+
         # Initialize validators and analyzers
         self.syntax_validator = SyntaxValidator()
         self.antipattern_checker = AntipatternChecker()
@@ -138,13 +156,19 @@ class CodeAgent(
                 "Ensure Lemonade server is started with: lemonade-server serve --ctx-size 32768"
             )
 
-    def _get_system_prompt(self) -> str:
+    def _get_system_prompt(self, _user_input: Optional[str] = None) -> str:
         """Generate the system prompt for the Code agent.
+
+        Uses the language and project_type set during initialization to
+        select the appropriate prompt (no runtime detection).
+
+        Args:
+            _user_input: Optional user query (not used for detection anymore)
 
         Returns:
             str: System prompt for code operations
         """
-        return get_system_prompt()
+        return get_system_prompt(language=self.language, project_type=self.project_type)
 
     def _create_console(self):
         """Create console for Code agent output.
@@ -165,6 +189,9 @@ class CodeAgent(
         self.register_project_management_tools()  # ProjectManagementMixin
         self.register_testing_tools()  # TestingMixin
         self.register_error_fixing_tools()  # ErrorFixingMixin
+        self.register_typescript_tools()  # TypeScriptToolsMixin
+        self.register_web_tools()  # WebToolsMixin (Next.js unified approach)
+        self.register_cli_tools()  # CLIToolsMixin (Universal CLI execution)
 
     def process_query(
         self, user_input: str, workspace_root=None, progress_callback=None, **kwargs
@@ -190,6 +217,13 @@ class CodeAgent(
         # Store progress callback for tools to use
         if progress_callback:
             self.progress_callback = progress_callback
+
+        # Update system prompt based on actual user input for language detection
+        # Reconstruct full prompt with language-specific base + tools
+        base_prompt = self._get_system_prompt(user_input)
+        self.system_prompt = (
+            base_prompt + f"\n\n==== AVAILABLE TOOLS ====\n{self.tools_description}\n\n"
+        )
 
         try:
             if self.step_through:

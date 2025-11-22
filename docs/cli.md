@@ -296,14 +296,18 @@ For detailed voice interaction instructions, see the [Voice Interaction Guide](.
 
 ## Code Command
 
-For comprehensive documentation of GAIA's Code agent including Python code analysis, generation, and linting, see the **[Code Guide](./code.md)**.
+For comprehensive documentation of GAIA's Code agent including Python/TypeScript code analysis, generation, and linting, see the **[Code Guide](./code.md)**.
 
 **Prerequisites**: The Code Agent requires a larger context size (32,768 tokens). When using the local Lemonade server, start it with:
 ```bash
 lemonade-server serve --ctx-size 32768
 ```
 
+**Intelligent Routing**: The `gaia code` command uses GAIA's Routing Agent to automatically detect your target programming language and project type. For details on how routing works, see the **[Routing Guide](./routing.md)**.
+
 The Code agent provides:
+- **Intelligent Language Detection**: Automatically routes to Python or TypeScript based on framework mentions (Express, Django, React, etc.)
+- **Conversational Disambiguation**: Asks clarifying questions when the request is ambiguous
 - **Code Generation**: Create functions, classes, and unit tests from descriptions
 - **Autonomous Workflow**: Complete development lifecycle with planning, implementation, testing, and verification
 - **Automatic Test Generation**: Creates comprehensive unit tests after implementation
@@ -316,6 +320,22 @@ The Code agent provides:
 
 Quick examples:
 ```bash
+# TypeScript/Express backend (routing detects "Express" → TypeScript)
+gaia code "Create a REST API with Express and SQLite for managing products"
+
+# Python backend (routing detects "Django" → Python)
+gaia code "Create a Django REST API with authentication"
+
+# React frontend (routing detects "React" → TypeScript frontend)
+gaia code "Create a React dashboard with user management"
+
+# Conversational disambiguation (routing asks for clarification)
+gaia code "Build me a todo backend app"
+# → What language/framework would you like to use for your backend project?
+# → (e.g., 'Express', 'Django', 'React', 'FastAPI')
+# User: Express
+# → Creates TypeScript backend agent
+
 # Complete workflow: generate, validate, lint, test
 gaia code "Create a calculator that adds two numbers with error handling"
 

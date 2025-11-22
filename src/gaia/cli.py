@@ -525,8 +525,8 @@ def main():
     )
     parent_parser.add_argument(
         "--base-url",
-        default="http://localhost:8000/api/v1",
-        help="Lemonade LLM server base URL (default: http://localhost:8000/api/v1)",
+        default=None,
+        help="Lemonade LLM server base URL (default: from LEMONADE_BASE_URL env or http://localhost:8000/api/v1)",
     )
     parent_parser.add_argument(
         "--model",
@@ -3508,23 +3508,57 @@ def handle_code_command(args):
         args, "use_chatgpt", False
     )
 
-    # Check Lemonade health if using local server
-    if using_local and not check_lemonade_health():
-        print_lemonade_error(for_code_agent=True)
-        sys.exit(1)
+    # Get base_url from args or environment
+    base_url = getattr(args, "base_url", None)
+    if base_url is None:
+        base_url = os.getenv("LEMONADE_BASE_URL", "http://localhost:8000/api/v1")
+
+    # Check Lemonade health if using local server and localhost
+    # Skip health check for remote servers (e.g., devtunnel URLs)
+    if using_local and ("localhost" in base_url or "127.0.0.1" in base_url):
+        if not check_lemonade_health():
+            print_lemonade_error(for_code_agent=True)
+            sys.exit(1)
 
     try:
-        # Initialize the Code agent
-        agent = CodeAgent(
-            silent_mode=getattr(args, "silent", False),
-            debug=getattr(args, "debug", False),
-            show_prompts=getattr(args, "show_prompts", False),
-            max_steps=getattr(args, "max_steps", 100),
-            use_claude=getattr(args, "use_claude", False),
-            use_chatgpt=getattr(args, "use_chatgpt", False),
-            streaming=getattr(args, "streaming", False),
-            step_through=getattr(args, "step_through", False),
-        )
+        # Import RoutingAgent for intelligent language detection
+        from gaia.agents.routing.agent import RoutingAgent
+
+        # Get the query to analyze
+        query = args.query if hasattr(args, "query") and args.query else None
+
+        # Use RoutingAgent to determine language and project type
+        if query:
+            # Prepare agent configuration from CLI args
+            agent_config = {
+                "silent_mode": getattr(args, "silent", False),
+                "debug": getattr(args, "debug", False),
+                "show_prompts": getattr(args, "show_prompts", False),
+                "max_steps": getattr(args, "max_steps", 100),
+                "use_claude": getattr(args, "use_claude", False),
+                "use_chatgpt": getattr(args, "use_chatgpt", False),
+                "streaming": getattr(args, "streaming", False),
+                "step_through": getattr(args, "step_through", False),
+                "base_url": getattr(args, "base_url", None),
+            }
+
+            # Single query mode - use routing with configuration
+            router = RoutingAgent(**agent_config)
+            agent = router.process_query(query)
+        else:
+            # Interactive mode - start with default Python agent
+            # User can still benefit from routing per query
+            agent = CodeAgent(
+                silent_mode=getattr(args, "silent", False),
+                debug=getattr(args, "debug", False),
+                show_prompts=getattr(args, "show_prompts", False),
+                max_steps=getattr(args, "max_steps", 100),
+                use_claude=getattr(args, "use_claude", False),
+                use_chatgpt=getattr(args, "use_chatgpt", False),
+                streaming=getattr(args, "streaming", False),
+                step_through=getattr(args, "step_through", False),
+                base_url=getattr(args, "base_url", None),
+            )
 
         # Handle list tools option
         if getattr(args, "list_tools", False):

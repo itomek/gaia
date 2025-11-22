@@ -12,7 +12,7 @@ class AntipatternChecker:
     """Checks for combinatorial anti-patterns and code smells."""
 
     def check(self, _file_path: Path, content: str) -> Dict[str, Any]:
-        """Check for combinatorial anti-patterns like in HRMS services.py.
+        """Check for combinatorial anti-patterns.
 
         Args:
             _file_path: Path to the file being checked (unused currently)
@@ -36,7 +36,7 @@ class AntipatternChecker:
                     arg.arg for arg in node.args.args if arg.arg not in ("self", "cls")
                 ]
 
-                # Check for excessive function name length (HRMS had 311 chars!)
+                # Check for excessive function name length
                 if len(func_name) > 80:
                     errors.append(
                         f"Line {node.lineno}: Function name {len(func_name)} chars: {func_name[:60]}..."
@@ -50,7 +50,7 @@ class AntipatternChecker:
                         f"Line {node.lineno}: Combinatorial function with {and_count} 'and' and {by_count} 'by'"
                     )
 
-                # Check parameter count (HRMS had 12+ params)
+                # Check parameter count
                 if len(params) > 6:
                     warnings.append(
                         f"Line {node.lineno}: Function has {len(params)} parameters"

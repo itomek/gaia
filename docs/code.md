@@ -90,9 +90,6 @@ gaia code "Create a todo CLI app" --debug
 # Show prompts sent to LLM in console
 gaia code "Create a todo CLI app" --show-prompts
 
-# Step-through debugging mode (pause at each agent step)
-gaia code "Create a todo CLI app" --step-through
-
 # Save complete trace to JSON file
 gaia code "Create a todo CLI app" --output trace.json
 
@@ -115,20 +112,11 @@ gaia code "Create a todo CLI app" --show-stats
 **Debug Flags:**
 - `--debug`: Enable DEBUG level logging with internal decision traces
 - `--show-prompts`: Display every prompt sent to the LLM in real-time
-- `--step-through`: Interactive step-through debugging mode (pause at each agent step)
 - `--debug-prompts`: Include all prompts in the JSON conversation history
 - `--output <file>`: Save complete execution trace to JSON file
 - `--silent`: Suppress console output, only write to JSON file
 - `--max-steps <n>`: Override default maximum steps (default: 100)
 - `--show-stats`: Display LLM performance statistics after each response (disabled by default)
-
-**Step-Through Debug Commands:**
-When using `--step-through`, the agent pauses at each step with these commands:
-- `[Enter]` or `n`: Continue to next step
-- `c`: Continue without stepping (run to completion)
-- `q`: Quit debugging session
-- `s`: Show current agent state (step count, state, messages, plan)
-- `v <variable>`: View specific agent variable (e.g., `v plan`, `v conversation`)
 
 **JSON Output Structure:**
 The `--output` flag saves a complete trace with:
@@ -327,29 +315,6 @@ The Code Agent provides over 30 comprehensive tools for code operations:
 - **Context Awareness**: Reads GAIA.md for project-specific guidance
 
 ## Debugging
-
-### Interactive Step-Through Debugging (CLI)
-
-The Code Agent includes an interactive step-through mode for debugging agent execution:
-
-```bash
-gaia code "Create a calculator function" --step-through
-```
-
-**Available commands during step-through:**
-- `[Enter]` - Next step
-- `c` - Continue without stepping
-- `q` - Quit
-- `s` - Show current state
-- `v <variable>` - View variable value
-
-**Use cases:**
-- Understanding agent workflow
-- Inspecting agent state between steps
-- Debugging failed generations
-- Learning how the agent processes requests
-
-For detailed documentation, see [CODE_AGENT_DEBUG_MODE.md](../CODE_AGENT_DEBUG_MODE.md)
 
 ### VS Code Debugging (Developers)
 

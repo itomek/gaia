@@ -81,9 +81,16 @@ client = OpenAI(
     api_key="not-needed"
 )
 
+# TypeScript/Express backend (routing detects "Express" → TypeScript)
 response = client.chat.completions.create(
     model="gaia-code",
-    messages=[{"role": "user", "content": "Write a function to calculate factorial"}]
+    messages=[{"role": "user", "content": "Create a REST API with Express and SQLite"}]
+)
+
+# Python backend (routing detects "Django" → Python)
+response = client.chat.completions.create(
+    model="gaia-code",
+    messages=[{"role": "user", "content": "Create a Django REST API with authentication"}]
 )
 
 print(response.choices[0].message.content)
@@ -119,7 +126,11 @@ async function chat(message) {
     return response.data.choices[0].message.content;
 }
 
-chat('Write a hello world function').then(console.log);
+// TypeScript/React frontend (routing detects "React" → TypeScript frontend)
+chat('Build me a todo app using nextjs').then(console.log);
+
+// Python script (routing detects Python for generic functions)
+chat('Write a Python function to calculate factorial').then(console.log);
 ```
 
 ### cURL
@@ -147,7 +158,9 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 | Model ID | Description | Context | Requirements |
 |----------|-------------|---------|--------------|
-| `gaia-code` | Autonomous Python development agent | 32K input / 8K output | Lemonade with `--ctx-size 32768` |
+| `gaia-code` | Autonomous Python/TypeScript development agent with intelligent routing | 32K input / 8K output | Lemonade with `--ctx-size 32768` |
+
+**Intelligent Routing**: The `gaia-code` model uses GAIA's Routing Agent to automatically detect your target programming language (Python or TypeScript) and project type (frontend, backend, fullstack) based on framework mentions in your request. For details on how routing works, see the **[Routing Guide](./routing.md)**.
 
 For full model specifications, see [API Server Specification](./api-spec.md#available-models).
 
@@ -214,6 +227,7 @@ For complete VSCode integration guide, see [VSCode Integration Documentation](./
 For detailed API specifications, request/response formats, and implementation details:
 
 - **[API Server Specification](./api-spec.md)** - Complete API reference
+- **[Routing Guide](./routing.md)** - Intelligent language/framework detection
 - **[Code Agent Documentation](./code.md)** - Code agent capabilities and usage
 - **[Development Guide](./dev.md)** - Development and contribution guidelines
 
