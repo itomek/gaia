@@ -263,7 +263,7 @@ For detailed n8n workflow automation examples, see the [n8n Integration Guide](.
 
 2. In n8n, add an HTTP Request node:
    - **Method**: POST
-   - **URL**: `http://127.0.0.1:8765/chat` (use 127.0.0.1, not localhost)
+   - **URL**: `http://localhost:8765/chat`
    - **Body**: JSON with your query
 
 3. Import the example workflow:

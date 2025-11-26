@@ -2031,7 +2031,7 @@ class BatchExperimentRunner:
                     "system_prompt": "Answer questions about meeting transcripts clearly and accurately. Focus on the key information requested.",
                     "max_tokens": 512,
                     "temperature": 0.1,
-                    "parameters": {"host": "127.0.0.1", "port": 8000},
+                    "parameters": {"host": "localhost", "port": 8000},
                     "_comment": "Local inference - FREE, runs on your hardware",
                 },
                 {
@@ -2042,7 +2042,7 @@ class BatchExperimentRunner:
                     "system_prompt": "You are a creative meeting analyst. Analyze the transcript thoughtfully and provide insightful information that captures key insights and implications.",
                     "max_tokens": 512,
                     "temperature": 0.7,
-                    "parameters": {"host": "127.0.0.1", "port": 8000},
+                    "parameters": {"host": "localhost", "port": 8000},
                     "_comment": "Local inference - FREE, runs on your hardware",
                 },
             ],

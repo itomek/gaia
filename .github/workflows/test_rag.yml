@@ -89,7 +89,7 @@ jobs:
         try {
             Write-Host "Starting Lemonade server..."
             $serverJob = Start-Job -ScriptBlock {
-                & lemonade-server serve --host 127.0.0.1 --port 8000 --no-tray 2>&1
+                & lemonade-server serve --host localhost --port 8000 --no-tray 2>&1
             }
             Write-Host "Started Lemonade server job with ID: $($serverJob.Id)"
             $env:LEMONADE_JOB_ID = $serverJob.Id
@@ -105,7 +105,7 @@ jobs:
                 $waitTime += 2
 
                 try {
-                    $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/health" -Method GET -TimeoutSec 5
+                    $response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/health" -Method GET -TimeoutSec 5
                     Write-Host "[OK] Lemonade server is ready"
                     Write-Host "Health response: $($response | ConvertTo-Json -Compress)"
                     $serverReady = $true
@@ -126,7 +126,7 @@ jobs:
             Write-Host "Pulling Qwen3-0.6B-GGUF..."
             try {
                 $body = @{ model_name = "Qwen3-0.6B-GGUF" } | ConvertTo-Json
-                $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/pull" `
+                $response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/pull" `
                     -Method POST -ContentType "application/json" -Body $body -TimeoutSec 600
                 Write-Host "   [OK] Qwen3-0.6B-GGUF pull initiated"
             } catch {
@@ -137,7 +137,7 @@ jobs:
             Write-Host "Pulling nomic-embed-text-v2-moe-GGUF..."
             try {
                 $body = @{ model_name = "nomic-embed-text-v2-moe-GGUF" } | ConvertTo-Json
-                $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/pull" `
+                $response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/pull" `
                     -Method POST -ContentType "application/json" -Body $body -TimeoutSec 600
                 Write-Host "   [OK] nomic-embed-text-v2-moe-GGUF pull initiated"
             } catch {
@@ -148,7 +148,7 @@ jobs:
             Write-Host "Pulling Qwen2.5-VL-7B-Instruct-GGUF..."
             try {
                 $body = @{ model_name = "Qwen2.5-VL-7B-Instruct-GGUF" } | ConvertTo-Json
-                $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/pull" `
+                $response = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/pull" `
                     -Method POST -ContentType "application/json" -Body $body -TimeoutSec 1200
                 Write-Host "   [OK] Qwen2.5-VL-7B-Instruct-GGUF pull initiated"
             } catch {
@@ -161,7 +161,7 @@ jobs:
 
             # Verify models
             try {
-                $models = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/models" -Method GET
+                $models = Invoke-RestMethod -Uri "http://localhost:8000/api/v1/models" -Method GET
                 Write-Host "`n[OK] Available models:"
                 $models.data | ForEach-Object { Write-Host "   - $($_.id)" }
             } catch {

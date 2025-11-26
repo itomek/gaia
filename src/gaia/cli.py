@@ -53,7 +53,7 @@ DEFAULT_EXPERIMENTS_DIR = "output/experiments"
 DEFAULT_EVALUATIONS_DIR = "output/evaluations"
 
 
-def check_lemonade_health(host="127.0.0.1", port=8000):
+def check_lemonade_health(host="localhost", port=8000):
     """Check if Lemonade server is running and healthy using LemonadeClient."""
     log = get_logger(__name__)
 
@@ -107,13 +107,13 @@ def print_lemonade_error(for_code_agent=False):
         )
         print("", file=sys.stderr)
     print(
-        "The server should be accessible at http://127.0.0.1:8000/api/v1/health",
+        "The server should be accessible at http://localhost:8000/api/v1/health",
         file=sys.stderr,
     )
     print("Then try your command again.", file=sys.stderr)
 
 
-def check_mcp_health(host="127.0.0.1", port=9876):
+def check_mcp_health(host="localhost", port=9876):
     """Check if Blender MCP server is running and accessible."""
     log = get_logger(__name__)
 
