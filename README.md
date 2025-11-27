@@ -237,7 +237,7 @@ Most GAIA CLI commands require the Lemonade server to be running. If you install
 
 ### Option 1: Standalone Installation
 1. Visit [www.lemonade-server.ai](https://www.lemonade-server.ai) to download the latest release
-2. Download and install `Lemonade_Server_Installer.exe` from the latest release
+2. Download and install `lemonade-server-minimal.msi` from the latest release
 3. Ensure your system has the recommended Ryzen AI drivers installed (NPU Driver `32.0.203.237` or `32.0.203.240`)
 4. Launch the server by double-clicking the `lemonade_server` desktop shortcut created during installation
 

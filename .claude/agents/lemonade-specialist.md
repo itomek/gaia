@@ -1,6 +1,3 @@
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
-# SPDX-License-Identifier: MIT
-
 ---
 name: lemonade-specialist
 description: Lemonade Server and SDK specialist for local LLM deployment with AMD NPU/GPU acceleration. Use PROACTIVELY for Lemonade Server setup, model management, API integration, AMD hardware optimization, or troubleshooting local LLM inference.

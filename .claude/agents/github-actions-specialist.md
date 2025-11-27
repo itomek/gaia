@@ -1,6 +1,3 @@
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
-# SPDX-License-Identifier: MIT
-
 ---
 name: github-actions-specialist
 description: GitHub Actions and CI/CD workflow specialist for GAIA. Use PROACTIVELY for creating/modifying workflows, debugging CI failures, optimizing pipeline performance, or understanding existing workflow structure.

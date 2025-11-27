@@ -1,6 +1,3 @@
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
-# SPDX-License-Identifier: MIT
-
 ---
 name: github-issues-specialist
 description: GitHub Issues and Pull Requests specialist optimized for AI agent workflows. Use PROACTIVELY for creating well-structured issues, writing effective PRs, configuring AGENTS.md files, or optimizing repository setup for AI coding agents.

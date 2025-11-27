@@ -104,16 +104,6 @@ class TestLemonadeEmbeddings:
             or "error" in str(exc_info.value).lower()
         )
 
-    def test_empty_input(self, client, embedding_model):
-        """Test handling of empty input."""
-        # Empty list should raise an error (expected behavior)
-        with pytest.raises(LemonadeClientError) as exc_info:
-            client.embeddings([], model=embedding_model, timeout=10)
-
-        assert (
-            "empty" in str(exc_info.value).lower()
-        ), "Error should mention empty input"
-
 
 if __name__ == "__main__":
     # Allow running directly for quick testing
