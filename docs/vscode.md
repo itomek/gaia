@@ -29,6 +29,21 @@ The GAIA VSCode extension integrates GAIA agents as selectable language models i
    ```bash
    lemonade-server serve --ctx-size 32768
    ```
+3. **Node.js v20.19.x**: Required for building the VSCode extension
+   - **Windows**: Download and install from [nodejs.org](https://nodejs.org/en/download) (select Windows Installer for v20.x LTS)
+   - **Linux**: Install using a package manager or nvm:
+     ```bash
+     # Using nvm (recommended)
+     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+     source ~/.bashrc
+     nvm install 20
+     nvm use 20
+
+     # Or using NodeSource repository (Debian/Ubuntu)
+     curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+     sudo apt-get install -y nodejs
+     ```
+   - Verify installation: `node --version` (should show v20.x.x)
 
 ### Getting Started
 
@@ -293,6 +308,8 @@ src/vscode/gaia/
 ```
 
 ### Setup Development Environment
+
+**Note**: Node.js v20.19.x is required. See [Prerequisites](#prerequisites) for installation instructions.
 
 #### 1. Install Dependencies
 
