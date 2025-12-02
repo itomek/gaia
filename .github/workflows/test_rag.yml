@@ -30,16 +30,15 @@ jobs:
     - name: Free disk space
       uses: ./.github/actions/free-disk-space
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Python environment
+      uses: ./.github/actions/setup-venv
       with:
-        python-version: '3.10'
+        python-version: '3.12'
+        install-package: '.[dev,rag]'
 
-    - name: Install dependencies
+    - name: Install additional test dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev,rag]
-        pip install pytest pytest-cov
+        pip install pytest-cov
 
     - name: Run RAG unit tests
       run: |
@@ -55,22 +54,21 @@ jobs:
 
   test-rag-integration:
     name: RAG Integration Tests
-    runs-on: [stx, miniforge]
+    runs-on: [stx]
     needs: test-rag-unit
 
     steps:
     - uses: actions/checkout@v5
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - name: Setup Python environment
+      uses: ./.github/actions/setup-venv
       with:
-        python-version: '3.10'
+        python-version: '3.12'
+        install-package: '.[dev,rag]'
 
-    - name: Install dependencies
+    - name: Install additional test dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -e .[dev,rag]
-        pip install pytest reportlab
+        pip install reportlab
 
     - name: Install Lemonade Server
       uses: ./.github/actions/install-lemonade

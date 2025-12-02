@@ -50,7 +50,7 @@ These steps will place your machine in the `stx-test` pool, which is where we pu
     - When running `./config.cmd` in step 2, make the following choices:
          - Name of the runner group = `stx`
          - For the runner name, call it `NAME-stx-NUMBER`, where NAME is your alias and NUMBER would tell you this is the Nth STX machine you've added (e.g., `jefowers-stx-1` for Jeremy's first STX laptop)
-         - Apply the labels `stx-test` and `miniforge`, as well as a label with your name to indicate that you are maintaining the runner (for example, Jeremy puts the label `jefowers` on his runners)
+         - Apply the labels `stx-test`, as well as a label with your name to indicate that you are maintaining the runner (for example, Jeremy puts the label `jefowers` on his runners)
          - Accept the default for the work folder
          - You want the runner to function as a service (respond Y)
          - User account to use for the service = `NT AUTHORITY\SYSTEM` (not the default of `NT AUTHORITY\NETWORK SERVICE`)
@@ -64,13 +64,11 @@ These steps will use GitHub Actions to run automated setup and validation for yo
 
 1. Go to the [lemonade NPU test action](https://github.com/aigdat/genai/actions/workflows/test_npu.yml) and click "run workflow".
     - Select `stx-test` as the nimbys group
-    - Check the box for "Install miniforge"
     - Click `Run workflow`
 1. The workflow should appear at the top of the queue. Click to open it, then click into "make-npu-oga-lemonade".
     - Expand the `Set up job` section and make sure `Runner name:` refers to your new runner. Otherwise, the job may have gone to someone else's runner in the test group. You can re-queue the workflow until it lands on your runner.
     - Wait for the workflow to finish successfully.
-1. In a powershell admin terminal, run `Stop-Service "actions.runner.*"` and then `Start-Service "actions.runner.*"`. If you don't do this, the runner wont be able to find Conda.
-1. Repeat step 1, except do **not** check the box for "Install miniforge". Wait for it to finish successfully. Congrats, your new runner is working!
+1. Congrats, your new runner is working!
 1. Go to the [Stx Runner Group](https://github.com/organizations/aigdat/settings/actions/runner-groups/3), click your new runner, and click the gear icon to change labels. Uncheck `stx-test` and check `stx`. If this machine is also outside the AMD network please also check `@home`.
 1. Done!
 
@@ -149,10 +147,9 @@ Here are some general guidelines to observe when creating or modifying NIMBYS wo
     - Installing software into the CWD (e.g., a path of `.\`) is always ok, because that will end up in `C:\actions-runner\_work\REPO`, which is always wiped between tests.
     - Installing software into `AppData`, `Program Files`, etc. is not advisable because that software will persist across tests. See the [setup](#npu-runner-setup) section to see which software is already expected on the system.
         - ⚠️ NOTE: GAIA tests do install some software, see [Workflow Examples](#workflow-examples) for an example of why these specific cases are ok.
-- Always create new conda environments in the CWD, for example `conda create -p .\my-env`.
-    - This way, the conda environment is located in `C:\actions-runner\_work\REPO`, which is wiped between tests.
-    - Do NOT create conda environments by name, for example `conda create -n dont-you-dare` since that will end up in the conda install location and will persist across tests.
-    - Make sure to activate your conda environment (e.g., `conda activate .\lemon-npu-ci`) before running any `pip install` commands. Otherwise your workflow will modify the base environment!
+- Always create new virtual environments in the CWD, for example `python -m venv .\.venv`.
+    - This way, the virtual environment is located in `C:\actions-runner\_work\REPO`, which is wiped between tests.
+    - Make sure to activate your virtual environment (e.g., `.\.venv\Scripts\Activate.ps1`) before running any `pip install` commands.
 - PowerShell scripts do not necessarily raise errors by programs they call.
     - That means PowerShell can call a Python test, and then keep going and claim "success" even if that Python test fails and raises an error (non-zero exit code).
     - You can add `if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }` after any line of script where it is that is particularly important to fail the workflow if the program in the preceding line raised an error.

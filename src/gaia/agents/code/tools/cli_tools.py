@@ -917,6 +917,7 @@ class CLIToolsMixin:
 
                     # Send SIGTERM
                     try:
+                        # pylint: disable=no-member
                         os.killpg(os.getpgid(pid), signal.SIGTERM)
                         proc.wait(timeout=2)
                         return  # Success!
@@ -925,6 +926,7 @@ class CLIToolsMixin:
 
                 # Force kill with SIGKILL
                 try:
+                    # pylint: disable=no-member
                     os.killpg(os.getpgid(pid), signal.SIGKILL)
                 except (OSError, ProcessLookupError):
                     # Fallback to individual kill

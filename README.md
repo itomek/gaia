@@ -368,8 +368,7 @@ GAIA has been tested on the following system:
 ## Dependencies
 
 The GAIA installer will automatically set up most dependencies, including:
-- Python 3.10
-- Miniconda (if not already installed)
+- Python 3.12
 - FFmpeg
 - All required Python packages
 

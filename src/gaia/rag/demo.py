@@ -82,10 +82,12 @@ def demo_basic_rag():
         else:
             print(f"⚠️  Test PDF not found at: {pdf_path}")
             print("To try this demo, you need:")
-            print("1. Install RAG dependencies: pip install -e .[rag]")
-            print("2. Activate environment: conda activate gaiaenv")
+            print(
+                "1. Activate environment: source .venv/bin/activate (Linux/macOS) or .\\.venv\\Scripts\\Activate.ps1 (Windows)"
+            )
+            print("2. Install RAG dependencies: pip install -e .[rag]")
             print("3. Either use the test PDF or get your own PDF file")
-            print("4. Run: answer = quick_rag('document.pd', 'What is this about?')")
+            print("4. Run: answer = quick_rag('document.pdf', 'What is this about?')")
 
         # Example 2: RAG SDK with multiple operations
         print("\n📚 Example 2: RAG SDK with Multiple Operations")
@@ -114,8 +116,11 @@ def demo_basic_rag():
     except ImportError as e:
         print(f"❌ Missing dependencies: {e}")
         print("\nInstall RAG dependencies with:")
-        print("  # IMPORTANT: Activate environment first")
-        print("  conda activate gaiaenv")
+        print("  # IMPORTANT: Activate virtual environment first")
+        print("  # Linux/macOS:")
+        print("  source .venv/bin/activate")
+        print("  # Windows PowerShell:")
+        print("  .\\.venv\\Scripts\\Activate.ps1")
         print("  ")
         print("  # Install RAG extras")
         print("  pip install -e .[rag]")
@@ -220,8 +225,11 @@ def demo_cli_commands():
     print("\n🖥️  Example 5: CLI Commands")
     print("-" * 40)
 
-    print("# IMPORTANT: Always activate environment first")
-    print("conda activate gaiaenv")
+    print("# IMPORTANT: Always activate virtual environment first")
+    print("# Linux/macOS:")
+    print("source .venv/bin/activate")
+    print("# Windows PowerShell:")
+    print(".\\.venv\\Scripts\\Activate.ps1")
     print("")
 
     print("# Index PDF documents")
@@ -279,7 +287,9 @@ def main():
 
     print("\n✨ Demo completed!")
     print("\nNext steps:")
-    print("1. Activate environment: conda activate gaiaenv")
+    print("1. Activate virtual environment:")
+    print("   Linux/macOS: source .venv/bin/activate")
+    print("   Windows: .\\.venv\\Scripts\\Activate.ps1")
     print("2. Install RAG dependencies: pip install -e .[rag]")
     print("3. Get a PDF document to test with")
     print("4. Try the CLI commands: gaia rag --help")

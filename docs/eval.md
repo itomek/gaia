@@ -64,8 +64,8 @@ flowchart TD
 Before using the evaluation framework, ensure you have completed the initial GAIA setup:
 
 1. **Initial Setup**: Follow the [GAIA Development Guide](./dev.md) to:
-   - Install prerequisites (Miniforge/conda or Python venv)
-   - Create and activate the virtual environment (`gaiaenv`)
+   - Install Python 3.12
+   - Create and activate the virtual environment (`.venv`)
    - Install base GAIA dependencies
 
 2. **Continue below** to add evaluation-specific dependencies
@@ -98,7 +98,7 @@ lemonade-server serve
     ```
 
   - If either command fails:
-    - Windows: `winget install OpenJS.NodeJS.LTS` (or `conda install -c conda-forge nodejs`), then restart your shell
+    - Windows: `winget install OpenJS.NodeJS.LTS`, then restart your shell
     - macOS: `brew install node`
     - Linux: use your distro package manager (e.g., `apt install nodejs npm`)
   - The visualizer will automatically install its webapp dependencies on first launch

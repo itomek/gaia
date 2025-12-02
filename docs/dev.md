@@ -4,18 +4,12 @@
 - [Introduction](#introduction)
 - [Before you start](#before-you-start)
   - [System Requirements](#system-requirements)
-    - [Ryzen AI Systems](#ryzen-ai-systems)
-    - [Software](#software)
   - [Software Requirements](#software-requirements)
 - [Prerequisites](#prerequisites)
 - [Setup and Installation](#setup-and-installation)
 - [Environment Configuration](#environment-configuration)
 - [Troubleshooting](#troubleshooting)
   - [Common Issues](#common-issues)
-    - [NPU Driver Installation](#npu-driver-installation)
-    - [pip Installation Errors](#pip-installation-errors)
-    - [Model Loading Issues](#model-loading-issues)
-    - [Environment Variable Issues](#environment-variable-issues)
 - [Support](#support)
 - [License](#license)
 
@@ -36,175 +30,113 @@ GAIA utilizes both NPU and iGPU on Ryzen AI systems for optimal performance on 3
 - Storage: 20GB free space
 - Tested Configuration: ASUS ProArt (HN7306W) Laptop
 
-### Software
-- [Miniforge](https://conda-forge.org/download/) (conda-forge's recommended installer)
-- [Lemonade Server](https://lemonade-server.ai/) (LLM backend server for GAIA)
+## Software Requirements
+
+- **Python 3.12+**: Download from [python.org](https://www.python.org/downloads/)
+- **Git**: For version control
+- **Lemonade Server**: LLM backend server for GAIA - download from [lemonade-server.ai](https://lemonade-server.ai/)
 
 # Prerequisites
 
 ## Windows Prerequisites
 
-1. Download and install Windows installer from [Miniforge](https://conda-forge.org/download/)
-   1. Check _"Add Miniforge3 to my PATH environment variables"_ if you want it accessible in all terminals
-2. Download and install [Lemonade Server](https://lemonade-server.ai/)
-   1. Go to https://lemonade-server.ai/ and download the appropriate installer for your system
-   2. Follow the installation instructions provided on the website
-   3. Lemonade Server will be used as the backend for running LLMs with GAIA
+1. **Install Python 3.12**:
+   - Download from [python.org](https://www.python.org/downloads/)
+   - During installation, **check "Add Python to PATH"**
+   - Verify installation: `python --version`
+
+2. **Install Lemonade Server**:
+   - Go to https://lemonade-server.ai/ and download the Windows installer
+   - Follow the installation instructions provided on the website
+   - Lemonade Server will be used as the backend for running LLMs with GAIA
 
 ## Linux/Ubuntu Prerequisites
 
-1. Install Miniforge (includes conda):
+1. **Install Python 3.12**:
    ```bash
-   # Download the installer
-   wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+   # Ubuntu 24.04 (has Python 3.12 by default)
+   sudo apt update
+   sudo apt install python3.12 python3.12-venv python3-pip
 
-   # Make it executable
-   chmod +x Miniforge3-Linux-x86_64.sh
-
-   # Run the installer
-   bash Miniforge3-Linux-x86_64.sh
-   ```
-   - Press ENTER to review the license
-   - Press SPACE to scroll through the license
-   - Type `yes` to accept the license
-   - Press ENTER to accept the default installation location
-   - Type `yes` when asked to initialize Miniforge3
-
-2. Activate conda:
-   ```bash
-   # Reload shell configuration
-   source ~/.bashrc
-   # Or restart terminal
-   exec bash
+   # Ubuntu 22.04 (use deadsnakes PPA)
+   sudo add-apt-repository ppa:deadsnakes/ppa
+   sudo apt update
+   sudo apt install python3.12 python3.12-venv
    ```
 
-3. Verify installation:
+2. **Verify installation**:
    ```bash
-   conda --version
+   python3.12 --version
    ```
 
-4. Install Lemonade Server:
-   1. Go to https://lemonade-server.ai/ and download the Linux version
-   2. Follow the Linux installation instructions provided on the website
-   3. Lemonade Server will be used as the backend for running LLMs with GAIA
+3. **Install Lemonade Server**:
+   - Go to https://lemonade-server.ai/ and download the Linux version
+   - Follow the Linux installation instructions provided on the website
+   - Lemonade Server will be used as the backend for running LLMs with GAIA
 
 ### WSL (Windows Subsystem for Linux) Note
-If you're using WSL, install the Linux version of Miniforge inside WSL rather than trying to use the Windows installation. This ensures better compatibility and performance.
-
-### Troubleshooting Conda Installation on Linux/WSL
-
-If `conda` command is not found after installation:
-
-1. **Check if Miniforge was installed**:
-   ```bash
-   ls ~/miniforge3
-   ```
-
-2. **Manually initialize conda** (most common fix):
-   ```bash
-   # Initialize conda for bash
-   ~/miniforge3/bin/conda init bash
-
-   # Reload your shell
-   source ~/.bashrc
-   ```
-
-3. **Verify conda is now available**:
-   ```bash
-   conda --version
-   ```
-
-4. **If still not working, add conda to PATH manually**:
-   ```bash
-   # Add to your ~/.bashrc file
-   echo 'export PATH="$HOME/miniforge3/bin:$PATH"' >> ~/.bashrc
-
-   # Reload
-   source ~/.bashrc
-   ```
-
-5. **For persistent issues, reinstall**:
-   ```bash
-   # Remove any partial installation
-   rm -rf ~/miniforge3
-
-   # Download and reinstall
-   wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
-   bash Miniforge3-Linux-x86_64.sh
-   ```
-   **Important**: Answer `yes` when asked about conda init during installation.
+If you're using WSL, install Python inside WSL rather than trying to use the Windows installation. This ensures better compatibility and performance.
 
 # Setup and Installation
-1. Clone GAIA repo: `git clone https://github.com/amd/gaia.git`
-2. Navigate to the GAIA root directory:
-   - **Windows (PowerShell)**: `cd .\gaia`
-   - **Linux/Ubuntu/WSL**: `cd ./gaia`
-3. Create and activate a virtual environment:
 
-   **Option A: Using Conda (Recommended)**
+1. **Clone GAIA repo**:
    ```bash
-   conda create -n gaiaenv python=3.10 -y
-   conda activate gaiaenv
+   git clone https://github.com/amd/gaia.git
+   cd gaia
    ```
 
-   **Option B: Using Python venv (Alternative)**
+2. **Create and activate a virtual environment**:
 
-   First, install venv if not already installed:
-   ```bash
-   # Ubuntu/Debian
-   sudo apt update
-   sudo apt install python3.10-venv python3-pip -y
-
-   # Or for default Python 3
-   sudo apt install python3-venv python3-pip -y
+   **Windows (PowerShell)**:
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
    ```
 
-   Then create and activate the virtual environment:
-   ```bash
-   # Create virtual environment
-   python3 -m venv gaiaenv
-
-   # Activate virtual environment
-   # Linux/Ubuntu/WSL/macOS:
-   source gaiaenv/bin/activate
-
-   # Windows (PowerShell):
-   .\gaiaenv\Scripts\Activate.ps1
-
-   # Windows (Command Prompt):
-   gaiaenv\Scripts\activate.bat
+   **Windows (Command Prompt)**:
+   ```cmd
+   python -m venv .venv
+   .venv\Scripts\activate.bat
    ```
 
-   You should see `(gaiaenv)` prefix in your terminal prompt when activated.
-
-   To deactivate when done:
+   **Linux/Ubuntu/WSL/macOS**:
    ```bash
-   deactivate
+   python3 -m venv .venv
+   source .venv/bin/activate
    ```
 
-   **Note for venv users**: The `gaiaenv/` directory should not be committed to git. It's already included in `.gitignore`.
+   You should see `(.venv)` prefix in your terminal prompt when activated.
 
-4. Install GAIA dependencies:
-    ```bash
-    # Linux/Windows
-    pip install -e .[dev]
+3. **Upgrade pip**:
+   ```bash
+   python -m pip install --upgrade pip
+   ```
 
-    # macOS (zsh shell requires quotes)
-    pip install -e ".[dev]"
-    ```
-    ⚠️ NOTE: If actively developing, use `-e` switch to enable editable mode and create links to sources instead.
+4. **Install GAIA dependencies**:
+   ```bash
+   # Linux/Windows
+   pip install -e .[dev]
 
-    ⚠️ NOTE: **macOS users**: If you get an error like `zsh: no matches found`, you need to quote the package specification: `pip install -e ".[dev]"`
+   # macOS (zsh shell requires quotes)
+   pip install -e ".[dev]"
+   ```
 
-    ⚠️ NOTE: Make sure you are in the correct virtual environment when installing dependencies. If not, activate it:
-    - **Conda**: `conda activate gaiaenv`
-    - **venv**: `source gaiaenv/bin/activate` (Linux/macOS) or `.\gaiaenv\Scripts\Activate.ps1` (Windows PowerShell)
+   ⚠️ NOTE: If actively developing, use `-e` switch to enable editable mode and create links to sources instead.
 
-    ⚠️ NOTE: Check `./setup.py` for additional packages that support extra features in the CLI tool:
-    - Linux/Windows: `pip install -e .[dev,eval,talk]`
-    - macOS: `pip install -e ".[dev,eval,talk]"`
+   ⚠️ NOTE: **macOS users**: If you get an error like `zsh: no matches found`, you need to quote the package specification: `pip install -e ".[dev]"`
+
+   ⚠️ NOTE: Check `./setup.py` for additional packages that support extra features in the CLI tool:
+   - Linux/Windows: `pip install -e .[dev,eval,talk,rag]`
+   - macOS: `pip install -e ".[dev,eval,talk,rag]"`
 
 5. For detailed information about using the Chat SDK and CLI chat features, see the [Chat SDK Documentation](./chat.md).
+
+## Deactivating the Virtual Environment
+
+When you're done working, deactivate the virtual environment:
+```bash
+deactivate
+```
 
 ## Dependency Management
 
@@ -222,7 +154,7 @@ Once the installation and environment variables are set, run the following:
 
 1. Run `gaia -v` in the terminal to verify the installation. You should see a similar output:
     ```bash
-    0.10.0
+    0.13.1
     ```
 1. Run `gaia -h` to see CLI options.
 1. Try the chat feature with a simple query:
@@ -252,13 +184,40 @@ This will build the installer and launch the JAX application in development mode
 
 ## Common Issues
 
+### "python" command not found (Windows)
+
+- Ensure Python was installed with "Add to PATH" checked
+- Or use `py -3.12` instead of `python`
+- Try reinstalling Python and checking the PATH option
+
+### "python3.12" command not found (Linux)
+
+```bash
+# Add deadsnakes PPA for newer Python versions
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install python3.12 python3.12-venv
+```
+
+### Virtual Environment Activation Issues
+
+**Windows PowerShell execution policy**:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Use full path if needed**:
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
 ### pip Installation Errors
 
 If you encounter pip installation errors:
-1. Ensure you're using the correct Python version (3.10)
+1. Ensure you're using Python 3.12 or later
 2. Try running: `pip install --upgrade pip`
 3. Try deleting pip cache typically under: _C:\Users\<username>\AppData\Local\pip\cache_
-4. Make sure there are no spaces in your project or or pip file cache paths
+4. Make sure there are no spaces in your project or pip file cache paths
 
 ### Model Loading Issues
 
@@ -272,20 +231,15 @@ If GAIA is not working correctly:
 
 1. Verify the installation completed successfully by checking the log files
 2. Ensure all dependencies are installed correctly
-3. Check that you're using the correct virtual environment:
-   - **Conda**:
-     ```bash
-     conda activate gaiaenv
-     ```
-   - **venv**:
-     ```bash
-     # Linux/Ubuntu/WSL/macOS
-     source gaiaenv/bin/activate
+3. Check that you're in the correct virtual environment:
+   ```bash
+   # Linux/Ubuntu/WSL/macOS
+   source .venv/bin/activate
 
-     # Windows PowerShell
-     .\gaiaenv\Scripts\Activate.ps1
-     ```
-4. Verify the virtual environment is activated (you should see `(gaiaenv)` in your terminal prompt)
+   # Windows PowerShell
+   .\.venv\Scripts\Activate.ps1
+   ```
+4. Verify the virtual environment is activated (you should see `(.venv)` in your terminal prompt)
 5. Try restarting your terminal or command prompt
 
 # Support

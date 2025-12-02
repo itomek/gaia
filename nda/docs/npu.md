@@ -20,12 +20,12 @@ The following is a list of currently supported LLMs on Ryzen AI NPU, more will b
 | Qwen-1.5 7B Chat       | amd/Qwen1.5-7B-Chat-awq-g128-int4-asym-fp32-onnx-ryzen-strix          | NPU      | oga                | int4      | GAIA_NPU_Installer.exe / GAIA_Installer.exe |
 
 ## Installation and running ORT-GenAI
-1. ⚠️ NOTE: Do these steps in exactly this order using the same command shell and conda virtual environment
+1. ⚠️ NOTE: Do these steps in exactly this order using the same command shell and virtual environment
 1. Clone GAIA repo
 1. Open a powershell prompt and go to the GAIA root: `cd ./gaia`
-1. Create and activate a conda environment:
-    1. `conda create -n gaiaenv python=3.10`
-    1. `conda activate gaiaenv`
+1. Create and activate a virtual environment:
+    1. `python -m venv .venv`
+    1. `.\.venv\Scripts\Activate.ps1`
 1. Install GAIA package and dependencies:
     1. For NPU (not available publicly): `pip install -e .[npu,joker,clip,talk,dev]`
     ⚠️ NOTE: If actively developing, use `-e` switch to enable editable mode and create links to sources instead.
@@ -33,7 +33,7 @@ The following is a list of currently supported LLMs on Ryzen AI NPU, more will b
     1. `$env:OGA_TOKEN=<your_token>`
 1. Install NPU dependencies:
     1. For NPU, run: `lemonade-install --ryzenai npu -y --token $env:OGA_TOKEN`
-    1. ⚠️ NOTE: Make sure you are in the correct virtual environment when installing dependencies. If not, run `conda activate gaiaenv`.
+    1. ⚠️ NOTE: Make sure you are in the correct virtual environment when installing dependencies. If not, activate with `.\.venv\Scripts\Activate.ps1`.
 1. Run `gaia -v` in the terminal to verify the installation. You should see a similar output:
     ```bash
     amd/v0.7.1+cda0f5d5

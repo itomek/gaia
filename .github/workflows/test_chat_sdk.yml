@@ -30,43 +30,21 @@ permissions:
 jobs:
   test-chat-sdk-windows:
     name: Test Chat SDK on Windows (Lemonade Integration)
-    runs-on: [stx, miniforge]
+    runs-on: [stx]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false || contains(github.event.pull_request.labels.*.name, 'ready_for_ci')
     steps:
       - uses: actions/checkout@v5
 
-      - name: Download and Install Miniforge
+      - name: Setup Python environment
+        uses: ./.github/actions/setup-venv
+        with:
+          python-version: '3.12'
+          install-package: '.[dev]'
+
+      - name: Verify GAIA installation
+        shell: powershell
         run: |
-          Invoke-WebRequest -Uri "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Windows-x86_64.exe" -OutFile "miniforge3.exe"
-          Start-Process -FilePath "miniforge3.exe" -ArgumentList "/S", "/D=$env:GITHUB_WORKSPACE\miniforge3" -Wait
-
-      - name: Initialize Conda
-        run: |
-          Write-Host "Step 1: Get conda path"
-          $condaPath = "$env:GITHUB_WORKSPACE\miniforge3"
-          $env:Path = "$condaPath;$condaPath\Scripts;$env:Path"
-
-          Write-Host "Step 2: Initialize conda for both shells"
-          & "$condaPath\Scripts\conda.exe" init powershell
-          & "$condaPath\Scripts\conda.exe" init cmd.exe
-
-          Write-Host "Step 3: Create the environment at system level"
-          & "$condaPath\Scripts\conda.exe" create -n gaiaenv python=3.10 -y
-
-      - name: Install Lemonade Server
-        uses: ./.github/actions/install-lemonade
-
-      - name: Install GAIA dependencies
-        run: |
-          Write-Host "Step 1: Activate conda environment"
-          & "$env:GITHUB_WORKSPACE\miniforge3\shell\condabin\conda-hook.ps1"
-          conda activate gaiaenv
-
-          Write-Host "Step 2: Install dependencies"
-          python -m pip install --upgrade pip
-          pip install -e .[dev]
-
-          Write-Host "Step 3: Verify installation"
+          Write-Host "Verify GAIA installation"
           $gaiaPath = Get-Command gaia -ErrorAction SilentlyContinue
           if (-not $gaiaPath) {
             Write-Host "Error: gaia not installed correctly"
@@ -76,17 +54,16 @@ jobs:
           Write-Host "Found gaia at: $($gaiaPath.Source)"
           python -m pip check
 
+      - name: Install Lemonade Server
+        uses: ./.github/actions/install-lemonade
+
       - name: Start Lemonade Server for Integration Tests
         timeout-minutes: 15
         env:
           HUGGINGFACE_ACCESS_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
           HF_TOKEN: ${{ secrets.HUGGINGFACE_ACCESS_TOKEN }}
+        shell: powershell
         run: |
-          Write-Host "Activate and verify Conda environment"
-          $env:Path = "$env:GITHUB_WORKSPACE\miniforge3;$env:GITHUB_WORKSPACE\miniforge3\Scripts;$env:Path"
-          & "$env:GITHUB_WORKSPACE\miniforge3\shell\condabin\conda-hook.ps1"
-          conda activate gaiaenv
-
           Write-Host "Verify Python environment"
           python -c "import sys; print(sys.executable)"
 
@@ -142,14 +119,9 @@ jobs:
           Write-Host "Pulling Llama-3.2-3B-Instruct-Hybrid model..."
           lemonade-server pull Llama-3.2-3B-Instruct-Hybrid
 
-
-
       - name: Run Chat SDK Integration Tests with Lemonade
         shell: cmd
         run: |
-          REM Activate conda environment
-          call "%GITHUB_WORKSPACE%\miniforge3\Scripts\activate.bat" gaiaenv
-
           echo ================================================================
           echo           CHAT SDK INTEGRATION TESTS WITH LEMONADE SERVER
           echo ================================================================
@@ -209,5 +181,4 @@ jobs:
           )
 
           echo === Environment information ===
-          echo CONDA_DEFAULT_ENV: %CONDA_DEFAULT_ENV%
           echo PATH: %PATH%

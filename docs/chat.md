@@ -16,7 +16,11 @@ The Gaia Chat SDK provides a programmable interface for text chat with conversat
 ### Installation
 
 ```bash
-conda activate gaiaenv
+# Activate virtual environment (if not already active)
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# Linux/macOS:
+source .venv/bin/activate
 
 # Linux/Windows:
 pip install -e .[rag]  # Include RAG for document Q&A

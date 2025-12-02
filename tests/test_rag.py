@@ -100,15 +100,14 @@ class TestRAGSDK:
     def mock_dependencies(self):
         """Mock external dependencies."""
         # Mock VLMClient and LemonadeClient at the module level where they're defined
-        with patch("gaia.llm.vlm_client.VLMClient") as mock_vlm_class, patch(
-            "gaia.llm.lemonade_client.LemonadeClient"
-        ) as mock_lemonade, patch("gaia.rag.sdk.PdfReader") as mock_pdf, patch(
-            "gaia.rag.sdk.SentenceTransformer"
-        ) as mock_st, patch(
-            "gaia.rag.sdk.faiss"
-        ) as mock_faiss, patch(
-            "gaia.rag.sdk.ChatSDK"
-        ) as mock_chat:
+        with (
+            patch("gaia.llm.vlm_client.VLMClient") as mock_vlm_class,
+            patch("gaia.llm.lemonade_client.LemonadeClient") as mock_lemonade,
+            patch("gaia.rag.sdk.PdfReader") as mock_pdf,
+            patch("gaia.rag.sdk.SentenceTransformer") as mock_st,
+            patch("gaia.rag.sdk.faiss") as mock_faiss,
+            patch("gaia.rag.sdk.ChatSDK") as mock_chat,
+        ):
 
             # Mock VLMClient to prevent connection attempts
             mock_vlm_instance = Mock()
@@ -182,9 +181,11 @@ class TestRAGSDK:
             pytest.skip(f"RAG dependencies not available: {IMPORT_ERROR}")
 
         # Test when dependencies are missing
-        with patch("gaia.rag.sdk.PdfReader", None), patch(
-            "gaia.rag.sdk.SentenceTransformer", None
-        ), patch("gaia.rag.sdk.faiss", None):
+        with (
+            patch("gaia.rag.sdk.PdfReader", None),
+            patch("gaia.rag.sdk.SentenceTransformer", None),
+            patch("gaia.rag.sdk.faiss", None),
+        ):
 
             with pytest.raises(ImportError) as exc_info:
                 RAGSDK()
@@ -248,9 +249,10 @@ class TestRAGSDK:
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RAGConfig(cache_dir=temp_dir)
 
-            with patch("gaia.rag.sdk.RAGSDK._check_dependencies"), patch(
-                "gaia.rag.sdk.RAGSDK._encode_texts"
-            ) as mock_encode:
+            with (
+                patch("gaia.rag.sdk.RAGSDK._check_dependencies"),
+                patch("gaia.rag.sdk.RAGSDK._encode_texts") as mock_encode,
+            ):
                 rag = RAGSDK(config)
 
                 # Mock _encode_texts to return proper embeddings
@@ -394,11 +396,12 @@ class TestChatIntegration:
     @pytest.fixture
     def mock_chat_dependencies(self):
         """Mock chat and RAG dependencies."""
-        with patch("gaia.llm.vlm_client.VLMClient") as mock_vlm_class, patch(
-            "gaia.llm.lemonade_client.LemonadeClient"
-        ) as mock_lemonade, patch("gaia.chat.sdk.LLMClient") as mock_llm, patch(
-            "gaia.rag.sdk.RAGSDK"
-        ) as mock_rag_class:
+        with (
+            patch("gaia.llm.vlm_client.VLMClient") as mock_vlm_class,
+            patch("gaia.llm.lemonade_client.LemonadeClient") as mock_lemonade,
+            patch("gaia.chat.sdk.LLMClient") as mock_llm,
+            patch("gaia.rag.sdk.RAGSDK") as mock_rag_class,
+        ):
 
             # Mock VLMClient to prevent connection attempts
             mock_vlm_instance = Mock()
@@ -530,9 +533,11 @@ class TestErrorHandling:
         if not RAG_AVAILABLE:
             pytest.skip(f"RAG dependencies not available: {IMPORT_ERROR}")
 
-        with patch("gaia.rag.sdk.PdfReader", None), patch(
-            "gaia.rag.sdk.SentenceTransformer", None
-        ), patch("gaia.rag.sdk.faiss", None):
+        with (
+            patch("gaia.rag.sdk.PdfReader", None),
+            patch("gaia.rag.sdk.SentenceTransformer", None),
+            patch("gaia.rag.sdk.faiss", None),
+        ):
 
             with pytest.raises(ImportError) as exc_info:
                 RAGSDK()._check_dependencies()

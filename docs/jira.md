@@ -14,7 +14,7 @@ The GAIA Jira Agent provides a natural language interface for interacting with A
    Follow the [GAIA Development Guide](./dev.md) to set up GAIA:
 
    - Clone the repository
-   - Create conda environment
+   - Create and activate virtual environment
    - Install GAIA:
      - Linux/Windows: `pip install -e .` (or `pip install -e .[dev]` for development)
      - macOS: `pip install -e .` (or `pip install -e ".[dev]"` for development)
