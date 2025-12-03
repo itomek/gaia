@@ -44,13 +44,17 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-          
+
+      - name: Install uv
+        run: |
+          irm https://astral.sh/uv/install.ps1 | iex
+          echo "$env:USERPROFILE\.local\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -e .
-          pip install pytest pytest-cov pytest-mock
-          pip install anthropic rich
+          uv pip install --system -e .
+          uv pip install --system pytest pytest-cov pytest-mock anthropic rich
           
       - name: Run eval unit tests
         run: |

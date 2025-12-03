@@ -73,12 +73,14 @@ Before using the evaluation framework, ensure you have completed the initial GAI
 ## Installation
 
 ```bash
-# Install evaluation capabilities
-# Linux/Windows:
-pip install .[eval]
+# Using uv (recommended - much faster):
+uv pip install -e .[eval]
 
+# Or using pip:
+# Linux/Windows:
+pip install -e .[eval]
 # macOS:
-pip install ".[eval]"
+pip install -e ".[eval]"
 
 # Set up Claude API for synthetic data generation
 export ANTHROPIC_API_KEY=your_key_here
@@ -908,7 +910,9 @@ If you encounter numpy/pandas/sklearn import errors after installation:
 - ✅ **Fix**: Reinstall dependencies to rebuild against current numpy version:
   ```bash
   pip uninstall -y numpy pandas scikit-learn
-  # Linux/Windows:
+  # Using uv (recommended):
+  uv pip install -e .[eval]
+  # Or using pip (Linux/Windows):
   pip install -e .[eval]
   # macOS:
   pip install -e ".[eval]"

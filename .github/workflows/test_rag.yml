@@ -38,7 +38,7 @@ jobs:
 
     - name: Install additional test dependencies
       run: |
-        pip install pytest-cov
+        uv pip install --system pytest-cov
 
     - name: Run RAG unit tests
       run: |
@@ -68,7 +68,7 @@ jobs:
 
     - name: Install additional test dependencies
       run: |
-        pip install reportlab
+        uv pip install --system reportlab
 
     - name: Install Lemonade Server
       uses: ./.github/actions/install-lemonade

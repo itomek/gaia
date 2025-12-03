@@ -176,30 +176,51 @@ For GAIA UI (graphical interface) installation on Linux, see the [UI Documentati
 **CLI Installation from Source:**
 
 **Prerequisites:**
-- Python 3.10+
-- pip package manager
+- Python 3.10+ (3.12 recommended)
 - git
 
 **Installation Steps:**
-1. Clone the repository:
+
+1. Install uv (fast Python package manager):
+
+   **Linux/macOS:**
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+   **Windows (PowerShell):**
+   ```powershell
+   irm https://astral.sh/uv/install.ps1 | iex
+   ```
+
+2. Clone the repository:
    ```bash
    git clone https://github.com/amd/gaia.git
    cd gaia
    ```
 
-2. Install GAIA CLI:
+3. Create virtual environment and install GAIA:
+
+   **Linux/macOS:**
    ```bash
-   pip install -e .
+   uv venv .venv --python 3.12
+   source .venv/bin/activate
+   uv pip install -e .
    ```
 
-3. Install Lemonade server (for model serving):
-   ```bash
-   # Download and install Lemonade server
-   # Visit https://www.lemonade-server.ai for latest Linux release
-   # Or build from source following their documentation
+   **Windows (PowerShell):**
+   ```powershell
+   uv venv .venv --python 3.12
+   .\.venv\Scripts\Activate.ps1
+   uv pip install -e .
    ```
 
-4. Verify installation:
+4. Install Lemonade server (for model serving):
+   - Visit [lemonade-server.ai](https://www.lemonade-server.ai) for the latest release
+   - Windows: Download and run `lemonade-server-minimal.msi`
+   - Linux: Follow the documentation for source installation
+
+5. Verify installation:
    ```bash
    gaia -v
    ```
@@ -371,6 +392,9 @@ The GAIA installer will automatically set up most dependencies, including:
 - Python 3.12
 - FFmpeg
 - All required Python packages
+
+**For development/source installations:**
+- [uv](https://docs.astral.sh/uv/) - Fast Python package manager (10-100x faster than pip)
 
 # Troubleshooting
 

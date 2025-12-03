@@ -35,6 +35,7 @@ GAIA utilizes both NPU and iGPU on Ryzen AI systems for optimal performance on 3
 - **Python 3.12+**: Download from [python.org](https://www.python.org/downloads/)
 - **Git**: For version control
 - **Lemonade Server**: LLM backend server for GAIA - download from [lemonade-server.ai](https://lemonade-server.ai/)
+- **uv** (recommended): Fast Python package manager - install from [docs.astral.sh/uv](https://docs.astral.sh/uv/)
 
 # Prerequisites
 
@@ -78,6 +79,48 @@ GAIA utilizes both NPU and iGPU on Ryzen AI systems for optimal performance on 3
 If you're using WSL, install Python inside WSL rather than trying to use the Windows installation. This ensures better compatibility and performance.
 
 # Setup and Installation
+
+## Option A: Using uv (Recommended - 10-100x Faster)
+
+[uv](https://docs.astral.sh/uv/) is a fast Python package manager that handles virtual environments and package installation much faster than pip.
+
+1. **Install uv**:
+
+   **Windows (PowerShell)**:
+   ```powershell
+   irm https://astral.sh/uv/install.ps1 | iex
+   ```
+
+   **Linux/macOS**:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. **Clone GAIA repo**:
+   ```bash
+   git clone https://github.com/amd/gaia.git
+   cd gaia
+   ```
+
+3. **Create virtual environment and install dependencies**:
+   ```bash
+   # Create venv with Python 3.12 (uv will download Python if needed)
+   uv venv .venv --python 3.12
+
+   # Activate the environment
+   # Windows PowerShell:
+   .\.venv\Scripts\Activate.ps1
+   # Linux/macOS:
+   source .venv/bin/activate
+
+   # Install GAIA with dev dependencies
+   uv pip install -e .[dev]
+
+   # Or with all extras
+   uv pip install -e .[dev,eval,talk,rag]
+   ```
+
+## Option B: Using Standard Python venv + pip
 
 1. **Clone GAIA repo**:
    ```bash

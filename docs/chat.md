@@ -22,11 +22,15 @@ The Gaia Chat SDK provides a programmable interface for text chat with conversat
 # Linux/macOS:
 source .venv/bin/activate
 
+# Using uv (recommended - much faster):
+uv pip install -e .[rag]  # Include RAG for document Q&A
+
+# Or using pip:
 # Linux/Windows:
-pip install -e .[rag]  # Include RAG for document Q&A
+pip install -e .[rag]
 
 # macOS:
-pip install -e ".[rag]"  # Include RAG for document Q&A
+pip install -e ".[rag]"
 ```
 
 ### Simple Chat
@@ -305,9 +309,12 @@ agent = ChatAgent(
 
 **Missing dependencies:**
 ```bash
+# Using uv (recommended):
+uv pip install -e .[rag]
+
+# Or using pip:
 # Linux/Windows:
 pip install -e .[rag]
-
 # macOS:
 pip install -e ".[rag]"
 ```

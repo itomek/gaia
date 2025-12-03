@@ -64,7 +64,7 @@ python -m gaia.mcp.mcp_bridge
 
 ## Development Workflow
 
-**See [`docs/dev.md`](docs/dev.md)** for complete setup, testing, and linting instructions.
+**See [`docs/dev.md`](docs/dev.md)** for complete setup (using uv for fast installs), testing, and linting instructions.
 
 **Feature documentation:** [`docs/cli.md`](docs/cli.md), [`docs/chat.md`](docs/chat.md), [`docs/code.md`](docs/code.md), [`docs/talk.md`](docs/talk.md), [`docs/blender.md`](docs/blender.md), [`docs/jira.md`](docs/jira.md), [`docs/mcp.md`](docs/mcp.md)
 
