@@ -3125,6 +3125,7 @@ Let me know your answer!
                 model=args.model,
                 max_tokens=args.max_tokens,
                 stream=not getattr(args, "no_stream", False),
+                base_url=getattr(args, "base_url", None),
             )
 
             # Only print if streaming is disabled (response wasn't already printed during streaming)
@@ -4869,10 +4870,14 @@ def handle_blender_command(args):
         # Create MCP client with custom port if specified
         mcp_client = MCPClient(host="localhost", port=mcp_port)
 
+        # Get base_url from args or environment
+        base_url = getattr(args, "base_url", None)
+
         # Create the BlenderAgent
         agent = BlenderAgent(
             mcp=mcp_client,
             model_id=args.model,
+            base_url=base_url,
             max_steps=args.steps,
             output_dir=output_dir,
             streaming=args.stream,

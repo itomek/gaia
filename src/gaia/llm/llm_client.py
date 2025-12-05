@@ -81,6 +81,22 @@ class LLMClient:
         # Use provided base_url, fall back to env var, then default
         if base_url is None:
             base_url = os.getenv("LEMONADE_BASE_URL", DEFAULT_LEMONADE_URL)
+
+        # Normalize base_url to ensure it has the /api/v1 suffix for Lemonade server
+        # This allows users to specify just "http://localhost:8000" for convenience
+        if base_url and not base_url.endswith("/api/v1"):
+            # Remove trailing slash if present
+            base_url = base_url.rstrip("/")
+            # Add /api/v1 if the URL looks like a Lemonade server (localhost or IP with port)
+            # but doesn't already have a path beyond the port
+            from urllib.parse import urlparse
+
+            parsed = urlparse(base_url)
+            # Only add /api/v1 if path is empty or just "/"
+            if not parsed.path or parsed.path == "/":
+                base_url = f"{base_url}/api/v1"
+                logger.debug(f"Normalized base_url to: {base_url}")
+
         # Compute use_local: True if neither claude nor openai is selected
         use_local = not (use_claude or use_openai)
 
