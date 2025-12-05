@@ -11,19 +11,10 @@ on:
   workflow_call:
   push:
     branches: [ main ]
-    paths:
-      - "src/gaia/**"
-      - "tests/verify_*.py"
-      - "src/gaia/security.py"
-      - "src/gaia/agents/*/tools/*.py"
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/gaia/**"
-      - "tests/verify_*.py"
-      - "src/gaia/security.py"
-      - "src/gaia/agents/*/tools/*.py"
+  merge_group:
   workflow_dispatch:
 
 permissions:

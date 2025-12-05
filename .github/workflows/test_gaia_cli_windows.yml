@@ -8,22 +8,12 @@
 name: GAIA CLI Tests (Windows)
 
 on:
-  workflow_call: {}
+  workflow_call:
   push:
     branches: [ main ]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "setup.py"
-      - "pyproject.toml"
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "setup.py"
-      - "pyproject.toml"
   merge_group:
   workflow_dispatch:
 

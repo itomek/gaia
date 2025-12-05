@@ -11,19 +11,10 @@ on:
   workflow_call:
   push:
     branches: ["main"]
-    paths:
-      - "src/gaia/**"
-      - "tests/**"
-      - "groundtruth/**"
-      - "test_data/**"
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/gaia/**"
-      - "tests/**"
-      - "groundtruth/**"
-      - "test_data/**"
+  merge_group:
   workflow_dispatch:
 
 permissions:

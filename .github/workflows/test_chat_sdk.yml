@@ -8,19 +8,12 @@
 name: Chat SDK Tests (Windows)
 
 on:
+  workflow_call:
   push:
     branches: [ main ]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "setup.py"
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "setup.py"
   merge_group:
   workflow_dispatch:
 

@@ -11,16 +11,10 @@ on:
   workflow_call:
   push:
     branches: [ main ]
-    paths:
-      - "src/gaia/**"
-      - "tests/**"
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "src/gaia/**"
-      - "tests/**"
-      - ".github/workflows/test_mcp.yml"
+  merge_group:
   workflow_dispatch:
 
 permissions:

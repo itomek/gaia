@@ -4,16 +4,13 @@
 name: Test RAG
 
 on:
+  workflow_call:
   push:
     branches: [ main ]
-    paths:
-      - 'src/gaia/**'
-      - 'tests/**'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'src/gaia/**'
-      - 'tests/**'
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
   workflow_dispatch:
 
 permissions:
