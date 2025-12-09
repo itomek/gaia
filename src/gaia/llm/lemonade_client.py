@@ -2225,6 +2225,57 @@ class LemonadeClient:
         except Exception:
             return False
 
+    def validate_context_size(
+        self,
+        required_tokens: int = 32768,
+        quiet: bool = False,
+    ) -> tuple:
+        """
+        Validate that Lemonade server has sufficient context size.
+
+        Checks the /health endpoint to verify the server's context size
+        meets the required minimum.
+
+        Args:
+            required_tokens: Minimum required context size in tokens (default: 32768)
+            quiet: Suppress output messages
+
+        Returns:
+            Tuple of (success: bool, error_message: Optional[str])
+            - success: True if context size is sufficient
+            - error_message: Description of the issue if validation failed, None if successful
+
+        Example:
+            client = LemonadeClient()
+            success, error = client.validate_context_size(required_tokens=32768)
+            if not success:
+                print(f"Context validation failed: {error}")
+        """
+        try:
+            health = self.health_check()
+            reported_ctx = health.get("context_size", 0)
+
+            if reported_ctx >= required_tokens:
+                self.log.debug(
+                    f"Context size validated: {reported_ctx} >= {required_tokens}"
+                )
+                return True, None
+            else:
+                error_msg = (
+                    f"Insufficient context size: server has {reported_ctx} tokens, "
+                    f"but {required_tokens} tokens are required. "
+                    f"Restart with: lemonade-server serve --ctx-size {required_tokens}"
+                )
+                if not quiet:
+                    print(f"⚠️  {error_msg}")
+                return False, error_msg
+
+        except Exception as e:
+            self.log.warning(f"Context validation failed: {e}")
+            if not quiet:
+                print(f"⚠️  Context validation failed: {e}")
+            return True, None  # Don't block on connection errors
+
     def get_status(self) -> LemonadeStatus:
         """
         Get comprehensive Lemonade status.

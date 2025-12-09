@@ -1119,6 +1119,64 @@ class TestLemonadeClientMock(unittest.TestCase):
         # Verify progress callbacks were called
         self.assertGreater(len(callback_calls), 0)
 
+    @responses.activate
+    def test_validate_context_size_sufficient(self):
+        """Test validate_context_size returns True when context is sufficient."""
+        health_response = {
+            "status": "ok",
+            "context_size": 32768,
+            "model_loaded": TEST_MODEL,
+        }
+        responses.add(
+            responses.GET, f"{API_BASE}/health", json=health_response, status=200
+        )
+
+        valid, error = self.client.validate_context_size(
+            required_tokens=32768, quiet=True
+        )
+
+        self.assertTrue(valid)
+        self.assertIsNone(error)
+
+    @responses.activate
+    def test_validate_context_size_insufficient(self):
+        """Test validate_context_size returns False when context is insufficient."""
+        health_response = {
+            "status": "ok",
+            "context_size": 4096,  # Less than required
+            "model_loaded": TEST_MODEL,
+        }
+        responses.add(
+            responses.GET, f"{API_BASE}/health", json=health_response, status=200
+        )
+
+        valid, error = self.client.validate_context_size(
+            required_tokens=32768, quiet=True
+        )
+
+        self.assertFalse(valid)
+        self.assertIsNotNone(error)
+        self.assertIn("4096", error)
+        self.assertIn("32768", error)
+        self.assertIn("--ctx-size", error)
+
+    @responses.activate
+    def test_validate_context_size_health_failure(self):
+        """Test validate_context_size returns True on health check failure (don't block)."""
+        responses.add(
+            responses.GET,
+            f"{API_BASE}/health",
+            body=requests.exceptions.ConnectionError("Connection refused"),
+        )
+
+        valid, error = self.client.validate_context_size(
+            required_tokens=32768, quiet=True
+        )
+
+        # Should return True to not block on connection errors
+        self.assertTrue(valid)
+        self.assertIsNone(error)
+
 
 def is_server_running(host=HOST, port=PORT):
     """Check if a lemonade server is already running on the specified host and port."""
