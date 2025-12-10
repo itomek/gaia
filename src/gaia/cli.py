@@ -113,6 +113,17 @@ def check_lemonade_health(host=None, port=None):
         return False
 
 
+def is_lemonade_installed() -> bool:
+    """Check if Lemonade server is installed by attempting to get its version.
+
+    Uses LemonadeClient.get_lemonade_version() which runs 'lemonade-server --version'.
+    Returns True if the version can be retrieved, False otherwise.
+    """
+    # Create a minimal client instance just to check version
+    client = LemonadeClient(verbose=False)
+    return client.get_lemonade_version() is not None
+
+
 def print_lemonade_error(for_code_agent=False):
     """Print informative error message when Lemonade is not running.
 
@@ -123,31 +134,46 @@ def print_lemonade_error(for_code_agent=False):
         "❌ Error: Lemonade server is not running or not accessible.", file=sys.stderr
     )
     print("", file=sys.stderr)
-    print(
-        "GAIA will automatically start Lemonade Server if installed.", file=sys.stderr
-    )
-    print("If auto-start fails, you can start it manually by:", file=sys.stderr)
-    print("  • Double-clicking the desktop shortcut, or", file=sys.stderr)
-    if for_code_agent:
-        print(
-            "  • Running: lemonade-server serve --ctx-size 32768",
-            file=sys.stderr,
-        )
-    else:
-        print("  • Running: lemonade-server serve", file=sys.stderr)
-    print("", file=sys.stderr)
-    if for_code_agent:
-        print(
-            "Note: GAIA requires larger context size (32768 tokens)",
-            file=sys.stderr,
-        )
+
+    # Check if lemonade-server is installed
+    if not is_lemonade_installed():
+        print("📥 Lemonade server is not installed on your system.", file=sys.stderr)
         print("", file=sys.stderr)
-    base_url = os.getenv("LEMONADE_BASE_URL", f"{DEFAULT_LEMONADE_URL}/api/v1")
-    print(
-        f"The server should be accessible at {base_url}/health",
-        file=sys.stderr,
-    )
-    print("Then try your command again.", file=sys.stderr)
+        print("To install Lemonade server:", file=sys.stderr)
+        print("  1. Visit: https://lemonade-server.ai", file=sys.stderr)
+        print("  2. Download the installer for your platform", file=sys.stderr)
+        print("  3. Run the installer and follow prompts", file=sys.stderr)
+        print("", file=sys.stderr)
+        print("After installation, try your command again.", file=sys.stderr)
+    else:
+        print("Lemonade server is installed but not running.", file=sys.stderr)
+        print("", file=sys.stderr)
+        print(
+            "GAIA will automatically start Lemonade Server if installed.",
+            file=sys.stderr,
+        )
+        print("If auto-start fails, you can start it manually by:", file=sys.stderr)
+        print("  • Double-clicking the desktop shortcut, or", file=sys.stderr)
+        if for_code_agent:
+            print(
+                "  • Running: lemonade-server serve --ctx-size 32768",
+                file=sys.stderr,
+            )
+        else:
+            print("  • Running: lemonade-server serve", file=sys.stderr)
+        print("", file=sys.stderr)
+        if for_code_agent:
+            print(
+                "Note: GAIA requires larger context size (32768 tokens)",
+                file=sys.stderr,
+            )
+            print("", file=sys.stderr)
+        base_url = os.getenv("LEMONADE_BASE_URL", f"{DEFAULT_LEMONADE_URL}/api/v1")
+        print(
+            f"The server should be accessible at {base_url}/health",
+            file=sys.stderr,
+        )
+        print("Then try your command again.", file=sys.stderr)
 
 
 def initialize_lemonade_for_agent(
