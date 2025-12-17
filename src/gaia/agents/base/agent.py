@@ -81,6 +81,8 @@ class Agent(abc.ABC):
         debug: bool = False,
         output_handler=None,
         max_plan_iterations: int = 3,
+        min_context_size: int = 32768,
+        skip_lemonade: bool = False,
     ):
         """
         Initialize the Agent with LLM client.
@@ -101,6 +103,9 @@ class Agent(abc.ABC):
             debug: If True, enables debug output for troubleshooting (default: False)
             output_handler: Custom OutputHandler for displaying agent output (default: None, creates console based on silent_mode)
             max_plan_iterations: Maximum number of plan-execute-replan cycles (default: 3, 0 = unlimited)
+            min_context_size: Minimum context size required for this agent (default: 32768).
+            skip_lemonade: If True, skip Lemonade server initialization (default: False).
+                          Use this when connecting to a different OpenAI-compatible backend.
 
         Note: Uses local LLM server by default unless use_claude or use_chatgpt is True.
         """
@@ -122,6 +127,17 @@ class Agent(abc.ABC):
         # Read base_url from environment if not provided
         if base_url is None:
             base_url = os.getenv("LEMONADE_BASE_URL", "http://localhost:8000/api/v1")
+
+        # Lazy Lemonade initialization for local LLM users
+        # This ensures Lemonade server is running before we try to use it
+        if not (use_claude or use_chatgpt or skip_lemonade):
+            from gaia.llm.lemonade_manager import LemonadeManager
+
+            LemonadeManager.ensure_ready(
+                min_context_size=min_context_size,
+                quiet=silent_mode,
+                base_url=base_url,
+            )
 
         # Initialize state management
         self.execution_state = self.STATE_PLANNING
