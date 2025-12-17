@@ -1,0 +1,640 @@
+---
+title: "Code Agent"
+description: "AI-powered code analysis, generation, and autonomous development for Python and TypeScript projects"
+---
+
+<Note>
+  This is a proof of concept demonstrating autonomous AI-driven code generation capabilities within the GAIA framework.
+</Note>
+
+The GAIA Code Agent is an autonomous agent that handles coding tasks from requirements to implementation. It plans workflows, generates code with best practices, integrates linting and formatting tools, and iteratively fixes errors.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Autonomous Workflows" icon="robot">
+    Multi-step planning and execution for complex tasks
+  </Card>
+
+  <Card title="Architectural Planning" icon="sitemap">
+    Creates detailed PLAN.md with project structure before implementation
+  </Card>
+
+  <Card title="Progress Tracking" icon="list-check">
+    Checkbox task lists in PLAN.md for tracking progress
+  </Card>
+
+  <Card title="Project Scaffolding" icon="folder-tree">
+    Generates complete project structures with appropriate hierarchy
+  </Card>
+
+  <Card title="Code Generation" icon="code">
+    Functions, classes, and comprehensive unit tests
+  </Card>
+
+  <Card title="Quality Assurance" icon="shield-check">
+    Integrated pylint and Black formatting with auto-fixing
+  </Card>
+
+  <Card title="Error Recovery" icon="wrench">
+    Iterative error correction for syntax, runtime, and linting issues
+  </Card>
+
+  <Card title="External Lookup" icon="magnifying-glass">
+    Automatic documentation search and web search when needed
+  </Card>
+</CardGroup>
+
+## Quick Start
+
+### Installation
+
+<Steps>
+  <Step title="Install development dependencies">
+    <CodeGroup>
+    ```bash Windows/Linux
+    pip install -e .[dev]
+    ```
+
+    ```bash macOS
+    pip install -e ".[dev]"
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Start Lemonade Server">
+    <Warning>
+      The Code Agent requires a larger context size (32,768 tokens) to handle complex code generation tasks.
+    </Warning>
+
+    ```bash
+    lemonade-server serve --ctx-size 32768
+    ```
+
+    <Info>
+      This requirement only applies when using the local Lemonade server. If using Claude or ChatGPT via `--use-claude` or `--use-chatgpt`, no special configuration is needed.
+    </Info>
+  </Step>
+
+  <Step title="Try your first command">
+    ```bash
+    # Initialize GAIA.md for existing project
+    gaia code /init
+
+    # Generate a function
+    gaia code "Create a function to calculate factorial"
+    ```
+  </Step>
+</Steps>
+
+### Basic Examples
+
+<Tabs>
+  <Tab title="Function Generation">
+    ```bash
+    # Generate a function
+    gaia code "Create a function to calculate factorial"
+    ```
+  </Tab>
+
+  <Tab title="Unit Tests">
+    ```bash
+    # Generate tests for existing code
+    gaia code "Generate tests for my_module.py"
+    ```
+  </Tab>
+
+  <Tab title="Fix Linting">
+    ```bash
+    # Fix linting issues
+    gaia code "Fix linting issues in script.py"
+    ```
+  </Tab>
+
+  <Tab title="Full Project">
+    ```bash
+    # Create complete project with architecture
+    gaia code "Create a task management API with user authentication"
+    ```
+  </Tab>
+
+  <Tab title="Interactive Mode">
+    ```bash
+    # Interactive mode for continuous development
+    gaia code --interactive
+    ```
+  </Tab>
+
+  <Tab title="Cloud LLMs">
+    ```bash
+    # Use with Claude API (no server setup required)
+    gaia code "Create a REST API" --use-claude
+
+    # Use with ChatGPT API
+    gaia code "Create a REST API" --use-chatgpt
+    ```
+  </Tab>
+</Tabs>
+
+## Next.js Full-Stack App Generation
+
+The Code Agent can generate complete Next.js applications with database integration:
+
+```bash
+# Generate a todo app with Prisma + SQLite
+gaia code "Create a todo app" --use-claude
+
+# Generate a blog with posts
+gaia code "Create a blog with posts that have title, content, and published date"
+
+# Generate a task tracker with categories
+gaia code "Create a task tracker with categories and priority levels"
+```
+
+## Debug and Trace Options
+
+<CardGroup cols={2}>
+  <Card title="Debug Logging" icon="bug">
+    ```bash
+    gaia code "Create app" --debug
+    ```
+    See internal decision logs
+  </Card>
+
+  <Card title="Show Prompts" icon="eye">
+    ```bash
+    gaia code "Create app" --show-prompts
+    ```
+    Display prompts sent to LLM
+  </Card>
+
+  <Card title="JSON Trace" icon="file-code">
+    ```bash
+    gaia code "Create app" --trace
+    ```
+    Save detailed execution trace
+  </Card>
+
+  <Card title="Silent Mode" icon="volume-xmark">
+    ```bash
+    gaia code "Create app" --silent
+    ```
+    JSON output only (for automation)
+  </Card>
+
+  <Card title="Step-Through" icon="forward-step">
+    ```bash
+    gaia code "Create app" --step-through
+    ```
+    Pause at each agent step
+  </Card>
+
+  <Card title="Max Steps Control" icon="gauge-high">
+    ```bash
+    gaia code "Create app" --max-steps 150
+    ```
+    Override default maximum steps
+  </Card>
+
+  <Card title="Performance Stats" icon="chart-line">
+    ```bash
+    gaia code "Create app" --show-stats
+    ```
+    Display LLM performance metrics
+  </Card>
+
+  <Card title="Full Debug" icon="magnifying-glass-chart">
+    ```bash
+    gaia code "Create app" --debug --show-prompts --trace
+    ```
+    Maximum debugging information
+  </Card>
+</CardGroup>
+
+### JSON Output Structure
+
+The `--trace` flag saves a complete trace with detailed information:
+
+```json title="trace_output.json"
+{
+  "status": "success",
+  "result": "Final answer from agent",
+  "system_prompt": "Complete system prompt used",
+  "conversation": [
+    {"role": "user", "content": "User's query"},
+    {"role": "assistant", "content": {"thought": "...", "tool": "...", "tool_args": {...}}},
+    {"role": "system", "content": {...}}
+  ],
+  "steps_taken": 28,
+  "duration": 123.45,
+  "total_input_tokens": 15000,
+  "total_output_tokens": 8000,
+  "output_file": "/absolute/path/to/output.json"
+}
+```
+
+## Advanced Application Examples
+
+The Code Agent can generate project scaffolding and basic implementations:
+
+```bash
+# HRMS (Human Resource Management System)
+gaia code "Build an HRMS SaaS app with role-based access (HR, employee), employee directory, and leave requests with approval flow."
+```
+
+<Accordion title="What Gets Generated">
+  - Basic project structure and folder organization
+  - Starter code for authentication and role management
+  - Skeleton code for employee directory operations
+  - Basic leave request workflow structure
+  - API endpoint scaffolding
+  - Initial database model definitions
+  - Basic unit test templates
+  - Configuration file templates
+</Accordion>
+
+<Warning>
+  Generated code serves as a starting point and requires review, testing, and refinement for production use. Complex features like payment processing, real-time communications, and security-critical components should be implemented with careful review and testing.
+</Warning>
+
+## Testing
+
+```bash
+# Run all Code Agent tests
+python -m pytest tests/test_code_agent.py -v
+
+# Run orchestration tests (Next.js generation)
+python -m pytest tests/test_checklist_orchestration.py -v
+
+# Test specific features
+python -m pytest tests/test_code_agent.py::TestCodeAgent::test_generate_function -xvs
+
+# Test LLM code generation
+python -m pytest tests/test_checklist_orchestration.py::TestLLMCodeGeneration -xvs
+
+# Test error recovery
+python -m pytest tests/test_checklist_orchestration.py::TestErrorRecovery -xvs
+```
+
+## Python API
+
+```python title="code_agent_example.py"
+from gaia.agents.code.agent import CodeAgent
+
+# Initialize the agent
+agent = CodeAgent()
+
+# Process a query
+result = agent.process_query("Generate a function to sort a list")
+```
+
+## VSCode Integration
+
+<Info>
+  The Code Agent is available through the GAIA API Server as the `gaia-code` model, providing an OpenAI-compatible REST API for integration with VSCode and other IDEs.
+</Info>
+
+### Quick Start
+
+<Steps>
+  <Step title="Start Lemonade server">
+    ```bash
+    lemonade-server serve --ctx-size 32768
+    ```
+  </Step>
+
+  <Step title="Install API dependencies">
+    ```bash
+    pip install -e .[api]
+    ```
+  </Step>
+
+  <Step title="Start GAIA API server">
+    ```bash
+    gaia api start
+    ```
+  </Step>
+
+  <Step title="Use with any OpenAI-compatible client">
+    ```bash
+    curl -X POST http://localhost:8080/v1/chat/completions \
+      -H "Content-Type: application/json" \
+      -d '{
+        "model": "gaia-code",
+        "messages": [{"role": "user", "content": "Create a fibonacci function"}]
+      }'
+    ```
+  </Step>
+</Steps>
+
+### Key Features via API
+
+- **OpenAI Compatible**: Works with OpenAI Python client and compatible tools
+- **Workspace Awareness**: Automatically detects workspace root from VSCode/IDEs
+- **Streaming Support**: Real-time progress updates during code generation
+- **Multi-Turn Conversations**: Maintains context across multiple requests
+
+<CardGroup cols={2}>
+  <Card title="VSCode Integration Guide" icon="code" href="/integrations/vscode">
+    Complete VSCode setup instructions
+  </Card>
+
+  <Card title="API Server Documentation" icon="server" href="/reference/api">
+    API examples and usage
+  </Card>
+</CardGroup>
+
+## Workflow Capabilities
+
+The Code Agent executes workflows with these steps:
+
+<Steps>
+  <Step title="Analyze Requirements">
+    Parse and interpret the task description
+  </Step>
+
+  <Step title="Create Architectural Plan">
+    Generate PLAN.md with proposed structure and checkbox tasks
+  </Step>
+
+  <Step title="Build Project Structure">
+    Create folder hierarchy based on plan
+  </Step>
+
+  <Step title="Generate Code">
+    Create functions, classes, or program scaffolding with PLAN.md context
+  </Step>
+
+  <Step title="Validate Syntax">
+    Check for syntax errors
+  </Step>
+
+  <Step title="Lint and Format">
+    Apply pylint and Black formatting automatically
+  </Step>
+
+  <Step title="Fix Errors">
+    Attempt to correct identified linting and runtime issues
+  </Step>
+
+  <Step title="Generate Tests">
+    Create comprehensive unit test templates
+  </Step>
+
+  <Step title="Execute and Verify">
+    Run the code and tests, reporting results
+  </Step>
+
+  <Step title="Progress Updates">
+    Optionally update PLAN.md task checkboxes as work progresses
+  </Step>
+</Steps>
+
+<Note>
+  Success depends on task complexity and LLM capabilities. Review and manual refinement are typically required.
+</Note>
+
+## File Management
+
+Generated files follow these naming conventions:
+
+<CardGroup cols={2}>
+  <Card title="Functions" icon="function">
+    `[function_name]_generated.py`
+  </Card>
+
+  <Card title="Classes" icon="layer-group">
+    `[class_name]_generated.py`
+  </Card>
+
+  <Card title="Tests" icon="flask-vial">
+    `test_[module_name].py`
+  </Card>
+
+  <Card title="Project Plans" icon="file-lines">
+    `PLAN.md` in project root
+  </Card>
+
+  <Card title="Project Context" icon="book">
+    `GAIA.md` for agent guidance
+  </Card>
+
+  <Card title="Temporary Files" icon="folder">
+    `~/.gaia/cache/`
+  </Card>
+</CardGroup>
+
+## Available Tools
+
+The Code Agent provides over 30 comprehensive tools organized into categories:
+
+<AccordionGroup>
+  <Accordion title="Core Code Operations">
+    - `list_files` - List files and directories
+    - `parse_python_code` - Parse Python code and extract structure using AST
+    - `validate_syntax` - Validate Python code syntax
+    - `list_symbols` - List symbols (functions, classes, variables)
+  </Accordion>
+
+  <Accordion title="Code Generation">
+    - `generate_function` - Generate Python functions with docstrings and type hints
+    - `generate_class` - Generate Python classes with proper structure
+    - `generate_test` - Generate comprehensive unit tests for modules
+  </Accordion>
+
+  <Accordion title="Quality Assurance">
+    - `analyze_with_pylint` - Run pylint analysis on code
+    - `format_with_black` - Apply Black formatting to code
+    - `lint_and_format` - Combined linting and formatting
+    - `validate_project` - Comprehensive project validation for all file types
+  </Accordion>
+
+  <Accordion title="Project Management">
+    - `create_project` - Create complete Python projects from requirements
+    - `create_architectural_plan` - Create detailed PLAN.md with project architecture
+    - `create_project_structure` - Generate project folder structure from plan
+    - `implement_from_plan` - Implement components based on architectural plan
+  </Accordion>
+
+  <Accordion title="Error Fixing">
+    - `auto_fix_syntax_errors` - Attempt to detect and fix syntax errors
+    - `fix_code` - Attempt to fix Python code using LLM-driven analysis
+    - `fix_linting_errors` - Attempt to fix specific linting issues
+    - `fix_python_errors` - Attempt to fix Python runtime errors based on error messages
+  </Accordion>
+
+  <Accordion title="File Operations">
+    - `read_python_file` - Read and analyze Python files
+    - `write_python_file` - Write Python code to files with validation
+    - `edit_python_file` - Edit Python files with content replacement
+    - `search_code` - Search for patterns in code files
+    - `replace_function` - Replace specific functions in Python files
+  </Accordion>
+
+  <Accordion title="Web Development (Next.js/TypeScript)">
+    - `manage_data_model` - Create/update Prisma database models
+    - `manage_api_endpoint` - Generate REST API routes with Zod validation
+    - `manage_react_component` - Create React components (list, form, new, detail)
+    - `setup_nextjs_testing` - Configure Vitest testing infrastructure
+    - `setup_app_styling` - Apply dark theme design system with Tailwind CSS
+    - `update_landing_page` - Update home page with navigation links
+    - `validate_typescript` - Run TypeScript compiler checks
+    - `setup_prisma` - Initialize Prisma ORM with SQLite database
+  </Accordion>
+
+  <Accordion title="CLI Tools (Process Management)">
+    - `run_cli_command` - Execute CLI commands with background execution support
+    - `stop_process` - Stop background processes gracefully
+    - `list_processes` - List all managed background processes
+    - `get_process_logs` - Get output logs from background processes
+    - `cleanup_all_processes` - Stop all managed background processes
+  </Accordion>
+
+  <Accordion title="Validation and Testing">
+    - `test_crud_api` - Test CRUD API endpoints using curl-based validation
+    - `validate_typescript` - Run TypeScript compiler checks
+    - `validate_crud_structure` - Validate all required CRUD files exist
+    - `validate_styles` - Validate CSS files and design system consistency
+  </Accordion>
+</AccordionGroup>
+
+## External Information Lookup
+
+The Code Agent can automatically look up documentation and web information when needed:
+
+### Perplexity Web Search
+
+<Info>
+  Works only if `PERPLEXITY_API_KEY` environment variable is set
+</Info>
+
+```bash title=".env"
+# Set Perplexity API key in .env file
+PERPLEXITY_API_KEY=your_api_key_here
+```
+
+Benefits:
+- Helps resolve errors
+- Expands knowledge base
+- Finds current best practices
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Server Not Running Error">
+    If you see: `❌ Error: Lemonade server is not running or not accessible.`
+
+    **Solution:**
+    ```bash
+    lemonade-server serve --ctx-size 32768
+    ```
+  </Accordion>
+
+  <Accordion title="Context Size Issues">
+    If you experience incomplete code generation or truncated responses:
+
+    - Verify the server was started with `--ctx-size 32768`
+    - Check server logs for context size information
+    - Alternatively, use `--use-claude` or `--use-chatgpt` for cloud-based LLMs
+  </Accordion>
+
+  <Accordion title="Other Common Issues">
+    - **LLM timeout errors**: Ensure Lemonade server is running with `--ctx-size 32768`
+    - **Import errors**: Install with `pip install -e .[dev]` (Linux/Windows) or `pip install -e ".[dev]"` (macOS)
+    - **File not found**: Check working directory and file paths
+    - **Incomplete code generation**: Restart Lemonade server with larger context size
+    - **Pylint not found**: Ensure pylint is installed (`pip install pylint`)
+    - **Black not found**: Ensure black is installed (`pip install black`)
+  </Accordion>
+</AccordionGroup>
+
+## VS Code Debugging (Developers)
+
+For code-level debugging with breakpoints, use the VS Code debugger with pre-configured launch configurations:
+
+<Accordion title="Available Debug Configurations">
+  1. **Code Agent Debug - Todo App** - Full project generation workflow
+  2. **Code Agent Debug - Function Generation** - Simple code generation
+  3. **Code Agent Debug - REST API** - Complex project generation
+  4. **Code Agent Debug - Test Generation** - Test file generation
+  5. **Code Agent Debug - Interactive** - Interactive mode debugging
+  6. **Code Agent Debug - With Breakpoint** ⭐ - Stops before execution for setting breakpoints
+</Accordion>
+
+### How to Use
+
+<Steps>
+  <Step title="Open Run and Debug panel">
+    Press `Ctrl+Shift+D`
+  </Step>
+
+  <Step title="Select a debug configuration">
+    Choose from the available configurations
+  </Step>
+
+  <Step title="Set breakpoints">
+    Click in the gutter next to line numbers
+  </Step>
+
+  <Step title="Start debugging">
+    Press `F5`
+  </Step>
+</Steps>
+
+**Useful breakpoint locations:**
+- `src/gaia/agents/code/agent.py` - Agent initialization and processing
+- `src/gaia/agents/code/tools/code_tools.py` - Code generation tools
+- `src/gaia/agents/code/tools/validation_parsing.py` - Validation and parsing
+- `src/gaia/agents/base/agent.py` - Base agent logic
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test CLI Commands" icon="terminal">
+    Always test actual CLI commands users will run, not internal Python modules
+  </Card>
+
+  <Card title="Review Generated Code" icon="eye">
+    All generated code should be reviewed before production use
+  </Card>
+
+  <Card title="Use Version Control" icon="code-branch">
+    Commit working code before running Code Agent
+  </Card>
+
+  <Card title="Start Simple" icon="seedling">
+    Begin with simple tasks to understand agent capabilities
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="VSCode Integration" icon="code" href="/integrations/vscode">
+    Use Code Agent directly in VSCode
+  </Card>
+
+  <Card title="API Server" icon="server" href="/reference/api">
+    Integrate via OpenAI-compatible API
+  </Card>
+
+  <Card title="Development Guide" icon="book" href="/reference/dev">
+    Learn to build custom agents
+  </Card>
+
+  <Card title="Features Overview" icon="stars" href="/reference/features">
+    Explore all GAIA capabilities
+  </Card>
+</CardGroup>
+
+---
+
+<small style="color: #666;">
+
+**License**
+
+Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+
+SPDX-License-Identifier: MIT
+
+</small>

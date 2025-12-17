@@ -1,43 +1,224 @@
-# <img src="src/gaia/img/gaia.ico" alt="GAIA Logo" width="64" height="64" style="vertical-align: middle;"> Introducing GAIA by AMD: Generative AI Is Awesome!
+# <img src="src/gaia/img/gaia.ico" alt="GAIA Logo" width="64" height="64" style="vertical-align: middle;"> GAIA: AI Agent Framework for AMD Ryzen AI
 
 [![GAIA Build Installer](https://github.com/amd/gaia/actions/workflows/build_installer.yml/badge.svg)](https://github.com/amd/gaia/tree/main/tests "Check out our build")
 [![GAIA Installer Test](https://github.com/amd/gaia/actions/workflows/test_installer.yml/badge.svg)](https://github.com/amd/gaia/tree/main/tests "Check out our installer tests")
 [![GAIA CLI Tests](https://github.com/amd/gaia/actions/workflows/test_gaia_cli.yml/badge.svg)](https://github.com/amd/gaia/tree/main/tests "Check out our cli tests")
 [![Latest Release](https://img.shields.io/github/v/release/amd/gaia?include_prereleases)](https://github.com/amd/gaia/releases/latest "Download the latest release")
+[![PyPI](https://img.shields.io/pypi/v/amd-gaia)](https://pypi.org/project/amd-gaia/)
 [![OS - Windows](https://img.shields.io/badge/OS-Windows-blue)](https://github.com/amd/gaia/blob/main/docs/installer.md "Windows installer")
 [![OS - Linux](https://img.shields.io/badge/OS-Linux-green)](https://github.com/amd/gaia/blob/main/README.md#linux-installation "Linux support")
 [![OS - macOS](https://img.shields.io/badge/OS-macOS-black)](https://github.com/amd/gaia/blob/main/docs/dev.md "macOS support")
-[![Made with Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)](https://github.com/amd/gaia/blob/main/docs/install.md "Check out our instructions")
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://makeapullrequest.com)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![GitHub issues](https://img.shields.io/github/issues/amd/gaia)](https://github.com/amd/gaia/issues)
-[![GitHub downloads](https://img.shields.io/github/downloads/amd/gaia/total.svg)](https://tooomm.github.io/github-release-stats/?username=aigdat&repository=gaia)
-[![Star History Chart](https://img.shields.io/badge/Star%20History-View-brightgreen)](https://star-history.com/#amd/gaia)
-[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?logo=discord&logoColor=white)](https://discord.com/channels/1392562559122407535/1402013282495102997 "Join our Discord community")
+[![GitHub downloads](https://img.shields.io/github/downloads/amd/gaia/total.svg)](https://github.com/amd/gaia/releases)
+[![Discord](https://img.shields.io/badge/Discord-Join%20Community-7289DA?logo=discord&logoColor=white)](https://discord.com/channels/1392562559122407535/1402013282495102997)
 
 <img src="https://img.youtube.com/vi/_PORHv_-atI/maxresdefault.jpg" style="display: block; margin: auto;" />
 
-**GAIA is an open-source solution designed for the quick setup and execution of generative AI applications on local PC hardware.** It enables fast and efficient execution of LLM-based applications using a hybrid hardware approach that combines the AMD Neural Processing Unit (NPU) and Integrated Graphics Processing Unit (iGPU) in the Ryzen-AI PC. GAIA provides the following key features:
+**GAIA** is AMD's open-source framework for building intelligent AI agents that run **100% locally** on AMD Ryzen AI hardware. Keep your data private, eliminate cloud costs, and deploy in air-gapped environments—all with hardware-accelerated performance using AMD NPU.
+
+## What is GAIA?
+
+GAIA is a **framework/SDK** for AI PC agent development, providing:
+
+### **Agent Development Framework**
+Build custom AI agents quickly and easily with:
+- **Agent Base Class** - Smart orchestration of LLM + your tools
+- **Tool System** - Register Python functions as agent capabilities
+- **RAG Integration** - Document Q&A with vector search
+- **Vision Models** - Extract text from images and documents
+- **Voice Integration** - Speech-to-text and text-to-speech
+- **Database Mixins** - SQLAlchemy integration for stateful agents
+- **Testing Utilities** - Mock LLMs, temporary databases, fixtures
+
+```python
+# Build your own agent in minutes
+from gaia.agents.base.agent import Agent
+from gaia.agents.base.tools import tool
+
+class MyAgent(Agent):
+    @tool
+    def search_data(query: str) -> dict:
+        """Search for data."""
+        return {"results": ["item1", "item2"]}
+
+agent = MyAgent()
+result = agent.process_query("Find user data")
+```
+
+### **Application Packaging System**
+Package your agents professionally:
+- **Web UI Generation** - Modern React-based interfaces for your agents
+- **Windows Installer** - NSIS-based installers with RAUX integration
+- **Plugin Discovery** - Agents auto-discovered via `pip install`
+- **CLI Integration** - Custom commands under `gaia <your-command>`
+
+**Example agents are maintained in separate repositories** - GAIA is the framework they're built on.
+
+## Why GAIA?
+
+**Framework Features:**
+
+- **100% Local Execution**: All data stays on your machine—perfect for sensitive workloads, compliance requirements, and air-gapped deployments
+- **Zero Cloud Costs**: No API fees, no usage limits, no monthly subscriptions—unlimited AI processing at no extra cost
+- **Privacy-First**: HIPAA-compliant, GDPR-friendly, no data leaves your network—ideal for healthcare, finance, and enterprise
+- **Agent Framework**: Build autonomous agents with tools, state management, and error recovery
+- **Ryzen AI Optimized**: Utilizes both NPU and iGPU for accelerated local inference—leverages built-in neural processing and integrated graphics
+- **Plugin System**: Distribute agents via PyPI—`pip install` makes them discoverable
+- **Database Integration**: SQLAlchemy mixins for stateful agents (coming soon)
+- **Vision-Language Models**: Extract text from images with Qwen2.5-VL
+- **RAG System**: Document indexing and semantic search for Q&A
+- **Voice Integration**: Whisper ASR + Kokoro TTS for speech interaction
+- **Web UI Packaging**: Generate modern interfaces for your agents
+- **Air-Gapped Ready**: Deploy in secure, isolated networks with no internet dependency
 
 **Platform Support:**
-- **Windows 11 Home/Pro**: Full GUI and CLI support with installer
-- **Linux (Ubuntu/Debian)**: Full GUI and CLI support via source installation
-- **macOS**: CLI support via source installation (see [Development Guide](docs/dev.md))
-
-- 🏠 **Local LLM Processing**: Easily run powerful language models directly on your device without cloud dependencies
-- ⚡ **Direct LLM Access**: Query models instantly with the new `gaia llm` command - no server setup required
-- 🎯 **Specialized Agents**: Includes Blender agent for 3D content creation and workflow automation
-- ⚡ **Optimized Performance**: GAIA uses Lemonade Server for hardware-optimized model execution on AMD NPU and iGPU
-- 🖥️ **Easy-to-Use Interface**: Provides both a command-line interface (CLI) and a graphical user interface (GUI) option for easy interaction with models and agents
-- 🔧 **Extensible Architecture**: Easily build and integrate your own agents and use cases
+- **Windows 11**: Full GUI and CLI with installer
+- **Linux (Ubuntu/Debian)**: Full GUI and CLI via source
+- **macOS**: CLI via source (see [Dev Guide](docs/dev.md))
 
 For more details, see our [GAIA Blog Article](https://www.amd.com/en/developer/resources/technical-articles/gaia-an-open-source-project-from-amd-for-running-local-llms-on-ryzen-ai.html) or [Frequently Asked Questions](docs/faq.md).
 For Ryzen AI LLM app development similar to GAIA, see [this developer guide](https://ryzenai.docs.amd.com/en/latest/llm/overview.html).
 
 ⚠️ **IMPORTANT**: GAIA is specifically designed for **AMD Ryzen AI systems** and uses Lemonade Server for optimal hardware utilization. For more details, see [here](https://www.amd.com/en/products/software/ryzen-ai-software.html#tabs-2733982b05-item-7720bb7a69-tab).
 
-## Optional Web Interface: GAIA UI (RAUX)
+---
+
+## Using GAIA as an SDK
+
+### Install from PyPI
+
+**Using uv (recommended - 10-100x faster):**
+
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/macOS
+irm https://astral.sh/uv/install.ps1 | iex       # Windows
+
+# Install GAIA
+uv pip install amd-gaia
+```
+
+**Using pip (traditional):**
+
+```bash
+pip install amd-gaia
+```
+
+### Build Your First Agent
+
+```python
+from gaia.agents.base.agent import Agent
+from gaia.agents.base.tools import tool
+
+class WeatherAgent(Agent):
+    """Get weather information."""
+
+    def _get_system_prompt(self) -> str:
+        return "You are a weather assistant. Use the get_weather tool."
+
+    def _create_console(self):
+        from gaia.agents.base.console import AgentConsole
+        return AgentConsole()
+
+    def _register_tools(self):
+        @tool
+        def get_weather(city: str) -> dict:
+            """Get current weather for a city."""
+            # Your implementation (call weather API)
+            return {"city": city, "temperature": 72, "conditions": "Sunny"}
+
+# Use it
+agent = WeatherAgent()
+result = agent.process_query("What's the weather in Austin?")
+print(result)
+```
+
+### SDK Features
+
+| Component | Purpose | Documentation |
+|-----------|---------|---------------|
+| **Agent Base** | Core agent loop & tool execution | [docs/sdk/core](./docs/sdk/core/agent-system.mdx) |
+| **ChatSDK** | Chat with memory & streaming | [docs/sdk/sdks/chat](./docs/sdk/sdks/chat.mdx) |
+| **RAGSDK** | Document Q&A with vector search | [docs/sdk/sdks/rag](./docs/sdk/sdks/rag.mdx) |
+| **VLMClient** | Extract text from images | [docs/sdk/sdks/vlm](./docs/sdk/sdks/vlm.mdx) |
+| **AudioClient** | Voice interaction (ASR + TTS) | [docs/sdk/sdks/audio](./docs/sdk/sdks/audio.mdx) |
+| **Tool Mixins** | Reusable tool sets | [docs/sdk/mixins](./docs/sdk/mixins/tool-mixins.mdx) |
+
+**[Complete SDK Reference](./docs/sdk/index.mdx)** - Full API documentation with examples
+
+### Build Real-World Agents
+
+**Example: Document Q&A Agent**
+
+```python
+from gaia.agents.base.agent import Agent
+from gaia.agents.base.tools import tool
+from gaia.rag.sdk import RAGSDK, RAGConfig
+
+class DocumentAgent(Agent):
+    def __init__(self, docs_path="./docs", **kwargs):
+        super().__init__(**kwargs)
+        self.rag = RAGSDK(RAGConfig())
+        # Index documents
+        from pathlib import Path
+        for pdf in Path(docs_path).glob("*.pdf"):
+            self.rag.index_document(str(pdf))
+
+    def _get_system_prompt(self) -> str:
+        return "Answer questions using the search_docs tool."
+
+    def _create_console(self):
+        from gaia.agents.base.console import AgentConsole
+        return AgentConsole()
+
+    def _register_tools(self):
+        @tool
+        def search_docs(question: str) -> dict:
+            """Search documents for answers."""
+            response = self.rag.query(question)
+            return {
+                "answer": response.text,
+                "sources": response.source_files
+            }
+```
+
+**Package as PyPI Plugin**
+
+```toml
+# pyproject.toml
+[project]
+name = "my-doc-agent"
+dependencies = ["amd-gaia>=0.14.0"]
+
+[project.entry-points."gaia.agents"]
+doc-agent = "my_agent.agent:DocumentAgent"
+```
+
+```bash
+pip install my-doc-agent
+# Agent auto-discovered!
+gaia agents list  # Shows: doc-agent
+```
+
+### Developer Resources
+
+- **[SDK Reference](./docs/sdk/index.mdx)** - Complete API documentation with examples
+- **[Developer Guide](./docs/dev.md)** - Development environment setup
+- **[Testing Guide](./docs/sdk/testing.mdx)** - Testing your agents
+- **[Examples](./docs/sdk/examples.mdx)** - Sample agent implementations
+- **[Best Practices](./docs/sdk/best-practices.mdx)** - Agent development guidelines
+
+---
+
+## Using GAIA as an Application
+
+GAIA includes pre-built AI tools and a modern web interface.
+
+### Optional Web Interface: GAIA UI (RAUX)
 
 GAIA UI is an optional, modern web-based interface for GAIA, built on the RAUX ([Open-WebUI](https://openwebui.com/) fork) platform. It offers a feature-rich, extensible, and user-friendly experience for interacting with GAIA's AI capabilities. GAIA UI is currently in beta and is being actively integrated with new features and improvements.
 
@@ -45,31 +226,26 @@ GAIA UI is an optional, modern web-based interface for GAIA, built on the RAUX (
 
 For more details and setup instructions, see the [UI Documentation](docs/ui.md).
 
-## Contents:
+## Contents
 
-- [ Introducing GAIA by AMD: Generative AI Is Awesome!](#-introducing-gaia-by-amd-generative-ai-is-awesome)
-  - [Optional Web Interface: GAIA UI (RAUX)](#optional-web-interface-gaia-beta-raux)
-  - [Contents:](#contents)
-- [Getting Started Guide](#getting-started-guide)
-  - [Installation Steps](#installation-steps)
-    - [Command-line Installation](#command-line-installation)
-  - [Uninstallation Steps](#uninstallation-steps)
-  - [Running the GAIA GUI](#running-the-gaia-gui)
-  - [Running the GAIA CLI](#running-the-gaia-cli)
-  - [Building from Source](#building-from-source)
-- [Features](#features)
+### For Developers (SDK/Framework)
+- [Using GAIA as an SDK](#using-gaia-as-an-sdk) - Build custom agents
+- [SDK Reference](./docs/sdk/index.mdx) - Complete API documentation
+- [Building from Source](#building-from-source)
 - [Contributing](#contributing)
+
+### For End Users (Application)
+- [Installation](#installation) - Windows installer
+- [Running the GAIA GUI](#running-the-gaia-gui)
+- [Running the GAIA CLI](#running-the-gaia-cli)
+- [Features](#features)
+
+### Reference
 - [System Requirements](#system-requirements)
-  - [Dependencies](#dependencies)
 - [Troubleshooting](#troubleshooting)
-  - [Driver Issues](#driver-issues)
-  - [Installation Problems](#installation-problems)
-  - [Model Download Issues](#model-download-issues)
-  - [Performance Problems](#performance-problems)
 - [FAQ](#faq)
 - [Contact](#contact)
 - [License](#license)
-- [Acknowledgments](#acknowledgments)
 
 # Getting Started Guide
 
@@ -93,9 +269,9 @@ For more details and setup instructions, see the [UI Documentation](docs/ui.md).
 - **Intel or Apple Silicon (M1/M2/M3)**
 
 **Performance Tiers:**
-- **🚀 Hybrid Mode** (NPU + iGPU): Requires AMD Ryzen AI 9 HX 300 series or newer
-- **⚡ Vulkan Mode**: Older Ryzen processors use llama.cpp with Vulkan acceleration via Lemonade
-- **🔧 CPU Mode**: Fallback for any system without GPU acceleration
+- **Hybrid Mode** (NPU + iGPU): Requires AMD Ryzen AI 9 HX 300 series or newer
+- **Vulkan Mode**: Older Ryzen processors use llama.cpp with Vulkan acceleration via Lemonade
+- **CPU Mode**: Fallback for any system without GPU acceleration
 
 ## Installation
 
@@ -344,11 +520,62 @@ For a list of features and supported LLMs, please refer to the [Features](docs/f
 
 # Contributing
 
-This is a new project with a codebase that is actively being developed. If you decide to contribute, please:
-- Submit your contributions via a Pull Request.
-- Ensure your code follows the same style as the rest of the repository.
+We welcome contributions from the community! GAIA is being transformed into a production-ready SDK for building AI agents.
 
-The best way to contribute is by adding a new agent that covers a unique use-case. You can use the existing agents under the `./src/gaia/agents/` folder as a starting point. If you prefer to avoid UI development, you can add a feature to the CLI tool first. For adding features to the GUI, please refer to our [UI Development Guide](docs/ui.md).
+## Ways to Contribute
+
+### Build External Agents (Recommended)
+
+**Build agents in your own repository:**
+
+```bash
+# Create your agent
+gaia init my-agent --template document-chat  # (coming soon)
+cd my-agent
+
+# Develop and publish
+pip install -e ".[dev]"
+pytest tests/ -v
+python -m build
+twine upload dist/*
+
+# Now anyone can: pip install my-agent
+```
+
+Benefits:
+- Own your code and release cycle
+- Use GAIA as a dependency
+- Contribute to ecosystem without core changes
+
+### Framework Contributions
+
+**Priority contributions:**
+- **Issue #1: DatabaseMixin** - SQLAlchemy integration for stateful agents
+- **Issue #2: FileChangeHandler** - Extract file watching utility
+- **Issue #4: Plugin Registry** - Entry point discovery system
+- **Issue #13: `gaia init --claude`** - AI-assisted development
+- See [GitHub Issues](https://github.com/amd/gaia/issues) for all open issues
+
+### Documentation
+
+- SDK examples and tutorials
+- Agent development patterns
+- API reference improvements
+
+### Testing
+
+- Framework test utilities
+- Template testing
+- Integration tests
+
+## Contribution Guidelines
+
+- Submit via Pull Request
+- Follow code style (black, ruff)
+- Add tests for new features
+- Update documentation
+
+For adding features to the GUI, see our [UI Development Guide](docs/ui.md).
 
 # System Requirements
 
@@ -391,7 +618,7 @@ GAIA has been tested on the following system:
 - Physical Memory: 32GB
 - Recommended: AMD Ryzen AI 9 HX 370 with NPU Driver `32.0.203.240` and newer
 
-⚠️ **NOTE**: Use NPU Driver `32.0.203.240` and newer. You can check your driver version by going to *Device Manager -> Neural Processors -> NPU Compute Accelerator Device -> Right-Click Properties -> Driver Tab -> Driver Version*.
+**NOTE**: Use NPU Driver `32.0.203.240` and newer. You can check your driver version by going to *Device Manager -> Neural Processors -> NPU Compute Accelerator Device -> Right-Click Properties -> Driver Tab -> Driver Version*.
 
 
 ## Dependencies
@@ -442,6 +669,3 @@ Contact [AMD GAIA Team](mailto:gaia@amd.com) for any questions, feature requests
 
 Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 SPDX-License-Identifier: MIT
-
-# Acknowledgments
-GAIA UI (RAUX) is made possible through the exceptional hard work, dedication, and innovative vision of [Tim Jaeryang Baek](https://github.com/tjbck) and the [Open-WebUI](https://openwebui.com/) team! We are deeply grateful for their outstanding open-source contributions that have enabled us to build upon their robust foundation. Their commitment to creating accessible, user-friendly AI interfaces has been instrumental in bringing GAIA UI to life. We extend our heartfelt appreciation to the entire Open-WebUI community for their continued support, collaboration, and the incredible platform they've developed that makes modern AI interactions seamless and intuitive.

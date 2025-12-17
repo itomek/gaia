@@ -1,0 +1,929 @@
+# AudioClient, WhisperAsr, KokoroTTS Specification
+
+![Status](https://img.shields.io/badge/status-stable-green)
+![Category](https://img.shields.io/badge/category-audio-orange)
+
+**Components:** AudioClient, WhisperAsr, KokoroTTS
+**Module:** `gaia.audio`
+**Import:** `from gaia.audio import AudioClient, WhisperAsr, KokoroTTS`
+
+---
+
+## Overview
+
+The audio subsystem provides complete voice interaction capabilities including Automatic Speech Recognition (ASR), Text-to-Speech (TTS), and voice chat orchestration. AudioClient coordinates ASR and TTS with LLM generation, while WhisperAsr handles voice-to-text transcription and KokoroTTS provides high-quality speech synthesis.
+
+**Key Features:**
+- Voice chat with streaming TTS
+- Whisper-based ASR with VAD (Voice Activity Detection)
+- High-quality Kokoro TTS with multiple voices
+- Streaming audio processing
+- Interrupt handling (keyboard and voice)
+- GPU acceleration support
+- Thread-safe operation
+
+---
+
+## Requirements
+
+### Functional Requirements
+
+#### AudioClient
+
+1. **Voice Chat Management**
+   - `start_voice_chat()` - Start interactive voice session
+   - `process_voice_input()` - Process transcribed text with LLM
+   - `speak_text()` - Speak text using TTS
+   - Integration with LLMClient for generation
+
+2. **Audio Coordination**
+   - Pause recording during TTS playback
+   - Resume recording after TTS completes
+   - Handle keyboard interrupts
+   - Queue-based transcription delivery
+
+3. **TTS Integration**
+   - Streaming TTS with text queue
+   - Status callbacks for speaking state
+   - Interrupt event handling
+
+#### WhisperAsr
+
+1. **Speech Recognition**
+   - Real-time transcription using Whisper
+   - Voice Activity Detection (VAD)
+   - Configurable silence thresholds
+   - Minimum audio length filtering
+
+2. **Audio Recording**
+   - PyAudio-based recording
+   - Configurable audio device
+   - Pause/resume recording
+   - Streaming mode with chunking
+
+3. **Model Configuration**
+   - Multiple Whisper model sizes (base, small, medium, etc.)
+   - GPU acceleration support (CUDA)
+   - Batch processing capability
+
+#### KokoroTTS
+
+1. **Speech Synthesis**
+   - High-quality voice synthesis
+   - Multiple voice options (American, British)
+   - Streaming audio generation
+   - Real-time playback
+
+2. **Voice Management**
+   - 17+ available voices
+   - Quality ratings (A to F)
+   - Duration preferences (M to HH)
+   - Default voice configuration
+
+3. **Audio Playback**
+   - SoundDevice-based playback
+   - Interrupt handling
+   - Status callbacks
+
+### Non-Functional Requirements
+
+1. **Performance**
+   - Low latency transcription (< 1s for short phrases)
+   - Fast TTS generation
+   - Efficient GPU utilization
+   - Minimal audio buffer delays
+
+2. **Reliability**
+   - Graceful error handling
+   - Thread-safe operations
+   - Resource cleanup
+   - Connection recovery
+
+3. **Usability**
+   - Simple API
+   - Clear status messages
+   - Helpful error messages
+   - Visual feedback (spinners, animations)
+
+---
+
+## API Specification
+
+### File Locations
+
+```
+src/gaia/audio/audio_client.py
+src/gaia/audio/whisper_asr.py
+src/gaia/audio/kokoro_tts.py
+```
+
+### AudioClient Interface
+
+```python
+import asyncio
+import queue
+import threading
+from typing import Optional, Callable
+from gaia.llm import LLMClient
+
+class AudioClient:
+    """
+    Handles all audio-related functionality including TTS, ASR, and voice chat.
+
+    Usage:
+        audio = AudioClient(
+            whisper_model_size="base",
+            enable_tts=True,
+            system_prompt="You are a helpful assistant"
+        )
+
+        # Start voice chat
+        await audio.start_voice_chat(process_callback)
+    """
+
+    def __init__(
+        self,
+        whisper_model_size="base",
+        audio_device_index=None,
+        silence_threshold=0.5,
+        enable_tts=True,
+        logging_level="INFO",
+        use_claude=False,
+        use_chatgpt=False,
+        system_prompt=None,
+    ):
+        """
+        Initialize audio client.
+
+        Args:
+            whisper_model_size: Whisper model size (tiny, base, small, medium, large)
+            audio_device_index: Audio input device index (None = default)
+            silence_threshold: Silence duration before processing (seconds)
+            enable_tts: Enable text-to-speech output
+            logging_level: Logging level (DEBUG, INFO, WARNING, ERROR)
+            use_claude: Use Claude API for LLM
+            use_chatgpt: Use ChatGPT API for LLM
+            system_prompt: Default system prompt for LLM
+
+        Note:
+            - LLMClient is automatically initialized with base_url handling
+            - TTS is initialized on demand to avoid startup delays
+        """
+        pass
+
+    async def start_voice_chat(self, message_processor_callback: Callable):
+        """
+        Start a voice-based chat session.
+
+        Args:
+            message_processor_callback: Async callback to process transcribed text
+
+        Note:
+            - Runs until user says "stop" or presses Ctrl+C
+            - Automatically handles recording pause/resume
+            - Displays status with animated spinner
+
+        Example:
+            >>> async def process_message(text: str):
+            ...     await audio.process_voice_input(text)
+            >>> await audio.start_voice_chat(process_message)
+            Starting voice chat.
+            Say 'stop' to quit or 'restart' to clear history.
+            ⠋ Listening...
+        """
+        pass
+
+    async def process_voice_input(
+        self,
+        text: str,
+        get_stats_callback: Optional[Callable] = None
+    ):
+        """
+        Process transcribed voice input and get AI response.
+
+        Args:
+            text: Transcribed text to process
+            get_stats_callback: Optional callback for performance stats
+
+        Note:
+            - Pauses recording during LLM generation
+            - Streams TTS while generating
+            - Handles keyboard interrupts
+            - Resumes recording after completion
+
+        Example:
+            >>> await audio.process_voice_input("What's the weather?")
+            Gaia: The weather is sunny today.
+            {'tokens_per_second': 45.2, 'time_to_first_token': 0.3, ...}
+        """
+        pass
+
+    def initialize_tts(self):
+        """
+        Initialize TTS if enabled.
+
+        Raises:
+            RuntimeError: If TTS initialization fails
+
+        Note:
+            Called automatically on first TTS use.
+        """
+        pass
+
+    async def speak_text(self, text: str) -> None:
+        """
+        Speak text using initialized TTS.
+
+        Args:
+            text: Text to speak
+
+        Note:
+            Does nothing if TTS is disabled or not initialized.
+
+        Example:
+            >>> await audio.speak_text("Hello world")
+            # Plays audio: "Hello world"
+        """
+        pass
+
+    async def halt_generation(self):
+        """
+        Send a request to halt the current generation.
+
+        Example:
+            >>> await audio.halt_generation()
+            Generation interrupted.
+        """
+        pass
+```
+
+### WhisperAsr Interface
+
+```python
+import queue
+import numpy as np
+from gaia.audio.audio_recorder import AudioRecorder
+
+class WhisperAsr(AudioRecorder):
+    """
+    Whisper-based Automatic Speech Recognition.
+
+    Usage:
+        asr = WhisperAsr(
+            model_size="base",
+            transcription_queue=queue.Queue(),
+            silence_threshold=0.01,
+            min_audio_length=16000
+        )
+
+        asr.start_recording()
+        # Get transcriptions from queue
+        while True:
+            text = transcription_queue.get()
+            print(text)
+    """
+
+    def __init__(
+        self,
+        model_size="small",
+        device_index=None,
+        transcription_queue=None,
+        enable_cuda=False,
+        silence_threshold=None,
+        min_audio_length=None,
+    ):
+        """
+        Initialize Whisper ASR.
+
+        Args:
+            model_size: Whisper model size (tiny, base, small, medium, large)
+            device_index: Audio input device index (None = default)
+            transcription_queue: Queue to receive transcriptions
+            enable_cuda: Enable GPU acceleration
+            silence_threshold: Custom silence threshold (default: 0.01)
+            min_audio_length: Minimum audio length in samples (default: 16000)
+
+        Raises:
+            ImportError: If required dependencies missing (pyaudio, torch, whisper)
+
+        Note:
+            - Model auto-downloads on first use
+            - GPU acceleration requires CUDA-enabled PyTorch
+            - Batch processing enabled for better performance
+        """
+        pass
+
+    def start_recording(self):
+        """
+        Start recording audio.
+
+        Note:
+            Runs in background thread, puts transcriptions in queue.
+        """
+        pass
+
+    def stop_recording(self):
+        """
+        Stop recording audio.
+
+        Note:
+            Waits for recording thread to finish.
+        """
+        pass
+
+    def pause_recording(self):
+        """
+        Pause audio recording (e.g., during TTS playback).
+        """
+        pass
+
+    def resume_recording(self):
+        """
+        Resume audio recording after pause.
+        """
+        pass
+
+    def get_device_name(self) -> str:
+        """
+        Get the name of the current audio input device.
+
+        Returns:
+            Device name string
+        """
+        pass
+```
+
+### KokoroTTS Interface
+
+```python
+import queue
+import threading
+from typing import Optional, Callable
+from kokoro import KPipeline
+
+class KokoroTTS:
+    """
+    Kokoro-based Text-to-Speech synthesis.
+
+    Usage:
+        tts = KokoroTTS()
+
+        # Streaming generation
+        text_queue = queue.Queue()
+        tts.generate_speech_streaming(text_queue)
+
+        # Feed text
+        text_queue.put("Hello world")
+        text_queue.put("__END__")
+    """
+
+    def __init__(self):
+        """
+        Initialize Kokoro TTS.
+
+        Raises:
+            ImportError: If required dependencies missing (sounddevice, soundfile, kokoro)
+
+        Note:
+            - Uses American English by default
+            - Default voice: af_bella (A- quality)
+            - 17+ voices available
+        """
+        pass
+
+    def generate_speech_streaming(
+        self,
+        text_queue: queue.Queue,
+        status_callback: Optional[Callable[[bool], None]] = None,
+        interrupt_event: Optional[threading.Event] = None,
+    ):
+        """
+        Generate and play speech from streaming text queue.
+
+        Args:
+            text_queue: Queue containing text chunks and control signals
+            status_callback: Callback for speaking state (True=speaking, False=done)
+            interrupt_event: Event to signal interruption
+
+        Control Signals:
+            "__END__": End of text stream
+            "__HALT__": Immediate stop
+
+        Example:
+            >>> text_queue = queue.Queue()
+            >>> thread = threading.Thread(
+            ...     target=tts.generate_speech_streaming,
+            ...     args=(text_queue,)
+            ... )
+            >>> thread.start()
+            >>> text_queue.put("Hello")
+            >>> text_queue.put(" world")
+            >>> text_queue.put("__END__")
+            >>> thread.join()
+        """
+        pass
+
+    def get_available_voices(self) -> dict:
+        """
+        Get available voice configurations.
+
+        Returns:
+            Dictionary of voice configs with quality/duration ratings
+
+        Example:
+            >>> tts.get_available_voices()
+            {
+                "af_bella": {
+                    "name": "American Female - Bella",
+                    "quality": "A-",
+                    "duration": "HH"
+                },
+                ...
+            }
+        """
+        pass
+
+    def set_voice(self, voice_id: str):
+        """
+        Set the TTS voice.
+
+        Args:
+            voice_id: Voice identifier (e.g., "af_bella", "am_michael")
+
+        Raises:
+            ValueError: If voice_id not found
+        """
+        pass
+```
+
+---
+
+## Implementation Details
+
+### Voice Chat Flow
+
+```python
+async def start_voice_chat(self, message_processor_callback):
+    # Initialize TTS
+    self.initialize_tts()
+
+    # Create WhisperAsr with custom settings
+    from gaia.audio.whisper_asr import WhisperAsr
+    self.whisper_asr = WhisperAsr(
+        model_size=self.whisper_model_size,
+        device_index=self.audio_device_index,
+        transcription_queue=self.transcription_queue,
+        silence_threshold=0.01,
+        min_audio_length=16000 * 1.0,  # 1 second
+    )
+
+    # Start recording
+    self.whisper_asr.start_recording()
+
+    # Start processing thread
+    process_thread = threading.Thread(
+        target=self._process_audio_wrapper,
+        args=(message_processor_callback,)
+    )
+    process_thread.start()
+
+    # Keep main thread alive
+    while True:
+        if not process_thread.is_alive():
+            break
+        if not self.whisper_asr.is_recording:
+            break
+        await asyncio.sleep(0.1)
+```
+
+### Streaming TTS Coordination
+
+```python
+# Initialize text queue for TTS
+text_queue = queue.Queue(maxsize=100)
+interrupt_event = threading.Event()
+
+# Define status callback
+def tts_status_callback(is_speaking):
+    self.is_speaking = is_speaking
+    if not is_speaking:
+        if self.whisper_asr:
+            self.whisper_asr.resume_recording()
+    else:
+        if self.whisper_asr:
+            self.whisper_asr.pause_recording()
+
+# Start TTS thread
+self.tts_thread = threading.Thread(
+    target=self.tts.generate_speech_streaming,
+    args=(text_queue,),
+    kwargs={
+        "status_callback": tts_status_callback,
+        "interrupt_event": interrupt_event,
+    },
+    daemon=True,
+)
+self.tts_thread.start()
+
+# Stream LLM response to TTS
+response_stream = self.llm_client.generate(text, stream=True)
+for chunk in response_stream:
+    print(chunk, end="", flush=True)
+    text_queue.put(chunk)
+
+# Signal end
+text_queue.put("__END__")
+```
+
+### Whisper VAD Processing
+
+```python
+# Simple VAD - only send chunks with sufficient audio energy
+min_energy_threshold = 0.001
+
+while self.is_recording:
+    data = np.frombuffer(
+        self.stream.read(self.CHUNK, exception_on_overflow=False),
+        dtype=np.float32,
+    )
+    audio_buffer = np.concatenate((audio_buffer, data))
+
+    # Process when we have 3 seconds of audio
+    if len(audio_buffer) >= chunk_size:
+        chunk = audio_buffer[:chunk_size].copy()
+
+        # Check energy
+        energy = np.abs(chunk).mean()
+
+        if energy > min_energy_threshold:
+            # Transcribe with Whisper
+            result = self.model.transcribe(
+                chunk,
+                fp16=False,
+                language="en",
+                temperature=0.0,
+            )
+            text = result["text"].strip()
+            self.transcription_queue.put(text)
+
+        # Keep overlap for continuity
+        audio_buffer = audio_buffer[chunk_size - overlap_size:]
+```
+
+### Kokoro Streaming Generation
+
+```python
+def generate_speech_streaming(self, text_queue, status_callback=None, interrupt_event=None):
+    if status_callback:
+        status_callback(True)  # Start speaking
+
+    try:
+        accumulated_text = ""
+
+        while True:
+            try:
+                chunk = text_queue.get(timeout=0.1)
+
+                # Check for control signals
+                if chunk == "__END__":
+                    break
+                if chunk == "__HALT__":
+                    break
+                if interrupt_event and interrupt_event.is_set():
+                    break
+
+                accumulated_text += chunk
+
+                # Generate when we have enough text
+                if len(accumulated_text) >= 20:
+                    # Generate audio with Kokoro
+                    audio = self.pipeline(
+                        accumulated_text,
+                        voice=self.current_voice,
+                        speed=1.0,
+                    )
+
+                    # Play audio
+                    sd.play(audio, samplerate=24000)
+                    sd.wait()
+
+                    accumulated_text = ""
+
+            except queue.Empty:
+                continue
+
+        # Generate any remaining text
+        if accumulated_text:
+            audio = self.pipeline(accumulated_text, voice=self.current_voice)
+            sd.play(audio, samplerate=24000)
+            sd.wait()
+
+    finally:
+        if status_callback:
+            status_callback(False)  # Done speaking
+```
+
+---
+
+## Testing Requirements
+
+### Unit Tests
+
+**File:** `tests/audio/test_audio_client.py`
+
+```python
+import pytest
+import asyncio
+from unittest.mock import Mock, patch, MagicMock
+from gaia.audio import AudioClient
+
+def test_audio_client_can_be_imported():
+    """Verify AudioClient can be imported."""
+    from gaia.audio import AudioClient
+    assert AudioClient is not None
+
+def test_initialize_audio_client():
+    """Test AudioClient initialization."""
+    with patch('gaia.audio.audio_client.LLMClient'):
+        audio = AudioClient()
+        assert audio.whisper_model_size == "base"
+        assert audio.enable_tts is True
+        assert audio.llm_client is not None
+
+def test_initialize_with_custom_settings():
+    """Test initialization with custom settings."""
+    with patch('gaia.audio.audio_client.LLMClient'):
+        audio = AudioClient(
+            whisper_model_size="small",
+            enable_tts=False,
+            silence_threshold=1.0,
+            system_prompt="Custom prompt"
+        )
+        assert audio.whisper_model_size == "small"
+        assert audio.enable_tts is False
+        assert audio.silence_threshold == 1.0
+
+@pytest.mark.asyncio
+async def test_process_voice_input():
+    """Test voice input processing."""
+    with patch('gaia.audio.audio_client.LLMClient') as mock_llm:
+        audio = AudioClient(enable_tts=False)
+        audio.llm_client.generate = Mock(return_value="Response text")
+        audio.llm_client.get_performance_stats = Mock(return_value={})
+        audio.llm_client.is_generating = Mock(return_value=False)
+
+        await audio.process_voice_input("Test input")
+
+        assert audio.llm_client.generate.called
+
+def test_initialize_tts():
+    """Test TTS initialization."""
+    with patch('gaia.audio.audio_client.LLMClient'):
+        with patch('gaia.audio.kokoro_tts.KokoroTTS') as mock_tts:
+            audio = AudioClient(enable_tts=True)
+            audio.initialize_tts()
+
+            assert audio.tts is not None
+
+def test_initialize_tts_disabled():
+    """Test TTS initialization when disabled."""
+    with patch('gaia.audio.audio_client.LLMClient'):
+        audio = AudioClient(enable_tts=False)
+        # Should not raise error
+        # TTS should not be initialized
+
+@pytest.mark.asyncio
+async def test_speak_text():
+    """Test speak_text method."""
+    with patch('gaia.audio.audio_client.LLMClient'):
+        with patch('gaia.audio.kokoro_tts.KokoroTTS') as mock_tts:
+            audio = AudioClient(enable_tts=True)
+            audio.tts = Mock()
+            audio.tts.generate_speech_streaming = Mock()
+
+            await audio.speak_text("Hello world")
+            # Verify TTS was called (indirectly through thread)
+```
+
+**File:** `tests/audio/test_whisper_asr.py`
+
+```python
+import pytest
+from unittest.mock import Mock, patch
+from gaia.audio import WhisperAsr
+import queue
+
+def test_whisper_asr_imports():
+    """Test required imports."""
+    try:
+        from gaia.audio import WhisperAsr
+        assert WhisperAsr is not None
+    except ImportError:
+        pytest.skip("Whisper dependencies not installed")
+
+def test_initialize_whisper_asr():
+    """Test WhisperAsr initialization."""
+    try:
+        with patch('whisper.load_model'):
+            q = queue.Queue()
+            asr = WhisperAsr(
+                model_size="base",
+                transcription_queue=q
+            )
+            assert asr.whisper_model_size == "base"
+            assert asr.transcription_queue is q
+    except ImportError:
+        pytest.skip("Whisper dependencies not installed")
+
+def test_whisper_asr_missing_dependencies():
+    """Test error when dependencies missing."""
+    with patch('gaia.audio.whisper_asr.whisper', None):
+        with pytest.raises(ImportError) as exc_info:
+            WhisperAsr()
+        assert "talk dependencies" in str(exc_info.value)
+```
+
+**File:** `tests/audio/test_kokoro_tts.py`
+
+```python
+import pytest
+from unittest.mock import Mock, patch
+from gaia.audio import KokoroTTS
+
+def test_kokoro_tts_imports():
+    """Test required imports."""
+    try:
+        from gaia.audio import KokoroTTS
+        assert KokoroTTS is not None
+    except ImportError:
+        pytest.skip("Kokoro dependencies not installed")
+
+def test_initialize_kokoro_tts():
+    """Test KokoroTTS initialization."""
+    try:
+        with patch('kokoro.KPipeline'):
+            tts = KokoroTTS()
+            assert tts.pipeline is not None
+    except ImportError:
+        pytest.skip("Kokoro dependencies not installed")
+
+def test_get_available_voices():
+    """Test voice listing."""
+    try:
+        with patch('kokoro.KPipeline'):
+            tts = KokoroTTS()
+            voices = tts.available_voices
+            assert isinstance(voices, dict)
+            assert "af_bella" in voices
+            assert "am_michael" in voices
+    except ImportError:
+        pytest.skip("Kokoro dependencies not installed")
+```
+
+---
+
+## Dependencies
+
+### Required Packages
+
+```toml
+# pyproject.toml
+[project.optional-dependencies]
+talk = [
+    "openai-whisper>=20231117",  # ASR
+    "pyaudio>=0.2.14",           # Audio recording
+    "torch>=2.0.0",              # Whisper backend
+    "kokoro>=0.3.1",             # TTS
+    "sounddevice>=0.4.6",        # Audio playback
+    "soundfile>=0.12.1",         # Audio file I/O
+    "numpy>=1.24.0",             # Audio processing
+    "psutil>=5.9.0",             # System monitoring
+]
+```
+
+---
+
+## Usage Examples
+
+### Example 1: Basic Voice Chat
+
+```python
+import asyncio
+from gaia.audio import AudioClient
+
+async def main():
+    audio = AudioClient(
+        whisper_model_size="base",
+        enable_tts=True,
+        system_prompt="You are a helpful assistant"
+    )
+
+    async def process_message(text):
+        await audio.process_voice_input(text)
+
+    await audio.start_voice_chat(process_message)
+
+asyncio.run(main())
+```
+
+### Example 2: Custom Voice Settings
+
+```python
+from gaia.audio import AudioClient, KokoroTTS
+
+audio = AudioClient(enable_tts=True)
+audio.initialize_tts()
+
+# Change voice
+audio.tts.set_voice("am_michael")  # Male voice
+
+# Speak text
+asyncio.run(audio.speak_text("Hello in a different voice"))
+```
+
+### Example 3: Standalone Whisper ASR
+
+```python
+import queue
+from gaia.audio import WhisperAsr
+
+# Create transcription queue
+transcription_queue = queue.Queue()
+
+# Initialize ASR
+asr = WhisperAsr(
+    model_size="small",
+    transcription_queue=transcription_queue,
+    enable_cuda=True  # Use GPU
+)
+
+# Start recording
+asr.start_recording()
+
+# Process transcriptions
+try:
+    while True:
+        text = transcription_queue.get(timeout=1)
+        print(f"Transcribed: {text}")
+except KeyboardInterrupt:
+    asr.stop_recording()
+```
+
+### Example 4: Standalone Kokoro TTS
+
+```python
+import queue
+import threading
+from gaia.audio import KokoroTTS
+
+tts = KokoroTTS()
+text_queue = queue.Queue()
+
+# Start TTS thread
+thread = threading.Thread(
+    target=tts.generate_speech_streaming,
+    args=(text_queue,)
+)
+thread.start()
+
+# Send text
+text_queue.put("Hello")
+text_queue.put(" world")
+text_queue.put("!")
+text_queue.put("__END__")
+
+thread.join()
+```
+
+---
+
+## Acceptance Criteria
+
+- [ ] AudioClient implemented in `src/gaia/audio/audio_client.py`
+- [ ] WhisperAsr implemented in `src/gaia/audio/whisper_asr.py`
+- [ ] KokoroTTS implemented in `src/gaia/audio/kokoro_tts.py`
+- [ ] All methods implemented with docstrings
+- [ ] Voice chat works end-to-end
+- [ ] Streaming TTS works
+- [ ] Recording pause/resume works
+- [ ] Interrupt handling works
+- [ ] All unit tests pass (20+ tests)
+- [ ] Can import: `from gaia.audio import AudioClient, WhisperAsr, KokoroTTS`
+- [ ] Documented in SDK.md
+- [ ] Example code works
+
+---
+
+*Audio Subsystem Technical Specification*
+
+---
+
+<small style="color: #666;">
+
+**License**
+
+Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+
+SPDX-License-Identifier: MIT
+
+</small>

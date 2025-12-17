@@ -1,0 +1,514 @@
+---
+title: "Quickstart"
+description: "Build your first AI agent in 10 minutes"
+---
+
+## Prerequisites
+
+| Requirement | Minimum | Recommended |
+|-------------|---------|-------------|
+| **Processor** | AMD Ryzen AI 300-series or above | AMD Ryzen AI Max+ 395 |
+| **OS** | Windows 11, Linux | - |
+| **RAM** | 16GB | 64GB |
+
+<Warning>
+  The default model (Qwen3-30B-Coder) requires **64GB RAM**. Smaller models may work on 16GB but are not extensively tested.
+</Warning>
+
+- **Lemonade Server** - Download from [lemonade-server.ai](https://lemonade-server.ai) (GAIA starts it automatically when needed)
+
+---
+
+## Install GAIA
+
+Choose your platform and installation type, then follow the steps below.
+
+<Tabs>
+  <Tab title="User (Windows)">
+    Use this if you want to **build agents using GAIA** as a library on **Windows**. Installs [amd-gaia](https://pypi.org/project/amd-gaia/) from PyPI.
+
+    ### Step 1: Install uv
+
+    [uv](https://docs.astral.sh/uv/) is a fast Python package manager (10-100x faster than pip).
+
+    Open **PowerShell** and run:
+    ```powershell
+    irm https://astral.sh/uv/install.ps1 | iex
+    ```
+
+    <Tip>
+      If `uv` is not recognized after install, restart PowerShell or run:
+      ```powershell
+      $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+      ```
+    </Tip>
+
+    Verify uv is installed:
+    ```powershell
+    uv --version
+    ```
+    Expected output: `uv 0.9.x` (or newer)
+
+    ### Step 2: Create Project Directory
+
+    ```powershell
+    mkdir my-gaia-project; cd my-gaia-project
+    ```
+
+    ### Step 3: Create Virtual Environment
+
+    ```powershell
+    uv venv .venv --python 3.12
+    ```
+
+    <Note>uv will automatically download Python 3.12 if not already installed.</Note>
+
+    ### Step 4: Activate the Environment
+
+    ```powershell
+    .\.venv\Scripts\Activate.ps1
+    ```
+
+    <Warning>
+      If you see a script execution error, run this once:
+      ```powershell
+      Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+      ```
+      Then retry the activation command.
+    </Warning>
+
+    You should see `(.venv)` in your terminal prompt when activated.
+
+    ### Step 5: Install GAIA
+
+    ```powershell
+    uv pip install amd-gaia
+    ```
+
+    <Tip>
+      **Optional extras:** `uv pip install "amd-gaia[talk,rag]"` for voice and document Q&A features.
+    </Tip>
+
+    ### Step 6: Verify Installation
+
+    ```powershell
+    gaia -v
+    ```
+
+    <Success>
+      You're ready to build your first agent! Continue to the next section.
+    </Success>
+
+    <Tip>
+      **Having issues?** Check the [Troubleshooting](/reference/troubleshooting) guide, [create an issue](https://github.com/amd/gaia/issues) on GitHub, or contact us at gaia@amd.com.
+    </Tip>
+  </Tab>
+
+  <Tab title="User (Linux)">
+    Use this if you want to **build agents using GAIA** as a library on **Linux**. Installs [amd-gaia](https://pypi.org/project/amd-gaia/) from PyPI.
+
+    ### Step 1: Install uv
+
+    [uv](https://docs.astral.sh/uv/) is a fast Python package manager (10-100x faster than pip).
+
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+
+    Verify uv is installed (restart terminal if needed):
+    ```bash
+    uv --version
+    ```
+    Expected output: `uv 0.9.x` (or newer)
+
+    ### Step 2: Create Project Directory
+
+    ```bash
+    mkdir my-gaia-project && cd my-gaia-project
+    ```
+
+    ### Step 3: Create Virtual Environment
+
+    ```bash
+    uv venv .venv --python 3.12
+    ```
+
+    <Note>uv will automatically download Python 3.12 if not already installed.</Note>
+
+    ### Step 4: Activate the Environment
+
+    ```bash
+    source .venv/bin/activate
+    ```
+
+    You should see `(.venv)` in your terminal prompt when activated.
+
+    ### Step 5: Install GAIA
+
+    ```bash
+    uv pip install amd-gaia
+    ```
+
+    <Tip>
+      **Optional extras:** `uv pip install "amd-gaia[talk,rag]"` for voice and document Q&A features.
+    </Tip>
+
+    ### Step 6: Verify Installation
+
+    ```bash
+    gaia -v
+    ```
+
+    <Success>
+      You're ready to build your first agent! Continue to the next section.
+    </Success>
+
+    <Tip>
+      **Having issues?** Check the [Troubleshooting](/reference/troubleshooting) guide, [create an issue](https://github.com/amd/gaia/issues) on GitHub, or contact us at gaia@amd.com.
+    </Tip>
+  </Tab>
+
+  <Tab title="Developer (Windows)">
+    Use this if you want to **contribute to GAIA** or modify the framework itself on **Windows**. Clones [amd/gaia](https://github.com/amd/gaia) from GitHub.
+
+    <Note>
+      **Requires:** [Git for Windows](https://git-scm.com/download/win) must be installed.
+    </Note>
+
+    ### Step 1: Install uv
+
+    [uv](https://docs.astral.sh/uv/) is a fast Python package manager (10-100x faster than pip).
+
+    Open **PowerShell** and run:
+    ```powershell
+    irm https://astral.sh/uv/install.ps1 | iex
+    ```
+
+    <Tip>
+      If `uv` is not recognized after install, restart PowerShell or run:
+      ```powershell
+      $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+      ```
+    </Tip>
+
+    Verify uv is installed:
+    ```powershell
+    uv --version
+    ```
+    Expected output: `uv 0.9.x` (or newer)
+
+    ### Step 2: Clone the Repository
+
+    ```powershell
+    git clone https://github.com/amd/gaia.git; cd gaia
+    ```
+
+    ### Step 3: Create Virtual Environment
+
+    ```powershell
+    uv venv .venv --python 3.12
+    ```
+
+    <Note>uv will automatically download Python 3.12 if not already installed.</Note>
+
+    ### Step 4: Activate the Environment
+
+    ```powershell
+    .\.venv\Scripts\Activate.ps1
+    ```
+
+    <Warning>
+      If you see a script execution error, run this once:
+      ```powershell
+      Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+      ```
+      Then retry the activation command.
+    </Warning>
+
+    You should see `(.venv)` in your terminal prompt when activated.
+
+    ### Step 5: Install in Editable Mode
+
+    ```powershell
+    uv pip install -e ".[dev]"
+    ```
+
+    <Tip>
+      **With all extras:** `uv pip install -e ".[dev,talk,rag]"` for voice and document Q&A features.
+    </Tip>
+
+    ### Step 6: Verify Installation
+
+    ```powershell
+    gaia -v
+    ```
+
+    <Note>
+      Changes to GAIA source code will take effect immediately without reinstalling.
+    </Note>
+
+    <Tip>
+      **Having issues?** Check the [Troubleshooting](/reference/troubleshooting) guide, [create an issue](https://github.com/amd/gaia/issues) on GitHub, or contact us at gaia@amd.com.
+    </Tip>
+
+    <Card title="Full Developer Guide" icon="book-open" href="/reference/dev">
+      See the complete development guide for testing, linting, and contributing.
+    </Card>
+  </Tab>
+
+  <Tab title="Developer (Linux)">
+    Use this if you want to **contribute to GAIA** or modify the framework itself on **Linux**. Clones [amd/gaia](https://github.com/amd/gaia) from GitHub.
+
+    <Note>
+      **Requires:** Git must be installed (`sudo apt install git`).
+    </Note>
+
+    ### Step 1: Install uv
+
+    [uv](https://docs.astral.sh/uv/) is a fast Python package manager (10-100x faster than pip).
+
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
+
+    Verify uv is installed (restart terminal if needed):
+    ```bash
+    uv --version
+    ```
+    Expected output: `uv 0.9.x` (or newer)
+
+    ### Step 2: Clone the Repository
+
+    ```bash
+    git clone https://github.com/amd/gaia.git && cd gaia
+    ```
+
+    ### Step 3: Create Virtual Environment
+
+    ```bash
+    uv venv .venv --python 3.12
+    ```
+
+    <Note>uv will automatically download Python 3.12 if not already installed.</Note>
+
+    ### Step 4: Activate the Environment
+
+    ```bash
+    source .venv/bin/activate
+    ```
+
+    You should see `(.venv)` in your terminal prompt when activated.
+
+    ### Step 5: Install in Editable Mode
+
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
+
+    <Tip>
+      **With all extras:** `uv pip install -e ".[dev,talk,rag]"` for voice and document Q&A features.
+    </Tip>
+
+    ### Step 6: Verify Installation
+
+    ```bash
+    gaia -v
+    ```
+
+    <Note>
+      Changes to GAIA source code will take effect immediately without reinstalling.
+    </Note>
+
+    <Tip>
+      **Having issues?** Check the [Troubleshooting](/reference/troubleshooting) guide, [create an issue](https://github.com/amd/gaia/issues) on GitHub, or contact us at gaia@amd.com.
+    </Tip>
+
+    <Card title="Full Developer Guide" icon="book-open" href="/reference/dev">
+      See the complete development guide for testing, linting, and contributing.
+    </Card>
+  </Tab>
+</Tabs>
+
+---
+
+## Build Your First Agent
+
+<Warning>
+  Make sure your virtual environment is still activated (you should see `(.venv)` in your prompt).
+</Warning>
+
+Using your text editor, create a file named `my_agent.py` in your project directory:
+
+```python
+import platform
+from datetime import datetime
+from gaia.agents.base.agent import Agent
+from gaia.agents.base.tools import tool
+
+class MyAgent(Agent):
+    """A simple agent that can report system information."""
+
+    def _get_system_prompt(self) -> str:
+        return "You are a helpful assistant."
+
+    def _create_console(self):
+        from gaia.agents.base.console import AgentConsole
+        return AgentConsole()
+
+    def _register_tools(self):
+        @tool
+        def get_system_info() -> dict:
+            """Get current time, date, platform, and Python version."""
+            return {
+                "time": datetime.now().strftime("%H:%M:%S"),
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "platform": platform.system(),
+                "python": platform.python_version()
+            }
+
+# Use the agent
+agent = MyAgent()
+result = agent.process_query("What time is it and what system am I on?")
+print(result)
+```
+
+**Run it** (in your terminal/PowerShell):
+```
+python my_agent.py
+```
+
+<Note>
+  First run may take a moment while GAIA starts Lemonade Server and loads the LLM.
+</Note>
+
+<Success>
+  **It works!** The agent understood your request and called the `get_system_info` tool automatically.
+</Success>
+
+<Info>
+  **Tip:** The tool's docstring is how the LLM knows what the tool does. Be descriptive!
+  `"""Get current time, date, platform, and Python version."""` tells the LLM this tool can answer time-related questions.
+</Info>
+
+---
+
+## How It Works
+
+<Steps>
+  <Step title="You Define Tools">
+    Tools are just Python functions with the `@tool` decorator.
+    ```python
+    @tool
+    def get_system_info() -> dict:
+        return {"time": "14:32:05", "platform": "Windows", ...}
+    ```
+  </Step>
+
+  <Step title="LLM Decides What to Do">
+    When you ask "What time is it?", the LLM:
+    - Sees your `get_system_info` tool is available
+    - Decides to call it
+    - Gets the result back
+  </Step>
+
+  <Step title="LLM Formats the Answer">
+    The LLM takes the result and creates a natural response for the user.
+  </Step>
+</Steps>
+
+**The magic:** You just write functions. The LLM figures out when and how to use them!
+
+---
+
+## Add More Capabilities
+
+### Example: Add a Database
+
+<Info>
+  **Coming Soon:** DatabaseMixin is planned for a future release.
+  See the [specification](/spec/database-mixin) for the planned API.
+</Info>
+
+### Example: Chat with Documents
+
+<Note>
+  Requires the RAG extra: `uv pip install "amd-gaia[rag]"`
+</Note>
+
+```python
+from gaia.agents.base.agent import Agent
+from gaia.agents.base.console import AgentConsole
+from gaia.agents.base.tools import tool
+from gaia.rag.sdk import RAGSDK, RAGConfig
+
+class DocAgent(Agent):
+    """An agent that can answer questions about your documents."""
+
+    def __init__(self, document_path: str, **kwargs):
+        super().__init__(**kwargs)
+        self.rag = RAGSDK(RAGConfig())
+        self.rag.index_document(document_path)
+
+    def _get_system_prompt(self) -> str:
+        return "You are a helpful assistant that answers questions based on the provided documents."
+
+    def _create_console(self):
+        return AgentConsole()
+
+    def _register_tools(self):
+        rag = self.rag  # Capture for closure
+
+        @tool
+        def search_docs(question: str) -> dict:
+            """Search the documentation for answers."""
+            response = rag.query(question)
+            return {"answer": response.text}
+
+# Usage:
+# agent = DocAgent("path/to/your/document.pdf")
+# result = agent.process_query("What does this document say about X?")
+```
+
+<Card title="RAG SDK" href="/spec/rag-sdk">
+  Learn about document Q&A →
+</Card>
+
+---
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="SDK Reference" icon="book" href="/sdk">
+    Explore all 53 components with examples
+  </Card>
+
+  <Card title="Component Specs" icon="file-code" href="/spec/agent-base">
+    Deep-dive into technical specifications
+  </Card>
+
+  <Card title="Tool Mixins" icon="puzzle-piece" href="/spec/file-tools-mixin">
+    Use pre-built tool collections
+  </Card>
+
+  <Card title="Examples" icon="lightbulb" href="/spec/chat-agent">
+    See complete agent implementations
+  </Card>
+</CardGroup>
+
+---
+
+<Tip>
+  **Stuck?** Join our [Discord](https://discord.com/channels/1392562559122407535/1402013282495102997) or check [GitHub Issues](https://github.com/amd/gaia/issues).
+</Tip>
+
+---
+
+<small style="color: #666;">
+
+**License**
+
+Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+
+SPDX-License-Identifier: MIT
+
+</small>

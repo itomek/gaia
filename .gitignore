@@ -161,6 +161,7 @@ config.ini
 
 # GAIA cache directory
 .gaia/
+.pypirc
 
 # Electron Apps - exclude .env but keep .env.development
 src/gaia/apps/**/.env

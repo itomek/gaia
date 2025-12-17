@@ -60,7 +60,11 @@
       "WebFetch",
       "WebFetch(domain:code.claude.com)",
       "WebFetch(domain:lemonade-server.ai)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(test:*)",
+      "Bash(python -m flake8:*)"
     ],
     "deny": []
   },
