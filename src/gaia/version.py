@@ -19,7 +19,7 @@ def get_package_version() -> str:
         str: The package version string
     """
     try:
-        return get_package_version_metadata("gaia")
+        return get_package_version_metadata("amd-gaia")
     except Exception as e:
         logging.warning(f"Failed to get package version: {e}")
         return ""

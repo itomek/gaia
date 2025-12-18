@@ -687,7 +687,7 @@ class ChatSDK:
             from gaia.rag.sdk import RAGSDK, RAGConfig
         except ImportError:
             raise ImportError(
-                'RAG dependencies not installed. Install with: uv pip install ".[rag]"'
+                'RAG dependencies not installed. Install with: uv pip install -e ".[rag]"'
             )
 
         # Create RAG config matching chat config

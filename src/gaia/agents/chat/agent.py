@@ -339,7 +339,7 @@ class ChatAgent(
         elif self.rag_documents and not self.rag:
             logger.warning(
                 "RAG dependencies not installed. Cannot index documents. "
-                'Install with: uv pip install "gaia[rag]"'
+                'Install with: uv pip install -e ".[rag]"'
             )
 
         # Start watching directories

@@ -15,10 +15,12 @@ with open("src/gaia/version.py", encoding="utf-8") as fp:
 tkml_version = "5.0.4"
 
 setup(
-    name="gaia",
+    name="amd-gaia",
     version=gaia_version,
     description="GAIA is a lightweight agent framework designed for the edge and AI PCs.",
     author="AMD",
+    url="https://github.com/amd/gaia",
+    license="MIT",
     package_dir={"": "src"},
     packages=[
         "gaia",
@@ -142,7 +144,17 @@ setup(
             "bandit",
         ],
     },
-    classifiers=[],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    ],
     entry_points={
         "console_scripts": [
             "gaia = gaia.cli:main",
