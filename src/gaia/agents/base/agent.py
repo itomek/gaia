@@ -159,9 +159,38 @@ class Agent(abc.ABC):
         # Register tools for this agent
         self._register_tools()
 
-        # Update system prompt with available tools
+        # Update system prompt with available tools and response format
         tools_description = self._format_tools_for_prompt()
-        self.system_prompt += f"\n\n==== AVAILABLE TOOLS ====\n{tools_description}\n\n"
+        self.system_prompt += f"\n\n==== AVAILABLE TOOLS ====\n{tools_description}\n"
+
+        # Add JSON response format instructions (shared across all agents)
+        self.system_prompt += """
+==== RESPONSE FORMAT ====
+You must respond ONLY in valid JSON. No text before { or after }.
+
+**To call a tool:**
+{"thought": "reasoning", "goal": "objective", "tool": "tool_name", "tool_args": {"arg1": "value1"}}
+
+**To create a multi-step plan:**
+{
+  "thought": "reasoning",
+  "goal": "objective",
+  "plan": [
+    {"tool": "tool1", "tool_args": {"arg": "val"}},
+    {"tool": "tool2", "tool_args": {"arg": "val"}}
+  ],
+  "tool": "tool1",
+  "tool_args": {"arg": "val"}
+}
+
+**To provide a final answer:**
+{"thought": "reasoning", "goal": "achieved", "answer": "response to user"}
+
+**RULES:**
+1. ALWAYS use tools for real data - NEVER hallucinate
+2. Plan steps MUST be objects like {"tool": "x", "tool_args": {}}, NOT strings
+3. After tool results, provide an "answer" summarizing them
+"""
 
         # Initialize ChatSDK with proper configuration
         # Note: We don't set system_prompt in config, we pass it per request
@@ -199,12 +228,11 @@ class Agent(abc.ABC):
         """
         raise NotImplementedError("Subclasses must implement _get_system_prompt")
 
-    @abc.abstractmethod
     def _create_console(self):
         """
         Create and return a console output handler.
         Returns SilentConsole if in silent_mode, otherwise AgentConsole.
-        Subclasses should override this to provide domain-specific console output.
+        Subclasses can override this to provide domain-specific console output.
         """
         if self.silent_mode:
             # Check if we should completely silence everything (including final answer)

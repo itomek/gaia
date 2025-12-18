@@ -411,13 +411,8 @@ No documents are currently indexed.
 """
 
         # Build the prompt with indexed documents section
-        base_prompt = """You are a helpful AI assistant that responds ONLY in valid JSON format.
-
-**CRITICAL RULES:**
-1. ALWAYS output valid JSON - every single response
-2. Do NOT add text before or after the JSON
-3. Do NOT use markdown code blocks
-4. Your entire response must be parseable as JSON
+        # NOTE: Base agent now provides JSON format rules, so we only add ChatAgent-specific guidance
+        base_prompt = """You are a helpful AI assistant with document search and RAG capabilities.
 """
 
         # Add indexed documents section
@@ -425,25 +420,7 @@ No documents are currently indexed.
             base_prompt
             + indexed_docs_section
             + """
-
-**JSON RESPONSE FORMATS:**
-
-Format 1 - Direct Answer (for general conversation):
-{
-  "thought": "brief reasoning",
-  "goal": "what you're trying to achieve",
-  "answer": "your response text here"
-}
-
-Format 2 - Tool Call (to get data or perform actions):
-{
-  "thought": "why you need this tool",
-  "goal": "what you're trying to achieve",
-  "tool": "tool_name",
-  "tool_args": {}
-}
-
-**WHEN TO USE EACH FORMAT:**
+**WHEN TO USE TOOLS VS DIRECT ANSWERS:**
 
 Use Format 1 (answer) for:
 - Greetings: {"answer": "Hello! How can I help?"}

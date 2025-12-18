@@ -374,8 +374,7 @@ class MyAgent(Agent):
 
     def _get_system_prompt(self) -> str:
         return """You are a system monitoring assistant.
-        When users ask about time or system details, use the get_system_info tool.
-        Be concise and helpful."""
+When users ask about time or system details, use the get_system_info tool."""
 
     def _register_tools(self):
         @tool
@@ -391,7 +390,7 @@ class MyAgent(Agent):
 # Use the agent
 agent = MyAgent()
 result = agent.process_query("What time is it and what system am I on?")
-print(result)
+print(result.get("result"))
 ```
 
 **Run it** (in your terminal/PowerShell):
@@ -403,13 +402,32 @@ python my_agent.py
   First run may take a moment while GAIA starts Lemonade Server and loads the LLM.
 </Note>
 
-Expected output (will vary based on your system):
+You'll see the agent thinking, creating a plan, and executing the tool:
+
 ```
-The current time is 14:32:05 and you are running on Windows with Python 3.12.0.
+🤖 Processing: 'What time is it and what system am I on?'
+...
+🔧 Executing operation
+  Tool: get_system_info
+
+✅ Tool execution complete
+{
+  "time": "15:03:26",
+  "date": "2025-12-17",
+  "platform": "Windows",
+  "python": "3.12.12"
+}
+...
+✨ Processing complete!
+```
+
+Final output (will vary based on your system):
+```
+The current time is 15:03:26 and you are on a Windows system running Python 3.12.12.
 ```
 
 <Success>
-  **It works!** The agent understood your request and called the `get_system_info` tool automatically.
+  **It works!** The agent called the `get_system_info` tool and returned real data from your system.
 </Success>
 
 <Info>
@@ -435,8 +453,7 @@ The system prompt tells your agent who it is and how to make decisions. You defi
 ```python
 def _get_system_prompt(self) -> str:
     return """You are a system monitoring assistant.
-    When users ask about time or system details, use the get_system_info tool.
-    Be concise and helpful."""
+When users ask about time or system details, use the get_system_info tool."""
 ```
 
 For agents, a good prompt includes:
