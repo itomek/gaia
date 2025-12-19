@@ -10,6 +10,7 @@ Operates at the LLM level (not agent level) for flexibility with community agent
 import os
 import sys
 import threading
+from enum import Enum
 from typing import Optional
 
 from gaia.llm.lemonade_client import LemonadeClient
@@ -18,6 +19,13 @@ from gaia.logger import get_logger
 # Default context size for GAIA agents (supports most complex tasks)
 DEFAULT_CONTEXT_SIZE = 32768
 DEFAULT_LEMONADE_URL = "http://localhost:8000"
+
+
+class MessageType(Enum):
+    """Message type for context size notifications."""
+
+    ERROR = "error"
+    WARNING = "warning"
 
 
 class LemonadeManager:
@@ -110,17 +118,30 @@ class LemonadeManager:
             print("Then try your command again.", file=sys.stderr)
 
     @classmethod
-    def print_context_error(cls, current_size: int, required_size: int):
-        """Print error when context size is insufficient.
+    def print_context_message(
+        cls,
+        current_size: int,
+        required_size: int,
+        message_type: MessageType = MessageType.ERROR,
+    ):
+        """Print message when context size is insufficient.
 
-        Shared by CLI and SDK for consistent error messages.
+        Shared by CLI and SDK for consistent messages.
 
         Args:
             current_size: Current server context size in tokens.
             required_size: Required context size in tokens.
+            message_type: MessageType.WARNING for warning, MessageType.ERROR for error.
         """
+        if message_type == MessageType.WARNING:
+            symbol = "⚠️ "
+            label = "Context size below recommended"
+        else:
+            symbol = "❌"
+            label = "Insufficient context size"
+
         print("", file=sys.stderr)
-        print("❌ Insufficient context size.", file=sys.stderr)
+        print(f"{symbol} {label}.", file=sys.stderr)
         print(
             f"   Current: {current_size} tokens, Required: {required_size} tokens",
             file=sys.stderr,
@@ -182,15 +203,17 @@ class LemonadeManager:
                     )
                     return True
                 else:
-                    # Context size insufficient - error and fail
+                    # Context size insufficient - warn and continue
                     cls._log.warning(
                         f"Lemonade running with {cls._context_size} tokens, "
                         f"but {min_context_size} requested. "
                         f"Restart with: lemonade-server serve --ctx-size {min_context_size}"
                     )
                     if not quiet:
-                        cls.print_context_error(cls._context_size, min_context_size)
-                    return False
+                        cls.print_context_message(
+                            cls._context_size, min_context_size, MessageType.WARNING
+                        )
+                    return True
 
             cls._log.debug(f"Initializing Lemonade (min context: {min_context_size})")
 
@@ -223,15 +246,17 @@ class LemonadeManager:
                     f"(context: {cls._context_size} tokens)"
                 )
 
-                # Verify context size - fail if insufficient
+                # Verify context size - warn if insufficient
                 if cls._context_size < min_context_size:
                     cls._log.warning(
                         f"Context size {cls._context_size} is less than "
                         f"requested {min_context_size}. Some features may not work correctly."
                     )
                     if not quiet:
-                        cls.print_context_error(cls._context_size, min_context_size)
-                    return False
+                        cls.print_context_message(
+                            cls._context_size, min_context_size, MessageType.WARNING
+                        )
+                    return True
 
                 return True
 

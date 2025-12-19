@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import sys
 import unittest
+from io import StringIO
+from unittest.mock import patch
 
 import requests
 
@@ -75,7 +77,7 @@ class TestLlmCli(unittest.TestCase):
         """Check if gaia command is available."""
         gaia_path = shutil.which("gaia")
 
-        print(f"Command availability check:")
+        print("Command availability check:")
         print(f"  gaia path: {gaia_path}")
         print(f"  Current PATH: {os.environ.get('PATH', 'NOT_SET')}")
         print(f"  Current Python: {sys.executable}")
@@ -237,6 +239,148 @@ class TestLlmCli(unittest.TestCase):
             self.fail(
                 f"Unexpected exception running LLM command: {type(e).__name__}: {e}"
             )
+
+
+class TestLemonadeManagerContextMessage(unittest.TestCase):
+    """Test cases for LemonadeManager context message formatting."""
+
+    def setUp(self):
+        """Reset LemonadeManager state before each test."""
+        from gaia.llm.lemonade_manager import LemonadeManager
+
+        LemonadeManager.reset()
+
+    def tearDown(self):
+        """Reset LemonadeManager state after each test."""
+        from gaia.llm.lemonade_manager import LemonadeManager
+
+        LemonadeManager.reset()
+
+    def test_print_context_message_warning(self):
+        """Test print_context_message outputs warning format."""
+        from gaia.llm.lemonade_manager import LemonadeManager, MessageType
+
+        stderr_capture = StringIO()
+        with patch("sys.stderr", stderr_capture):
+            LemonadeManager.print_context_message(4096, 32768, MessageType.WARNING)
+
+        output = stderr_capture.getvalue()
+        self.assertIn("⚠️", output)
+        self.assertIn("Context size below recommended", output)
+        self.assertIn("4096", output)
+        self.assertIn("32768", output)
+        self.assertNotIn("❌", output)
+
+    def test_print_context_message_error(self):
+        """Test print_context_message outputs error format."""
+        from gaia.llm.lemonade_manager import LemonadeManager, MessageType
+
+        stderr_capture = StringIO()
+        with patch("sys.stderr", stderr_capture):
+            LemonadeManager.print_context_message(4096, 32768, MessageType.ERROR)
+
+        output = stderr_capture.getvalue()
+        self.assertIn("❌", output)
+        self.assertIn("Insufficient context size", output)
+        self.assertIn("4096", output)
+        self.assertIn("32768", output)
+        self.assertNotIn("⚠️", output)
+
+    def test_ensure_ready_returns_true_on_insufficient_context_initial(self):
+        """Test ensure_ready returns True with insufficient context."""
+        from unittest.mock import MagicMock
+
+        from gaia.llm.lemonade_manager import (
+            LemonadeManager,
+            MessageType,
+        )
+
+        mock_client = MagicMock()
+        mock_status = MagicMock()
+        mock_status.running = True
+        mock_status.context_size = 4096
+        mock_client.get_status.return_value = mock_status
+        mock_client.base_url = "http://localhost:8000/api/v1"
+
+        with patch(
+            "gaia.llm.lemonade_manager.LemonadeClient",
+            return_value=mock_client,
+        ):
+            with patch.object(
+                LemonadeManager, "print_context_message"
+            ) as mock_print_context:
+                result = LemonadeManager.ensure_ready(
+                    min_context_size=32768, quiet=False
+                )
+
+                self.assertTrue(result)
+                mock_print_context.assert_called_once_with(
+                    4096, 32768, MessageType.WARNING
+                )
+
+    def test_ensure_ready_insufficient_context_already_initialized(self):
+        """Test ensure_ready returns True on subsequent calls."""
+        from unittest.mock import MagicMock
+
+        from gaia.llm.lemonade_manager import (
+            LemonadeManager,
+            MessageType,
+        )
+
+        mock_client = MagicMock()
+        mock_status = MagicMock()
+        mock_status.running = True
+        mock_status.context_size = 4096
+        mock_client.get_status.return_value = mock_status
+        mock_client.base_url = "http://localhost:8000/api/v1"
+
+        with patch(
+            "gaia.llm.lemonade_manager.LemonadeClient",
+            return_value=mock_client,
+        ):
+            first_result = LemonadeManager.ensure_ready(
+                min_context_size=4096, quiet=True
+            )
+            self.assertTrue(first_result)
+
+            with patch.object(
+                LemonadeManager, "print_context_message"
+            ) as mock_print_context:
+                second_result = LemonadeManager.ensure_ready(
+                    min_context_size=32768, quiet=False
+                )
+
+                self.assertTrue(second_result)
+                mock_print_context.assert_called_once_with(
+                    4096, 32768, MessageType.WARNING
+                )
+
+    def test_ensure_ready_quiet_mode_suppresses_context_warning(self):
+        """Test ensure_ready does not print warning when quiet=True."""
+        from unittest.mock import MagicMock
+
+        from gaia.llm.lemonade_manager import LemonadeManager
+
+        mock_client = MagicMock()
+        mock_status = MagicMock()
+        mock_status.running = True
+        mock_status.context_size = 4096
+        mock_client.get_status.return_value = mock_status
+        mock_client.base_url = "http://localhost:8000/api/v1"
+
+        with patch(
+            "gaia.llm.lemonade_manager.LemonadeClient",
+            return_value=mock_client,
+        ):
+            with patch.object(
+                LemonadeManager, "print_context_message"
+            ) as mock_print_context:
+                result = LemonadeManager.ensure_ready(
+                    min_context_size=32768, quiet=True
+                )
+
+                self.assertTrue(result)
+                mock_print_context.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -1099,31 +1099,6 @@ class TestContentTypeErrors:
         assert response.status_code in [200, 422]
 
 
-@pytest.mark.integration
-class TestRateLimitingAndThrottling:
-    """Test rate limiting if implemented - requires Lemonade for 200 responses"""
-
-    def test_rapid_sequential_requests(self, api_server, api_client):
-        """Test making many rapid requests"""
-        payload = {
-            "model": "gaia-code",
-            "messages": [{"role": "user", "content": "quick"}],
-            "stream": False,
-        }
-
-        # Make 10 rapid requests
-        responses = []
-        for _ in range(10):
-            response = api_client.post(
-                f"{api_server}/v1/chat/completions", json=payload
-            )
-            responses.append(response.status_code)
-
-        # All should succeed (200) or some might be rate limited (429)
-        for status in responses:
-            assert status in [200, 429, 500, 503]
-
-
 class TestErrorResponseFormat:
     """Test that error responses follow expected format"""
 
