@@ -824,11 +824,13 @@ class AgentConsole(OutputHandler):
             answer: The final answer to display
             streaming: Not used (kept for compatibility)
         """
-        # Use the "🧠 gaia:" prefix for consistency
         if self.rich_available:
-            self.console.print(f"\n[bold blue]🧠 gaia:[/bold blue] {answer}")
+            self.console.print()  # Add newline before
+            self.console.print(
+                Panel(answer, title="✅ Final Answer", border_style="green")
+            )
         else:
-            print(f"\n🧠 gaia: {answer}")
+            print(f"\n✅ FINAL ANSWER: {answer}\n")
 
     def print_completion(self, steps_taken: int, steps_limit: int) -> None:
         """
