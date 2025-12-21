@@ -1,11 +1,14 @@
-# TalkSDK Specification
+---
+title: "Talk SDK"
+description: "Voice and text chat integration with conversation management"
+icon: "microphone"
+---
 
-![Status](https://img.shields.io/badge/status-in_development-orange)
-![Category](https://img.shields.io/badge/category-sdk-blue)
-
+<Note>
 **Component:** TalkSDK - Unified voice and text chat integration
 **Module:** `gaia.talk.sdk`
 **Import:** `from gaia.talk.sdk import TalkSDK, TalkConfig, TalkMode, TalkResponse`
+</Note>
 
 ---
 
@@ -99,13 +102,11 @@ from gaia.audio.audio_client import AudioClient
 from gaia.chat.sdk import ChatConfig, ChatSDK
 from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
 
-
 class TalkMode(Enum):
     """Talk mode options."""
     TEXT_ONLY = "text_only"
     VOICE_ONLY = "voice_only"
     VOICE_AND_TEXT = "voice_and_text"
-
 
 @dataclass
 class TalkConfig:
@@ -134,14 +135,12 @@ class TalkConfig:
     # RAG settings (optional)
     rag_documents: Optional[list] = None
 
-
 @dataclass
 class TalkResponse:
     """Response from talk operations."""
     text: str
     stats: Optional[Dict[str, Any]] = None
     is_complete: bool = True
-
 
 class TalkSDK:
     """
@@ -283,7 +282,6 @@ class TalkSDK:
         """Get list of available audio input devices."""
         pass
 
-
 class SimpleTalk:
     """
     Ultra-simple interface for quick integration.
@@ -355,7 +353,6 @@ class SimpleTalk:
         """Get the conversation history in a readable format."""
         pass
 
-
 # Convenience functions for one-off usage
 async def quick_chat(
     message: str,
@@ -374,7 +371,6 @@ async def quick_chat(
         AI response
     """
     pass
-
 
 async def quick_voice_chat(
     system_prompt: Optional[str] = None,

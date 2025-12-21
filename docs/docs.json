@@ -27,6 +27,7 @@
             "group": "Getting Started",
             "pages": [
               "index",
+              "setup",
               "quickstart"
             ]
           },
@@ -242,6 +243,7 @@
           {
             "group": "Help",
             "pages": [
+              "glossary",
               "reference/faq"
             ]
           }

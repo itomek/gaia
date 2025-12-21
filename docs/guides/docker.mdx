@@ -1,8 +1,12 @@
-# GAIA Docker Agent Documentation
+---
+title: "Docker Agent"
+---
 
 ## Overview
 
 The GAIA Docker Agent provides a natural language interface for containerizing applications. The agent analyzes your application structure, generates appropriate Dockerfiles, and provides guidance for building and running containers - all through conversational commands. No Docker expertise required.
+
+> **First time here?** Complete the [Setup](/setup) guide first to install GAIA and its dependencies.
 
 ## Quick Start
 
@@ -11,12 +15,11 @@ The GAIA Docker Agent provides a natural language interface for containerizing a
 1. **Docker Installation** (Required):
    Docker Engine or Desktop: Download from [docker.com](https://www.docker.com/)
 
-2. **Setup GAIA Development Environment**:
-   Follow the [GAIA Development Guide](/reference/dev) for complete setup instructions.
+2. **GAIA Installation**:
+   Follow the [Setup](/setup) guide, then install with MCP extras:
 
-   Quick install (includes MCP and Docker agent dependencies):
    ```bash
-   uv pip install -e ".[mcp,dev]"
+   uv pip install "amd-gaia[mcp]"
    ```
 
 3. **Download Required Model**:

@@ -1,12 +1,12 @@
-# Test Utilities Specification
+---
+title: "Test Utilities"
+---
 
-![Status](https://img.shields.io/badge/status-development-yellow)
-![Category](https://img.shields.io/badge/category-testing-blue)
-
+<Note>
 **Component:** Test Utilities (MockLLMProvider, MockVLMClient, fixtures)
 **Module:** `gaia.testing` (planned location)
 **Import:** `from gaia.testing import MockLLMProvider, MockVLMClient, create_test_agent, temp_database`
-
+</Note>
 ---
 
 ## Overview
@@ -154,7 +154,6 @@ class MockLLMProvider:
         self.call_history = []
         self._response_index = 0
 
-
 class MockVLMClient:
     """
     Mock VLM client for testing image processing.
@@ -223,7 +222,6 @@ class MockVLMClient:
         """Reset call history."""
         self.call_history = []
 
-
 def create_test_agent(
     agent_class: Type,
     mock_responses: Optional[List[str]] = None,
@@ -266,7 +264,6 @@ def create_test_agent(
 
     return agent
 
-
 @contextmanager
 def temp_database(schema_file: Optional[str] = None):
     """
@@ -308,7 +305,6 @@ def temp_database(schema_file: Optional[str] = None):
         # Cleanup
         Path(db_path).unlink(missing_ok=True)
 
-
 @contextmanager
 def temp_directory():
     """
@@ -341,7 +337,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 def assert_tool_called(agent, tool_name: str, times: int = 1) -> None:
     """
     Assert that a tool was called specific number of times.
@@ -364,7 +359,6 @@ def assert_tool_called(agent, tool_name: str, times: int = 1) -> None:
     # This is a placeholder showing the intended API
     pass
 
-
 def assert_tool_result(result: Dict, expected_keys: List[str]) -> None:
     """
     Assert that tool result has expected structure.
@@ -384,7 +378,6 @@ def assert_tool_result(result: Dict, expected_keys: List[str]) -> None:
 
     for key in expected_keys:
         assert key in result, f"Missing expected key: '{key}'"
-
 
 def assert_agent_completed(result: Dict) -> None:
     """
@@ -423,12 +416,10 @@ from gaia.testing import (
 )
 from gaia import Agent
 
-
 def test_mock_llm_can_be_imported():
     """Verify MockLLMProvider can be imported."""
     from gaia.testing import MockLLMProvider
     assert MockLLMProvider is not None
-
 
 def test_mock_llm_returns_responses():
     """Test MockLLMProvider returns configured responses."""
@@ -437,7 +428,6 @@ def test_mock_llm_returns_responses():
     assert mock.generate("test") == "Response 1"
     assert mock.generate("test") == "Response 2"
     assert mock.generate("test") == "Response 1"  # Cycles
-
 
 def test_mock_llm_tracks_calls():
     """Test MockLLMProvider tracks call history."""
@@ -450,12 +440,10 @@ def test_mock_llm_tracks_calls():
     assert mock.call_history[0]["prompt"] == "prompt 1"
     assert mock.call_history[1]["kwargs"]["max_tokens"] == 100
 
-
 def test_mock_vlm_can_be_imported():
     """Verify MockVLMClient can be imported."""
     from gaia.testing import MockVLMClient
     assert MockVLMClient is not None
-
 
 def test_mock_vlm_returns_text():
     """Test MockVLMClient returns configured text."""
@@ -465,7 +453,6 @@ def test_mock_vlm_returns_text():
 
     assert result == "Extracted data"
     assert mock.was_called
-
 
 def test_temp_database_creates_and_cleans_up():
     """Test temp_database fixture."""
@@ -487,7 +474,6 @@ def test_temp_database_creates_and_cleans_up():
     # After context, file should be deleted
     assert not Path(db_path).exists()
 
-
 def test_temp_database_with_schema(tmp_path):
     """Test temp_database with schema file."""
     schema_file = tmp_path / "schema.sql"
@@ -504,7 +490,6 @@ def test_temp_database_with_schema(tmp_path):
 
         assert "users" in tables
         conn.close()
-
 
 def test_temp_directory_creates_and_cleans_up():
     """Test temp_directory fixture."""
@@ -524,7 +509,6 @@ def test_temp_directory_creates_and_cleans_up():
 
     # After context, directory should be deleted
     assert not created_path.exists()
-
 
 def test_create_test_agent():
     """Test create_test_agent helper."""
@@ -556,7 +540,6 @@ import pytest
 from gaia.testing import create_test_agent, MockLLMProvider
 from my_agent import MyAgent
 
-
 def test_agent_processes_query():
     """Test agent with mocked LLM."""
     agent = create_test_agent(
@@ -579,7 +562,6 @@ def test_agent_processes_query():
 import pytest
 from gaia.testing import temp_database
 from gaia import Agent, DatabaseMixin
-
 
 def test_customer_agent_creates_record(tmp_path):
     """Test agent can create database records."""
@@ -618,7 +600,6 @@ import pytest
 from gaia.testing import MockVLMClient
 from my_agent import FormProcessingAgent
 
-
 def test_form_extraction():
     """Test form extraction with mock VLM."""
     agent = FormProcessingAgent()
@@ -646,7 +627,6 @@ def test_form_extraction():
 import pytest
 from gaia.testing import temp_directory
 import time
-
 
 def test_agent_processes_new_files():
     """Test agent processes files dropped in watched directory."""
@@ -678,19 +658,16 @@ def test_agent_processes_new_files():
 import pytest
 from gaia.testing import temp_database, temp_directory, MockLLMProvider
 
-
 @pytest.fixture
 def mock_llm():
     """Provide MockLLMProvider fixture."""
     return MockLLMProvider()
-
 
 @pytest.fixture
 def temp_db():
     """Provide temporary database fixture."""
     with temp_database() as db_url:
         yield db_url
-
 
 @pytest.fixture
 def tmp_dir():

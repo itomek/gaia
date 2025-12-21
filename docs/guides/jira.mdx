@@ -1,8 +1,12 @@
-# GAIA Jira Agent Documentation
+---
+title: "Jira Agent"
+---
 
 ## Overview
 
 The GAIA Jira Agent provides a natural language interface for interacting with Atlassian Jira. The agent communicates directly with the Atlassian REST API - no intermediary services or MCP bridge required. It automatically discovers your Jira instance configuration and allows you to search, create, and update issues using plain English commands.
+
+> **First time here?** Complete the [Setup](/setup) guide first to install GAIA and its dependencies.
 
 > **Desktop WebUI**: GAIA includes a JIRA WebUI as an Electron desktop application. See the [WebUI Configuration](#webui-configuration) section below for setup instructions.
 
@@ -10,14 +14,8 @@ The GAIA Jira Agent provides a natural language interface for interacting with A
 
 ### Prerequisites
 
-1. **Setup GAIA Development Environment**:
-   Follow the [GAIA Development Guide](/reference/dev) to set up GAIA:
-
-   - Clone the repository
-   - Create and activate virtual environment
-   - Install GAIA: `uv pip install -e .` (or `uv pip install -e ".[dev]"` for development)
-
-   The base installation includes all dependencies needed for the Jira agent.
+1. **GAIA Installation**:
+   Follow the [Setup](/setup) guide to install GAIA. The base installation includes all dependencies needed for the Jira agent.
 
 2. **Download Required Model**:
    The Jira agent uses the `Qwen3-Coder-30B-A3B-Instruct-GGUF` model for reliable JSON parsing and JQL generation.

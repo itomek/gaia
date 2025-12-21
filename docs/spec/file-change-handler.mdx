@@ -1,12 +1,12 @@
-# FileChangeHandler Specification
+---
+title: "FileChangeHandler"
+---
 
-![Status](https://img.shields.io/badge/status-development-yellow)
-![Category](https://img.shields.io/badge/category-utilities-blue)
-
+<Note>
 **Component:** FileChangeHandler
 **Module:** `gaia.utils.file_watcher` (planned location)
 **Import:** `from gaia import FileChangeHandler` (after v1.0.0 restructure)
-
+</Note>
 ---
 
 ## Overview
@@ -91,7 +91,6 @@ import time
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 class FileChangeHandler(FileSystemEventHandler):
     """
@@ -241,18 +240,15 @@ from gaia import FileChangeHandler
 from watchdog.observers import Observer
 from watchdog.events import FileCreatedEvent, FileModifiedEvent
 
-
 def test_file_change_handler_can_be_imported():
     """Verify FileChangeHandler can be imported from gaia."""
     from gaia import FileChangeHandler
     assert FileChangeHandler is not None
 
-
 def test_handler_creation():
     """Test handler can be created."""
     handler = FileChangeHandler()
     assert handler is not None
-
 
 def test_handler_with_callbacks():
     """Test handler with callbacks."""
@@ -272,7 +268,6 @@ def test_handler_with_callbacks():
 
     assert handler._on_created is not None
     assert handler._on_modified is not None
-
 
 def test_extension_filtering():
     """Test file extension filtering."""
@@ -300,7 +295,6 @@ def test_extension_filtering():
     assert "test.pdf" in processed_files[0]
     assert "test.txt" in processed_files[1]
 
-
 def test_ignore_patterns():
     """Test ignore patterns."""
     processed_files = []
@@ -325,7 +319,6 @@ def test_ignore_patterns():
     # Only normal file should be processed
     assert len(processed_files) == 1
     assert "file.txt" in processed_files[0]
-
 
 def test_debouncing():
     """Test event debouncing."""
@@ -353,7 +346,6 @@ def test_debouncing():
     handler.on_created(event)  # Should process
 
     assert call_count == 2
-
 
 def test_real_file_watching(tmp_path):
     """Test with real file system changes."""
@@ -385,7 +377,6 @@ def test_real_file_watching(tmp_path):
     finally:
         observer.stop()
         observer.join(timeout=5)
-
 
 def test_callback_error_handling():
     """Test that callback errors don't crash handler."""

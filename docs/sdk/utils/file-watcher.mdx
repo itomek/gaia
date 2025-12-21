@@ -3,7 +3,7 @@ title: "FileWatcher"
 description: "File system monitoring for GAIA agents"
 ---
 
-# FileWatcher
+<Badge text="development" color="orange" />
 
 The `FileWatcher` and `FileChangeHandler` utilities provide file system monitoring
 for GAIA agents. Use them to watch directories for changes and trigger callbacks
@@ -282,7 +282,6 @@ from pathlib import Path
 
 from gaia import Agent, FileWatcherMixin, tool
 
-
 class FileWatcherAgent(Agent, FileWatcherMixin):
     """Agent that watches a directory and processes new files."""
 
@@ -391,7 +390,6 @@ Available actions:
                 f["extension"] = dest_file.suffix
                 break
 
-
 def main():
     """Run the File Watcher Agent."""
     watch_dir = sys.argv[1] if len(sys.argv) > 1 else "./watched_files"
@@ -411,7 +409,6 @@ def main():
             break
 
     agent.stop_all_watchers()
-
 
 if __name__ == "__main__":
     main()

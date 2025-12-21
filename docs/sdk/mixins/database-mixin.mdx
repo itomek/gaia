@@ -3,7 +3,9 @@ title: "DatabaseMixin"
 description: "SQLite database access for GAIA agents"
 ---
 
-# DatabaseMixin
+<Badge text="development" color="orange" />
+
+**Detailed Spec:** [spec/database-mixin](/spec/database-mixin)
 
 The `DatabaseMixin` provides SQLite database access for GAIA agents. It uses Python's
 built-in `sqlite3` module with zero external dependencies, making it lightweight and
@@ -240,7 +242,6 @@ A simple but complete agent that manages notes:
 ```python
 from gaia import Agent, DatabaseMixin, tool
 
-
 class NotesAgent(Agent, DatabaseMixin):
     """Agent that manages personal notes."""
 
@@ -296,7 +297,6 @@ class NotesAgent(Agent, DatabaseMixin):
             """Delete a note by ID."""
             count = agent.delete("notes", "id = :id", {"id": note_id})
             return {"deleted": count > 0}
-
 
 # Usage
 if __name__ == "__main__":

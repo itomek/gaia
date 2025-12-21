@@ -1,12 +1,14 @@
-# RAG: Teaching Your Agent About Documents
+---
+title: "RAG: Teaching Your Agent About Documents"
+---
 
-![Status](https://img.shields.io/badge/status-in_development-yellow)
+<Badge text="development" color="orange" />
+
+**Detailed Spec:** [spec/rag-sdk](/spec/rag-sdk)
 
 <Info>
 **What You'll Learn:** What RAG is and why you need it, how documents become searchable through chunking and embeddings, how to configure RAG for different use cases, how to tune parameters for quality vs. speed, what Agentic RAG is and how it differs from traditional RAG, how to implement multi-step retrieval patterns, and common pitfalls and how to avoid them.
 </Info>
-
----
 
 ## The Problem RAG Solves
 
@@ -1175,7 +1177,6 @@ class DocumentQA:
     def get_stats(self) -> dict:
         """Get index statistics."""
         return self.rag.get_stats()
-
 
 # Usage
 qa = DocumentQA([

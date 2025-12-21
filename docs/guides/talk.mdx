@@ -5,11 +5,19 @@ description: "Natural voice conversations with AI using speech recognition (ASR)
 
 GAIA's talk mode enables natural voice-based interaction with LLMs using Whisper for automatic speech recognition (ASR) and Kokoro TTS for text-to-speech (TTS). Have natural conversations with AI through your microphone and speakers.
 
+<Info>
+  **First time here?** Complete the [Setup](/setup) guide first to install GAIA and its dependencies.
+</Info>
+
 ## Quick Start
 
 <Steps>
-  <Step title="Install GAIA">
-    Follow the [Getting Started Guide](/quickstart) to install the `gaia` tool
+  <Step title="Install talk extras">
+    With GAIA installed, add the talk extras:
+
+    ```bash
+    uv pip install "amd-gaia[talk]"
+    ```
   </Step>
 
   <Step title="Start Lemonade Server">
