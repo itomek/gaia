@@ -435,20 +435,20 @@ class AgentConsole(OutputHandler):
 
     def print_processing_start(self, query: str, max_steps: int) -> None:
         """
-        Print the initial processing message with max steps info.
+        Print the initial processing message.
 
         Args:
             query: The user query being processed
-            max_steps: Maximum number of steps allowed
+            max_steps: Maximum number of steps allowed (kept for API compatibility)
         """
         if self.rich_available:
             self.console.print(f"\n[bold blue]🤖 Processing:[/bold blue] '{query}'")
             self.console.print("=" * 50)
-            self.console.print(f"[dim]Max steps: {max_steps}[/dim]\n")
+            self.console.print()
         else:
             print(f"\n🤖 Processing: '{query}'")
             print("=" * 50)
-            print(f"Max steps: {max_steps}\n")
+            print()
 
     def print_separator(self, length: int = 50) -> None:
         """
@@ -841,12 +841,18 @@ class AgentConsole(OutputHandler):
             steps_limit: Maximum number of steps allowed
         """
         self.print_separator()
-        if self.rich_available:
-            self.console.print(
-                f"[bold blue]✨ Processing complete![/bold blue] Steps taken: {steps_taken}/{steps_limit}"
-            )
+
+        if steps_taken < steps_limit:
+            # Completed successfully before hitting limit - clean message
+            message = "✨ Processing complete!"
         else:
-            print(f"✨ Processing complete! Steps taken: {steps_taken}/{steps_limit}")
+            # Hit the limit - show ratio to indicate incomplete
+            message = f"⚠️ Processing stopped after {steps_taken}/{steps_limit} steps"
+
+        if self.rich_available:
+            self.console.print(f"[bold blue]{message}[/bold blue]")
+        else:
+            print(message)
 
     def print_prompt(self, prompt: str, title: str = "Prompt") -> None:
         """
