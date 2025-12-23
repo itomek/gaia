@@ -14,13 +14,6 @@
                 "@modelcontextprotocol/server-sequential-thinking"
             ]
         },
-        "context7": {
-            "command": "npx",
-            "args": [
-                "-y",
-                "@upstash/context7-mcp"
-            ]
-        },
         "perplexity-ask": {
             "command": "npx",
             "args": [

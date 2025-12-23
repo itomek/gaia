@@ -28,7 +28,8 @@
             "pages": [
               "index",
               "setup",
-              "quickstart"
+              "quickstart",
+              "next-steps"
             ]
           },
           {
@@ -116,6 +117,12 @@
                   "playbooks/chat-agent/part-2-advanced-features",
                   "playbooks/chat-agent/part-3-deployment"
                 ]
+              },
+              {
+                "group": "Hardware Advisor Agent",
+                "pages": [
+                  "playbooks/hardware-advisor/part-1-getting-started"
+                ]
               }
             ]
           },
@@ -124,6 +131,7 @@
             "pages": [
               "guides/chat",
               "guides/talk",
+              "guides/hardware-advisor",
               "guides/code",
               "guides/blender",
               "guides/jira",

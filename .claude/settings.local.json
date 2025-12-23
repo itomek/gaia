@@ -54,6 +54,7 @@
       "mcp__MCP_DOCKER__perplexity_ask",
       "mcp__MCP_DOCKER__perplexity_research",
       "mcp__MCP_DOCKER__resolve-library-id",
+      "mcp__MCP_DOCKER__sequentialthinking",
       "mcp__memory__add_observations",
       "mcp__memory__create_entities",
       "mcp__memory__create_relations",

@@ -1371,7 +1371,6 @@ You must respond ONLY in valid JSON. No text before { or after }.
                             )
 
                             # Send the completion prompt to get final answer
-                            self.console.print_step_header(steps_taken, steps_limit)
                             self.console.print_state_info(
                                 "COMPLETION: Requesting final answer"
                             )
@@ -1735,16 +1734,17 @@ You must respond ONLY in valid JSON. No text before { or after }.
 
                 # Set the parsed response to the new plan for further processing
                 parsed = parsed_plan
+            else:
+                # Display the agent's reasoning in real-time (only if provided)
+                # Skip if we just displayed thought/goal for a plan request above
+                thought = parsed.get("thought", "").strip()
+                goal = parsed.get("goal", "").strip()
 
-            # Display the agent's reasoning in real-time (only if provided)
-            thought = parsed.get("thought", "").strip()
-            goal = parsed.get("goal", "").strip()
+                if thought and thought != "No explicit reasoning provided":
+                    self.console.print_thought(thought)
 
-            if thought and thought != "No explicit reasoning provided":
-                self.console.print_thought(thought)
-
-            if goal and goal != "No explicit goal provided":
-                self.console.print_goal(goal)
+                if goal and goal != "No explicit goal provided":
+                    self.console.print_goal(goal)
 
             # Process plan if available
             if "plan" in parsed:
