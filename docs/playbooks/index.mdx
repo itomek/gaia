@@ -27,6 +27,29 @@ Unlike reference documentation, playbooks are **journey-based tutorials** that:
 
 ## Available Playbooks
 
+### Hardware Advisor Agent
+
+Build an agent that analyzes your system hardware and recommends which LLMs you can run locally.
+
+<CardGroup cols={1}>
+  <Card
+    title="Building a Hardware Advisor"
+    icon="microchip"
+    href="/playbooks/hardware-advisor/part-1-getting-started"
+  >
+    **15-20 minutes**
+
+    Build an agent that advises on LLM capabilities based on hardware.
+
+    - Quick start (5 min working example)
+    - LemonadeClient SDK integration
+    - GPU/NPU detection (Windows & Linux)
+    - Memory-based recommendations
+    </Card>
+</CardGroup>
+
+---
+
 ### Document Q&A Agent with RAG
 
 Build an agent that searches, indexes, and answers questions about documents. Split into 3 progressive parts for easier learning.
@@ -81,24 +104,54 @@ Build an agent that searches, indexes, and answers questions about documents. Sp
 
 ---
 
-### Hardware Advisor Agent
+### Medical Intake Agent (EMR)
 
-Build an agent that analyzes your system hardware and recommends which LLMs you can run locally.
+Build an automated patient intake processor with VLM extraction, database storage, and a real-time web dashboard. Perfect for learning FileWatcherMixin and DatabaseMixin.
 
-<CardGroup cols={1}>
+<CardGroup cols={3}>
   <Card
-    title="Building a Hardware Advisor"
-    icon="microchip"
-    href="/playbooks/hardware-advisor/part-1-getting-started"
+    title="Part 1: Getting Started"
+    icon="notes-medical"
+    href="/playbooks/emr-agent/part-1-getting-started"
+  >
+    **20-25 minutes**
+
+    Build an automated intake form processor.
+
+    - FileWatcherMixin for auto-detection
+    - VLM extraction from images/PDFs
+    - DatabaseMixin for patient storage
+    - Natural language patient queries
+  </Card>
+
+  <Card
+    title="Part 2: Dashboard & API"
+    icon="chart-line"
+    href="/playbooks/emr-agent/part-2-dashboard"
+  >
+    **20-25 minutes**
+
+    Create a real-time monitoring dashboard.
+
+    - FastAPI server setup
+    - Server-Sent Events (SSE)
+    - React frontend components
+    - REST API endpoints
+  </Card>
+
+  <Card
+    title="Part 3: Architecture"
+    icon="sitemap"
+    href="/playbooks/emr-agent/part-3-architecture"
   >
     **15-20 minutes**
 
-    Build an agent that advises on LLM capabilities based on hardware.
+    Deep dive into system design.
 
-    - Quick start (5 min working example)
-    - LemonadeClient SDK integration
-    - GPU/NPU detection (Windows & Linux)
-    - Memory-based recommendations
+    - Database schema design
+    - Processing pipeline steps
+    - Time savings calculation
+    - Production considerations
   </Card>
 </CardGroup>
 

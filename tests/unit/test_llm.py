@@ -241,6 +241,77 @@ class TestLlmCli(unittest.TestCase):
             )
 
 
+class TestVLMMimeTypeDetection(unittest.TestCase):
+    """Test MIME type detection for image formats in VLM client."""
+
+    def test_detect_jpeg_from_bytes(self):
+        """Test JPEG detection from magic bytes."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        # JPEG magic bytes: FF D8 FF
+        jpeg_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(jpeg_bytes), "image/jpeg")
+
+    def test_detect_png_from_bytes(self):
+        """Test PNG detection from magic bytes."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        # PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+        png_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(png_bytes), "image/png")
+
+    def test_detect_gif87a_from_bytes(self):
+        """Test GIF87a detection from magic bytes."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        gif_bytes = b"GIF87a" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(gif_bytes), "image/gif")
+
+    def test_detect_gif89a_from_bytes(self):
+        """Test GIF89a detection from magic bytes."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        gif_bytes = b"GIF89a" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(gif_bytes), "image/gif")
+
+    def test_detect_bmp_from_bytes(self):
+        """Test BMP detection from magic bytes."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        bmp_bytes = b"BM" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(bmp_bytes), "image/bmp")
+
+    def test_detect_webp_from_bytes(self):
+        """Test WebP detection from magic bytes (RIFF...WEBP)."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        # WebP: RIFF [4 bytes size] WEBP
+        webp_bytes = b"RIFF\x00\x00\x00\x00WEBP" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(webp_bytes), "image/webp")
+
+    def test_unknown_format_defaults_to_png(self):
+        """Test that unknown format defaults to PNG."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        unknown_bytes = b"\x00\x01\x02\x03\x04\x05" + b"\x00" * 100
+        self.assertEqual(detect_image_mime_type(unknown_bytes), "image/png")
+
+    def test_empty_bytes_defaults_to_png(self):
+        """Test that empty bytes default to PNG."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        self.assertEqual(detect_image_mime_type(b""), "image/png")
+
+    def test_riff_without_webp_marker(self):
+        """Test that RIFF without WEBP marker is not detected as WebP."""
+        from gaia.llm.vlm_client import detect_image_mime_type
+
+        # RIFF file that's not WebP (e.g., WAV audio)
+        riff_not_webp = b"RIFF\x00\x00\x00\x00WAVE" + b"\x00" * 100
+        # Should default to PNG since it's not a recognized image format
+        self.assertEqual(detect_image_mime_type(riff_not_webp), "image/png")
+
+
 class TestLemonadeManagerContextMessage(unittest.TestCase):
     """Test cases for LemonadeManager context message formatting."""
 

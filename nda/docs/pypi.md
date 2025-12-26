@@ -457,7 +457,11 @@ twine upload --repository testpypi dist/*
 Test the installation:
 
 ```bash
+# Base package
 uv pip install --index-url https://test.pypi.org/simple/ amd-gaia
+
+# With extras
+uv pip install --index-url https://test.pypi.org/simple/ 'amd-gaia[api,rag]'
 ```
 
 ### Step 5: Publish to Production PyPI
@@ -506,6 +510,78 @@ twine upload dist/*
 
 4. **Dependencies**: All dependencies are defined in `setup.py` under `install_requires` and `extras_require`.
 
+## Optional Dependencies (Extras)
+
+GAIA packages optional features as extras to keep the base install lightweight. Users install only what they need.
+
+### Available Extras
+
+From `setup.py`:
+
+```python
+extras_require={
+    "api": ["fastapi>=0.115.0", "uvicorn>=0.32.0"],
+    "rag": ["pypdf", "pymupdf>=1.24.0", ...],
+    "audio": ["torch>=2.0.0", "openai-whisper", ...],
+    "talk": ["pyaudio", "openai-whisper", "kokoro>=0.3.1", ...],
+    "blender": ["bpy"],
+    "mcp": ["mcp>=1.1.0", "starlette", "uvicorn"],
+    "dev": ["pytest", "black", "pylint", ...],
+    "eval": ["anthropic", "bs4", "scikit-learn", ...],
+    "youtube": ["llama-index-readers-youtube-transcript"],
+}
+```
+
+### Installing with Extras
+
+**Single extra:**
+```bash
+pip install amd-gaia[api]
+```
+
+**Multiple extras:**
+```bash
+pip install amd-gaia[api,rag]
+```
+
+**Development install with extras:**
+```bash
+pip install -e ".[api,rag,dev]"
+```
+
+### Common Combinations
+
+| Use Case | Extras | Example |
+|----------|--------|---------|
+| **EMR Medical Intake Agent** | `api,rag` | `pip install amd-gaia[api,rag]` |
+| Document Q&A (Chat Agent) | `rag` | `pip install amd-gaia[rag]` |
+| Voice Interface (Talk) | `talk` | `pip install amd-gaia[talk]` |
+| Web Dashboards | `api` | `pip install amd-gaia[api]` |
+| MCP Server | `mcp` | `pip install amd-gaia[mcp]` |
+| Full Development | `dev,api,rag` | `pip install -e ".[dev,api,rag]"` |
+
+**Note:** The EMR agent (`gaia-emr`) requires both `api` (for FastAPI dashboard) and `rag` (for PDF processing with PyMuPDF).
+
+### Testing Extras in Local Wheels
+
+When testing local changes with extras:
+
+```bash
+# Build wheel
+cd /path/to/gaia
+rm -rf dist/
+uv build
+
+# Install with extras
+cd /path/to/your-project
+uv pip install '/path/to/gaia/dist/amd_gaia-*.whl[api,rag]'
+
+# Verify extras installed
+python -c "import fastapi; import pymupdf; print('Extras OK')"
+```
+
+**Important:** Quote the path when using brackets on bash/zsh to prevent glob expansion.
+
 ## Quick Reference
 
 | Command | Description |
@@ -514,3 +590,6 @@ twine upload dist/*
 | `twine check dist/*` | Verify package metadata |
 | `twine upload --repository testpypi dist/*` | Upload to Test PyPI |
 | `twine upload dist/*` | Upload to Production PyPI |
+| `pip install amd-gaia` | Install base package |
+| `pip install amd-gaia[api,rag]` | Install with extras |
+| `pip install -e ".[dev,api,rag]"` | Editable install with extras |

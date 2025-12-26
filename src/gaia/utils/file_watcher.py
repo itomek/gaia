@@ -7,11 +7,15 @@ Generic file watching utilities for GAIA agents.
 Provides FileChangeHandler and FileWatcher for monitoring directories
 and responding to file system events with callbacks.
 
+Also provides file hashing utilities for duplicate detection.
+
 Example:
-    from gaia.utils import FileChangeHandler, FileWatcher
+    from gaia.utils import FileChangeHandler, FileWatcher, compute_file_hash
 
     def on_new_file(path: str):
         print(f"New file: {path}")
+        file_hash = compute_file_hash(path)
+        print(f"Hash: {file_hash}")
 
     watcher = FileWatcher(
         directory="./data",
@@ -21,6 +25,7 @@ Example:
     watcher.start()
 """
 
+import hashlib
 import logging
 import time
 from pathlib import Path
@@ -52,6 +57,83 @@ logger = logging.getLogger(__name__)
 EventCallback = Callable[[str], None]
 MoveCallback = Callable[[str, str], None]  # (src_path, dest_path)
 FilterCallback = Callable[[str], bool]
+
+# Default chunk size for file hashing (64KB)
+HASH_CHUNK_SIZE = 65536
+
+
+def compute_file_hash(
+    path: Union[str, Path],
+    algorithm: str = "sha256",
+    chunk_size: int = HASH_CHUNK_SIZE,
+) -> Optional[str]:
+    """
+    Compute a hash of a file's contents.
+
+    Uses chunked reading to handle large files efficiently without
+    loading the entire file into memory.
+
+    Args:
+        path: Path to the file to hash.
+        algorithm: Hash algorithm to use (default: sha256).
+                   Supports any algorithm from hashlib.
+        chunk_size: Size of chunks to read at a time (default: 64KB).
+
+    Returns:
+        Hex-encoded hash string, or None if file cannot be read.
+
+    Example:
+        from gaia.utils import compute_file_hash
+
+        # Check if file was already processed
+        file_hash = compute_file_hash("intake_form.pdf")
+        if file_hash in processed_hashes:
+            print("Already processed")
+        else:
+            process_file("intake_form.pdf")
+            processed_hashes.add(file_hash)
+    """
+    try:
+        file_path = Path(path)
+        if not file_path.exists() or not file_path.is_file():
+            return None
+
+        hasher = hashlib.new(algorithm)
+        with open(file_path, "rb") as f:
+            while chunk := f.read(chunk_size):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    except (OSError, IOError, ValueError) as e:
+        logger.warning(f"Could not compute hash for {path}: {e}")
+        return None
+
+
+def compute_bytes_hash(
+    data: bytes,
+    algorithm: str = "sha256",
+) -> str:
+    """
+    Compute a hash of bytes data.
+
+    Useful when the file content is already loaded in memory.
+
+    Args:
+        data: Bytes to hash.
+        algorithm: Hash algorithm to use (default: sha256).
+
+    Returns:
+        Hex-encoded hash string.
+
+    Example:
+        from gaia.utils import compute_bytes_hash
+
+        with open("file.pdf", "rb") as f:
+            content = f.read()
+        file_hash = compute_bytes_hash(content)
+    """
+    hasher = hashlib.new(algorithm)
+    hasher.update(data)
+    return hasher.hexdigest()
 
 
 class FileChangeHandler(FileSystemEventHandler):

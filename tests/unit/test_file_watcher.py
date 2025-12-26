@@ -1,7 +1,7 @@
 # Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
-"""Unit tests for FileChangeHandler and FileWatcher."""
+"""Tests for file watcher utilities including hash functions and parsing."""
 
 import tempfile
 import time
@@ -9,6 +9,245 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock
 
 import pytest
+
+from gaia.utils import (
+    compute_bytes_hash,
+    compute_file_hash,
+    detect_field_changes,
+    extract_json_from_text,
+    validate_required_fields,
+)
+
+
+class TestFileHashUtilities:
+    """Tests for file hashing functions."""
+
+    def test_compute_file_hash_returns_sha256(self):
+        """Test that compute_file_hash returns a valid SHA-256 hash."""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"test content")
+            temp_path = f.name
+
+        try:
+            result = compute_file_hash(temp_path)
+            assert result is not None
+            # SHA-256 produces 64 hex characters
+            assert len(result) == 64
+            assert all(c in "0123456789abcdef" for c in result)
+        finally:
+            Path(temp_path).unlink()
+
+    def test_compute_file_hash_consistent(self):
+        """Test that same content produces same hash."""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"identical content")
+            temp_path = f.name
+
+        try:
+            hash1 = compute_file_hash(temp_path)
+            hash2 = compute_file_hash(temp_path)
+            assert hash1 == hash2
+        finally:
+            Path(temp_path).unlink()
+
+    def test_compute_file_hash_different_content(self):
+        """Test that different content produces different hashes."""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f1:
+            f1.write(b"content A")
+            path1 = f1.name
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f2:
+            f2.write(b"content B")
+            path2 = f2.name
+
+        try:
+            hash1 = compute_file_hash(path1)
+            hash2 = compute_file_hash(path2)
+            assert hash1 != hash2
+        finally:
+            Path(path1).unlink()
+            Path(path2).unlink()
+
+    def test_compute_file_hash_nonexistent_file(self):
+        """Test that nonexistent file returns None."""
+        result = compute_file_hash("/nonexistent/path/file.txt")
+        assert result is None
+
+    def test_compute_file_hash_with_path_object(self):
+        """Test that Path objects work as well as strings."""
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(b"path test")
+            temp_path = Path(f.name)
+
+        try:
+            result = compute_file_hash(temp_path)
+            assert result is not None
+            assert len(result) == 64
+        finally:
+            temp_path.unlink()
+
+    def test_compute_bytes_hash_returns_sha256(self):
+        """Test that compute_bytes_hash returns a valid SHA-256 hash."""
+        result = compute_bytes_hash(b"test bytes")
+        assert len(result) == 64
+        assert all(c in "0123456789abcdef" for c in result)
+
+    def test_compute_bytes_hash_consistent(self):
+        """Test that same bytes produce same hash."""
+        data = b"consistent data"
+        hash1 = compute_bytes_hash(data)
+        hash2 = compute_bytes_hash(data)
+        assert hash1 == hash2
+
+    def test_compute_bytes_hash_matches_file_hash(self):
+        """Test that bytes hash matches file hash for same content."""
+        content = b"matching content test"
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as f:
+            f.write(content)
+            temp_path = f.name
+
+        try:
+            file_hash = compute_file_hash(temp_path)
+            bytes_hash = compute_bytes_hash(content)
+            assert file_hash == bytes_hash
+        finally:
+            Path(temp_path).unlink()
+
+    def test_compute_file_hash_large_file(self):
+        """Test hashing of a larger file (exercises chunked reading)."""
+        # Create a 1MB file
+        large_content = b"x" * (1024 * 1024)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as f:
+            f.write(large_content)
+            temp_path = f.name
+
+        try:
+            result = compute_file_hash(temp_path)
+            assert result is not None
+            assert len(result) == 64
+            # Verify consistency
+            assert result == compute_file_hash(temp_path)
+        finally:
+            Path(temp_path).unlink()
+
+    def test_compute_bytes_hash_empty_bytes(self):
+        """Test hashing of empty bytes."""
+        result = compute_bytes_hash(b"")
+        # SHA-256 of empty string is a known value
+        assert (
+            result == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+
+
+class TestJsonExtraction:
+    """Tests for JSON extraction from text."""
+
+    def test_extract_plain_json(self):
+        """Test extracting pure JSON."""
+        text = '{"name": "John", "age": 30}'
+        result = extract_json_from_text(text)
+        assert result == {"name": "John", "age": 30}
+
+    def test_extract_json_with_surrounding_text(self):
+        """Test extracting JSON embedded in text."""
+        text = 'Here is the data: {"name": "Jane"} Hope this helps!'
+        result = extract_json_from_text(text)
+        assert result == {"name": "Jane"}
+
+    def test_extract_nested_json(self):
+        """Test extracting nested JSON objects."""
+        text = (
+            """Response: {"patient": {"address": {"city": "Boston", "zip": "02101"}}}"""
+        )
+        result = extract_json_from_text(text)
+        assert result == {"patient": {"address": {"city": "Boston", "zip": "02101"}}}
+
+    def test_extract_json_empty_text(self):
+        """Test with empty text."""
+        assert extract_json_from_text("") is None
+        assert extract_json_from_text(None) is None
+
+    def test_extract_json_no_json(self):
+        """Test with text containing no JSON."""
+        text = "This is just plain text with no JSON"
+        assert extract_json_from_text(text) is None
+
+
+class TestFieldChangeDetection:
+    """Tests for field change detection."""
+
+    def test_detect_single_change(self):
+        """Test detecting a single field change."""
+        old = {"phone": "555-1234", "email": "old@test.com"}
+        new = {"phone": "555-9999", "email": "old@test.com"}
+        changes = detect_field_changes(old, new, ["phone", "email"])
+        assert len(changes) == 1
+        assert changes[0]["field"] == "phone"
+        assert changes[0]["old"] == "555-1234"
+        assert changes[0]["new"] == "555-9999"
+
+    def test_detect_no_changes(self):
+        """Test when no fields changed."""
+        old = {"name": "John", "age": "30"}
+        new = {"name": "John", "age": "30"}
+        changes = detect_field_changes(old, new, ["name", "age"])
+        assert len(changes) == 0
+
+    def test_detect_multiple_changes(self):
+        """Test detecting multiple field changes."""
+        old = {"a": "1", "b": "2", "c": "3"}
+        new = {"a": "1", "b": "X", "c": "Y"}
+        changes = detect_field_changes(old, new, ["a", "b", "c"])
+        assert len(changes) == 2
+        changed_fields = [c["field"] for c in changes]
+        assert "b" in changed_fields
+        assert "c" in changed_fields
+
+    def test_detect_changes_all_fields(self):
+        """Test auto-detecting all fields when none specified."""
+        old = {"x": "1", "y": "2"}
+        new = {"x": "1", "y": "changed"}
+        changes = detect_field_changes(old, new)
+        assert len(changes) == 1
+        assert changes[0]["field"] == "y"
+
+
+class TestRequiredFieldValidation:
+    """Tests for required field validation."""
+
+    def test_all_fields_present(self):
+        """Test when all required fields are present."""
+        data = {"name": "John", "email": "john@test.com"}
+        is_valid, missing = validate_required_fields(data, ["name", "email"])
+        assert is_valid is True
+        assert missing == []
+
+    def test_missing_fields(self):
+        """Test when some required fields are missing."""
+        data = {"name": "John"}
+        is_valid, missing = validate_required_fields(data, ["name", "email", "phone"])
+        assert is_valid is False
+        assert "email" in missing
+        assert "phone" in missing
+
+    def test_empty_string_counts_as_missing(self):
+        """Test that empty strings are treated as missing."""
+        data = {"name": "John", "email": ""}
+        is_valid, missing = validate_required_fields(data, ["name", "email"])
+        assert is_valid is False
+        assert "email" in missing
+
+    def test_whitespace_only_counts_as_missing(self):
+        """Test that whitespace-only strings are treated as missing."""
+        data = {"name": "John", "email": "   "}
+        is_valid, missing = validate_required_fields(data, ["name", "email"])
+        assert is_valid is False
+        assert "email" in missing
+
+
+"""Unit tests for FileChangeHandler and FileWatcher."""
 
 from gaia.utils.file_watcher import (
     FileChangeHandler,

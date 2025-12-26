@@ -15,11 +15,15 @@ load_dotenv()
 # pylint: disable=wrong-import-position
 from gaia.agents.base import Agent, MCPAgent, tool  # noqa: F401, E402
 from gaia.database import DatabaseAgent, DatabaseMixin  # noqa: F401, E402
+from gaia.utils import FileChangeHandler, FileWatcher, FileWatcherMixin  # noqa: F401
 
 __all__ = [
     "Agent",
     "DatabaseAgent",
     "DatabaseMixin",
+    "FileChangeHandler",
+    "FileWatcher",
+    "FileWatcherMixin",
     "MCPAgent",
     "tool",
 ]

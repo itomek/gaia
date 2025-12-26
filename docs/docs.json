@@ -107,9 +107,29 @@
             ]
           },
           {
+            "group": "User Guides",
+            "pages": [
+              "guides/hardware-advisor",
+              "guides/chat",
+              "guides/talk",
+              "guides/code",
+              "guides/emr",
+              "guides/blender",
+              "guides/jira",
+              "guides/docker",
+              "guides/routing"
+            ]
+          },
+          {
             "group": "Playbooks",
             "pages": [
               "playbooks/index",
+              {
+                "group": "Hardware Advisor Agent",
+                "pages": [
+                  "playbooks/hardware-advisor/part-1-getting-started"
+                ]
+              },
               {
                 "group": "Document Q&A Agent",
                 "pages": [
@@ -119,24 +139,13 @@
                 ]
               },
               {
-                "group": "Hardware Advisor Agent",
+                "group": "Medical Intake Agent",
                 "pages": [
-                  "playbooks/hardware-advisor/part-1-getting-started"
+                  "playbooks/emr-agent/part-1-getting-started",
+                  "playbooks/emr-agent/part-2-dashboard",
+                  "playbooks/emr-agent/part-3-architecture"
                 ]
               }
-            ]
-          },
-          {
-            "group": "User Guides",
-            "pages": [
-              "guides/chat",
-              "guides/talk",
-              "guides/hardware-advisor",
-              "guides/code",
-              "guides/blender",
-              "guides/jira",
-              "guides/docker",
-              "guides/routing"
             ]
           }
         ]

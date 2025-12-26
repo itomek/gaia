@@ -466,9 +466,9 @@ class LemonadeClient:
         if not verbose:
             self.log.setLevel(logging.WARNING)
 
-        self.log.info(f"Initialized Lemonade client for {host}:{port}")
+        self.log.debug(f"Initialized Lemonade client for {host}:{port}")
         if model:
-            self.log.info(f"Initial model set to: {model}")
+            self.log.debug(f"Initial model set to: {model}")
 
     def launch_server(self, log_level="info", background="none", ctx_size=None):
         """
@@ -2007,7 +2007,7 @@ class LemonadeClient:
             InsufficientDiskSpaceError: If not enough disk space
             LemonadeClientError: If model loading fails
         """
-        self.log.info(f"Loading {model_name}")
+        self.log.debug(f"Loading {model_name}")
 
         request_data = {"model_name": model_name}
         if llamacpp_args:
@@ -2016,7 +2016,7 @@ class LemonadeClient:
 
         try:
             response = self._send_request("post", url, request_data, timeout=timeout)
-            self.log.info(f"Loaded {model_name} successfully: response={response}")
+            self.log.debug(f"Loaded {model_name} successfully: response={response}")
             self.model = model_name
             return response
         except Exception as e:

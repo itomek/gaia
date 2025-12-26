@@ -1,0 +1,474 @@
+---
+title: "Medical Intake Agent"
+description: "Automate patient intake form processing with VLM extraction and local database storage"
+---
+
+<Warning>
+  **Demonstration Application:** This is a proof-of-concept demo showcasing AMD Ryzen AI capabilities. Not intended for production use with real patient data. Do not use with actual PHI (Protected Health Information).
+</Warning>
+
+<Info>
+  **First time here?** Complete the [Setup](/setup) guide first to install GAIA and its dependencies.
+</Info>
+
+The GAIA Medical Intake Agent demonstrates automated patient intake form processing using Vision Language Models (VLM). It extracts structured data and stores records in a SQLite database, with all processing happening locally on AMD Ryzen AI hardware.
+
+<Tip>
+  **Want to learn how it works?** See the [EMR Agent Playbook](/playbooks/emr-agent/part-1-getting-started) for a step-by-step guide to building this agent from scratch.
+</Tip>
+
+## Key Features
+
+- **Automatic file watching** - Monitors a directory for new intake forms
+- **Drag-and-drop upload** - Drop files directly into the Watch Folder panel
+- **VLM-powered extraction** - Uses Qwen3-VL-4B-Instruct for OCR and data extraction
+- **Local database storage** - SQLite with full patient record schema
+- **New/returning detection** - Identifies returning patients and flags changes
+- **Critical alerts** - Automatic alerts for allergies and missing fields
+- **Web dashboard** - Real-time monitoring with SSE updates
+- **Cumulative efficiency metrics** - Track total time saved across all processed forms
+
+## Prerequisites
+
+<Warning>
+  **Developer Preview:** The Medical Intake Agent is currently only available by cloning the repository. PyPI package and installer coming soon.
+</Warning>
+
+Clone the repository and install in development mode:
+
+```bash
+git clone https://github.com/amd/gaia.git
+cd gaia
+uv pip install -e ".[api,rag]"
+```
+
+The `api` extra provides FastAPI and uvicorn for the web dashboard. The `rag` extra provides PyMuPDF for PDF processing.
+
+---
+
+## Quick Start
+
+### Step 1: Initialize (First Time Only)
+
+Download and load all required models before first use:
+
+```bash
+gaia-emr init
+```
+
+This command:
+- Checks Lemonade server is running and context size is configured
+- Downloads and loads all required models:
+  - **VLM**: Qwen3-VL-4B-Instruct-GGUF (form extraction)
+  - **LLM**: Qwen3-Coder-30B-A3B-Instruct-GGUF (chat/query processing)
+  - **Embedding**: nomic-embed-text-v2-moe-GGUF (similarity search)
+- Verifies all models are loaded and ready
+
+<Tip>
+  **Context Size:** For best results, set Lemonade context size to 32768. Right-click the Lemonade tray icon → Settings → Context Size → 32768.
+</Tip>
+
+### Step 2: Launch
+
+<Tabs>
+  <Tab title="Desktop App">
+    The recommended way to use the EMR Dashboard is via the native Electron desktop app.
+
+    ### Build the frontend (first time only)
+
+    ```bash
+    cd src/gaia/agents/emr/dashboard/frontend
+    npm install && npm run build
+    cd -
+    ```
+
+    ### Launch the desktop app
+
+    ```bash
+    gaia-emr dashboard
+    ```
+
+    That's it! The dashboard opens automatically in a native desktop window.
+
+    <Note>
+      First run will install Electron dependencies automatically. The default watch directory is `./intake_forms` and database is `./data/patients.db`.
+    </Note>
+
+    ### Dashboard Features
+
+    The dashboard includes four main views:
+
+    - **Dashboard** - Real-time stats, cumulative efficiency metrics, and live processing feed
+    - **Patient Database** - Searchable patient list with detailed records
+    - **Chat** - Natural language queries about patients
+    - **Settings** - Configure watch directory, upload files, and manage database
+
+    **Watch Folder Panel:** The left column displays a Watch Folder panel with status indicators:
+    - **Green dot** - Processed files
+    - **Red flashing dot** - Currently processing
+    - **Orange dot** - Queued for processing
+
+    **Drag-and-Drop:** Drop intake form images or PDFs directly onto the Watch Folder panel to upload and process them instantly.
+
+    ### Command Options
+
+    ```bash
+    # Launch dashboard (defaults: Electron app, ./intake_forms, port 8080)
+    gaia-emr dashboard
+
+    # Custom watch directory
+    gaia-emr dashboard --watch-dir /path/to/forms
+
+    # Force browser mode instead of Electron
+    gaia-emr dashboard --browser
+
+    # Custom port
+    gaia-emr dashboard --port 3000
+
+    # Don't auto-open (server only)
+    gaia-emr dashboard --no-open
+    ```
+
+    | Option | Default | Description |
+    |--------|---------|-------------|
+    | `--watch-dir` | `./intake_forms` | Directory to monitor for intake forms |
+    | `--db` | `./data/patients.db` | SQLite database path |
+    | `--port` | `8080` | Server port |
+    | `--browser` | off | Open in browser instead of Electron |
+    | `--no-open` | off | Don't auto-open, server only |
+
+    <Tip>
+      If Electron/Node.js is not available, the dashboard automatically falls back to opening in your default web browser.
+    </Tip>
+  </Tab>
+
+  <Tab title="CLI App">
+    ### Start watching for forms
+
+    ```bash
+    gaia-emr watch --watch-dir ./intake_forms
+    ```
+
+    The agent automatically creates the folder, processes existing files, and watches for new ones.
+
+    <Note>
+      First run may take a moment while GAIA starts Lemonade Server and downloads models.
+    </Note>
+
+    ### Drop intake forms
+
+    ```bash
+    cp patient_form.jpg ./intake_forms/
+    ```
+
+    The agent detects, extracts, and stores the patient record automatically.
+
+    ### Query patients
+
+    ```
+    You: How many patients were processed today?
+    You: Find patient John Smith
+    You: Show me patients with allergies
+    ```
+
+    Type `quit` or `exit` to stop.
+
+    ### CLI Commands Reference
+
+    ```bash
+    # First time setup - download VLM model
+    gaia-emr init
+
+    # Interactive mode with file watching
+    gaia-emr watch --watch-dir ./intake_forms
+
+    # Process a single file manually
+    gaia-emr process patient_form.jpg
+
+    # Test VLM extraction pipeline
+    gaia-emr test patient_form.jpg
+
+    # One-shot query
+    gaia-emr query "Find patients with allergies"
+
+    # Show processing statistics
+    gaia-emr stats
+
+    # Delete the database file and start fresh
+    gaia-emr reset
+
+    # Launch dashboard (Electron by default)
+    gaia-emr dashboard --port 8080
+
+    # Launch dashboard in browser
+    gaia-emr dashboard --browser
+    ```
+
+    | Command | Options | Description |
+    |---------|---------|-------------|
+    | `init` | `--vlm-model` | Download and setup required VLM models |
+    | `watch` | `--watch-dir`, `--db` | Interactive mode with auto-processing |
+    | `process` | `<file>` | Process a single intake form |
+    | `test` | `<file>`, `--max-dimension`, `--jpeg-quality` | Test VLM extraction pipeline with timing |
+    | `query` | `"<question>"` | One-shot natural language query |
+    | `stats` | `--db` | Show processing statistics table |
+    | `reset` | `--force` | Delete the database file and start fresh |
+    | `dashboard` | `--port`, `--host`, `--browser` | Launch dashboard (Electron or browser) |
+  </Tab>
+
+  <Tab title="Python API">
+    ```python title="intake_agent.py"
+    from gaia.agents.emr import MedicalIntakeAgent
+
+    agent = MedicalIntakeAgent(
+        watch_dir="./intake_forms",
+        db_path="./data/patients.db",
+    )
+
+    # Interactive query loop
+    try:
+        while True:
+            query = input("\nYou: ").strip()
+            if query.lower() in ("quit", "exit"):
+                break
+            agent.process_query(query)
+    finally:
+        agent.stop()
+    ```
+
+    Run with `python intake_agent.py`.
+
+    <Tip>
+      Use the context manager for automatic cleanup:
+      ```python
+      with MedicalIntakeAgent(watch_dir="./forms") as agent:
+          agent.process_query("Show recent patients")
+      ```
+    </Tip>
+  </Tab>
+</Tabs>
+
+---
+
+## Python API
+
+### Configuration Options
+
+```python
+MedicalIntakeAgent(
+    watch_dir="./intake_forms",    # Directory to monitor
+    db_path="./data/patients.db",  # SQLite database path
+    auto_start_watching=True,      # Start file watcher immediately
+    skip_lemonade=False,           # Skip LLM initialization (testing)
+    silent_mode=False,             # Suppress console output
+)
+```
+
+### Supported File Types
+
+| Extension | Processing |
+|-----------|------------|
+| `.png`, `.jpg`, `.jpeg` | Direct image processing |
+| `.pdf` | Converted to image via PyMuPDF |
+| `.tiff`, `.bmp` | Direct image processing |
+
+### Time Savings Estimation
+
+The dashboard displays estimated time savings based on how long manual data entry would take. This estimation is calculated per-form using:
+
+| Factor | Value | Description |
+|--------|-------|-------------|
+| Base time per field | 10 sec | Time to locate field in UI, click, prepare to type |
+| Typing speed | 0.3 sec/char | Slower than normal due to looking at form |
+| Field complexity | 0.5x - 1.8x | Simple dropdowns vs. complex fields like allergies |
+| Verification overhead | +15% | Time spent checking/verifying entries |
+
+**Example:** A form with 15 fields and ~300 characters would estimate to ~4-5 minutes of manual entry time.
+
+---
+
+## Testing
+
+### Test VLM Pipeline
+
+Use the `gaia-emr test` command to verify the VLM extraction pipeline on a single file with detailed timing and performance metrics:
+
+```bash
+gaia-emr test patient_form.jpg
+```
+
+This command:
+- Reads and analyzes the image file
+- Auto-rotates based on EXIF orientation data
+- Optimizes the image (resize to max 1024px, JPEG compression)
+- Auto-retries with smaller image if memory errors occur
+- Runs VLM extraction with the same pipeline as the dashboard
+- Parses and displays extracted patient data
+- Shows timing breakdown with token throughput metrics
+
+**Example output:**
+
+```
+⏱️  TIMING BREAKDOWN
+----------------------------------------
+   Model:              Qwen3-VL-4B-Instruct-GGUF
+   Image dimensions:   768x1024
+   VLM extraction:     28.5s
+   Est. image tokens:  ~4,010
+   Est. output tokens: ~250
+   Est. tokens/sec:    ~8.8 TPS
+
+   Patient: John Smith
+   ✓ Pipeline test PASSED
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--vlm-model` | `Qwen3-VL-4B-Instruct-GGUF` | VLM model to use |
+| `--max-dimension` | `1024` | Max image dimension in pixels |
+| `--jpeg-quality` | `85` | JPEG compression quality |
+| `--clear-context` | off | Clear VLM memory before processing |
+
+### Unit Tests
+
+```bash
+python -m pytest tests/unit/test_emr_agent.py -v
+```
+
+### With Mock VLM
+
+```python
+from gaia.testing import temp_directory
+
+with temp_directory() as tmp_dir:
+    agent = MedicalIntakeAgent(
+        watch_dir=str(tmp_dir / "intake"),
+        db_path=str(tmp_dir / "patients.db"),
+        skip_lemonade=True,
+        silent_mode=True,
+        auto_start_watching=False,
+    )
+
+    patient_id = agent._store_patient({
+        "first_name": "Test",
+        "last_name": "Patient",
+    })
+    assert patient_id is not None
+```
+
+---
+
+## Database Management
+
+### Reset Database
+
+Use `gaia-emr reset` to delete the database file and start fresh:
+
+```bash
+# Interactive confirmation prompt
+gaia-emr reset
+
+# Skip confirmation (use with caution)
+gaia-emr reset --force
+```
+
+This command:
+- Deletes the SQLite database file (`./data/patients.db` by default)
+- Removes all patient records and processing history
+- Allows you to start with a clean slate for testing
+
+<Warning>
+  **Destructive Operation:** This permanently deletes all patient data. Use `--force` only in automated testing scenarios.
+</Warning>
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--db` | `./data/patients.db` | Path to database file to delete |
+| `--force` | off | Skip confirmation prompt |
+
+---
+
+## Troubleshooting
+
+### PyMuPDF Required
+
+```
+ERROR: PyMuPDF required for PDF processing
+```
+
+**Solution**: `pip install "amd-gaia[rag]"`
+
+### JSON Parse Failed
+
+```
+WARNING: Failed to parse extraction for: form.jpg
+```
+
+**Solution**: Check image quality and form layout clarity.
+
+### Database Locked
+
+```
+ERROR: database is locked
+```
+
+**Solution**: Only one agent should access the database at a time.
+
+### Slow First Run
+
+First run downloads models (LLM, VLM, embeddings) which may take several minutes. Subsequent runs start immediately.
+
+### Model Download Failed
+
+```
+Failed to download file: [model files]
+Download succeeded but failed to rename file: The process cannot access the file
+```
+
+**Solution**: Run `gaia-emr init` again to resume the download. If the error persists:
+1. Close any applications that may be using the model files
+2. Delete partial downloads in Lemonade's model cache directory
+3. Run `gaia-emr init` again
+
+### Context Size Too Small
+
+```
+Context size too small! Image requires 4203 tokens but model context is only 4096.
+```
+
+**Solution**: Increase Lemonade context size:
+1. Right-click Lemonade tray icon → Settings
+2. Set Context Size to **32768**
+3. Restart the model
+
+---
+
+## Learn More
+
+<CardGroup cols={3}>
+  <Card title="Part 1: Getting Started" icon="rocket" href="/playbooks/emr-agent/part-1-getting-started">
+    Build this agent from scratch and understand the core components
+  </Card>
+
+  <Card title="Part 2: Dashboard & API" icon="chart-line" href="/playbooks/emr-agent/part-2-dashboard">
+    Deep dive into the web dashboard and REST API endpoints
+  </Card>
+
+  <Card title="Part 3: Architecture" icon="sitemap" href="/playbooks/emr-agent/part-3-architecture">
+    Database schema, processing pipeline, and system design
+  </Card>
+</CardGroup>
+
+---
+
+<small style="color: #666;">
+
+**License**
+
+Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+
+SPDX-License-Identifier: MIT
+
+</small>

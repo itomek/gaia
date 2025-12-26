@@ -45,6 +45,8 @@ setup(
         "gaia.agents.chat",
         "gaia.agents.chat.tools",
         "gaia.agents.docker",
+        "gaia.agents.emr",
+        "gaia.agents.emr.dashboard",
         "gaia.agents.jira",
         "gaia.agents.code",
         "gaia.agents.code.orchestration",
@@ -76,11 +78,13 @@ setup(
         "aiohttp",
         "rich",
         "watchdog>=2.1.0",
+        "pillow>=9.0.0",
     ],
     extras_require={
         "api": [
             "fastapi>=0.115.0",
             "uvicorn>=0.32.0",
+            "python-multipart>=0.0.9",
         ],
         "audio": [
             "torch>=2.0.0,<2.4",
@@ -134,6 +138,7 @@ setup(
         ],
         "rag": [
             "pypdf",
+            "pymupdf>=1.24.0",
             "sentence-transformers",
             "faiss-cpu>=1.7.0",
         ],
@@ -164,6 +169,7 @@ setup(
             "gaia-cli = gaia.cli:main",
             "gaia-mcp = gaia.mcp.mcp_bridge:main",
             "gaia-mcp-atlassian = gaia.mcp.atlassian_mcp:main",
+            "gaia-emr = gaia.agents.emr.cli:main",
         ]
     },
     python_requires=">=3.10",
