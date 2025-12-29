@@ -27,7 +27,11 @@ from openai import OpenAI
 from ..version import LEMONADE_VERSION
 
 # Local imports
-from .lemonade_client import DEFAULT_MODEL_NAME
+from .lemonade_client import (
+    DEFAULT_MODEL_NAME,
+    LemonadeClient,
+    LemonadeClientError,
+)
 
 # Default Lemonade server URL (can be overridden via LEMONADE_BASE_URL env var)
 DEFAULT_LEMONADE_URL = "http://localhost:8000/api/v1"
@@ -112,24 +116,19 @@ class LLMClient:
         self.retry_base_delay = retry_base_delay
 
         if use_local:
-            # Configure timeout for local LLM server
-            # For streaming: timeout between chunks (read timeout)
-            # For non-streaming: total timeout for the entire response
-            self.client = OpenAI(
-                base_url=base_url,
-                api_key="None",
-                timeout=httpx.Timeout(
-                    connect=15.0,  # 15 seconds to establish connection
-                    read=120.0,  # 120 seconds between data chunks (matches Lemonade DEFAULT_REQUEST_TIMEOUT)
-                    write=15.0,  # 15 seconds to send request
-                    pool=15.0,  # 15 seconds to acquire connection from pool
-                ),
-                max_retries=0,  # Disable retries to fail fast on connection issues
+            # Create LemonadeClient instance for local mode
+            # Don't pass host/port - let LemonadeClient use LEMONADE_BASE_URL env var
+            # This preserves remote URLs (like ngrok) that don't have explicit ports
+            self.lemonade_client = LemonadeClient(
+                model=DEFAULT_MODEL_NAME,
+                verbose=True,
+                keep_alive=True,
             )
+            self.client = None  # Not using raw OpenAI SDK for local mode
             # Use completions endpoint for pre-formatted prompts (ChatSDK compatibility)
             # Use chat endpoint when messages array is explicitly provided
             self.endpoint = "completions"
-            logger.debug("Using Lemonade completions endpoint")
+            logger.debug("Using Lemonade completions endpoint via LemonadeClient")
             self.default_model = DEFAULT_MODEL_NAME
             self.claude_client = None
             logger.debug(f"Using local LLM with model={self.default_model}")
@@ -320,33 +319,53 @@ class LLMClient:
             )
 
             try:
-                # Use retry logic for the API call
-                response = self._retry_with_exponential_backoff(
-                    self.client.completions.create,
+                # Use LemonadeClient for completions
+                response = self.lemonade_client.completions(
                     model=model,
                     prompt=prompt,
                     temperature=0.1,
                     stream=stream,
+                    auto_download=True,
                     **kwargs,
                 )
 
                 if stream:
-                    # Return a generator that yields chunks
+                    # Return a generator that yields chunks (dict-based response)
                     def stream_generator():
                         for chunk in response:
-                            if (
-                                hasattr(chunk.choices[0], "text")
-                                and chunk.choices[0].text
-                            ):
-                                yield chunk.choices[0].text
+                            text = chunk.get("choices", [{}])[0].get("text")
+                            if text:
+                                yield text
 
                     return stream_generator()
                 else:
-                    # Return the complete response
-                    result = response.choices[0].text
+                    # Return the complete response (dict-based response)
+                    result = response["choices"][0]["text"]
                     if not result or not result.strip():
                         logger.warning("Empty response from local LLM")
                     return result
+            except LemonadeClientError as e:
+                error_str = str(e)
+                logger.error(f"LemonadeClient error: {error_str}")
+
+                # Check if it's a connection error
+                if "connection" in error_str.lower() or "refused" in error_str.lower():
+                    raise ConnectionError(
+                        f"Lemonade Server not running at {self.base_url}\n"
+                        f"Start it with: lemonade-server serve"
+                    ) from e
+
+                # Check for 404 errors which might indicate endpoint or model issues
+                if "404" in error_str:
+                    raise ConnectionError(
+                        f"API endpoint error: {error_str}\n\n"
+                        f"This may indicate:\n"
+                        f"  1. Lemonade Server version mismatch (try updating to {LEMONADE_VERSION})\n"
+                        f"  2. Model not loaded (will auto-load on retry)\n"
+                    ) from e
+
+                # Re-raise other LemonadeClientErrors
+                raise
             except (
                 httpx.ConnectError,
                 httpx.TimeoutException,
@@ -358,24 +377,6 @@ class LLMClient:
             except Exception as e:
                 error_str = str(e)
                 logger.error(f"Error generating response from local LLM: {error_str}")
-
-                if "404" in error_str:
-                    if (
-                        "endpoint" in error_str.lower()
-                        or "not found" in error_str.lower()
-                    ):
-                        raise ConnectionError(
-                            f"API endpoint error: {error_str}\n\n"
-                            f"This may indicate:\n"
-                            f"  1. Lemonade Server version mismatch (try updating to {LEMONADE_VERSION})\n"
-                            f"  2. Model not properly loaded or corrupted\n\n"
-                            f"To fix model issues, try:\n"
-                            f"  lemonade model remove <model-name>\n"
-                            f"  lemonade model download <model-name>\n"
-                        ) from e
-
-                if "network" in error_str.lower() or "connection" in error_str.lower():
-                    raise ConnectionError(f"LLM Server Error: {error_str}") from e
                 raise
         elif endpoint_to_use == "chat":
             # For local LLM using chat completions format (Lemonade v9+)
@@ -403,33 +404,57 @@ class LLMClient:
             )
 
             try:
-                # Use retry logic for the API call
-                response = self._retry_with_exponential_backoff(
-                    self.client.chat.completions.create,
+                # Use LemonadeClient for chat completions
+                response = self.lemonade_client.chat_completions(
                     model=model,
                     messages=chat_messages,
                     temperature=0.1,
                     stream=stream,
+                    auto_download=True,
                     **kwargs,
                 )
 
                 if stream:
-                    # Return a generator that yields chunks
+                    # Return a generator that yields chunks (dict-based response)
                     def stream_generator():
                         for chunk in response:
-                            if (
-                                hasattr(chunk.choices[0].delta, "content")
-                                and chunk.choices[0].delta.content
-                            ):
-                                yield chunk.choices[0].delta.content
+                            content = (
+                                chunk.get("choices", [{}])[0]
+                                .get("delta", {})
+                                .get("content")
+                            )
+                            if content:
+                                yield content
 
                     return stream_generator()
                 else:
-                    # Return the complete response
-                    result = response.choices[0].message.content
+                    # Return the complete response (dict-based response)
+                    result = response["choices"][0]["message"]["content"]
                     if not result or not result.strip():
                         logger.warning("Empty response from local LLM")
                     return result
+            except LemonadeClientError as e:
+                error_str = str(e)
+                logger.error(f"LemonadeClient error: {error_str}")
+
+                # Check if it's a connection error
+                if "connection" in error_str.lower() or "refused" in error_str.lower():
+                    raise ConnectionError(
+                        f"Lemonade Server not running at {self.base_url}\n"
+                        f"Start it with: lemonade-server serve"
+                    ) from e
+
+                # Check for 404 errors which might indicate endpoint or model issues
+                if "404" in error_str:
+                    raise ConnectionError(
+                        f"API endpoint error: {error_str}\n\n"
+                        f"This may indicate:\n"
+                        f"  1. Lemonade Server version mismatch (try updating to {LEMONADE_VERSION})\n"
+                        f"  2. Model not loaded (will auto-load on retry)\n"
+                    ) from e
+
+                # Re-raise other LemonadeClientErrors
+                raise
             except (
                 httpx.ConnectError,
                 httpx.TimeoutException,
@@ -441,25 +466,6 @@ class LLMClient:
             except Exception as e:
                 error_str = str(e)
                 logger.error(f"Error generating response from local LLM: {error_str}")
-
-                # Check for 404 errors which might indicate endpoint or model issues
-                if "404" in error_str:
-                    if (
-                        "endpoint" in error_str.lower()
-                        or "not found" in error_str.lower()
-                    ):
-                        raise ConnectionError(
-                            f"API endpoint error: {error_str}\n\n"
-                            f"This may indicate:\n"
-                            f"  1. Lemonade Server version mismatch (try updating to {LEMONADE_VERSION})\n"
-                            f"  2. Model not properly loaded or corrupted\n\n"
-                            f"To fix model issues, try:\n"
-                            f"  lemonade model remove <model-name>\n"
-                            f"  lemonade model download <model-name>\n"
-                        ) from e
-
-                if "network" in error_str.lower() or "connection" in error_str.lower():
-                    raise ConnectionError(f"LLM Server Error: {error_str}") from e
                 raise
         elif endpoint_to_use == "openai":
             # For OpenAI API, use the messages format
@@ -514,7 +520,8 @@ class LLMClient:
             - input_tokens: Number of tokens in the input
             - output_tokens: Number of tokens in the output
         """
-        if not self.base_url:
+        # Check if using local LLM (has lemonade_client)
+        if not hasattr(self, "lemonade_client") or self.lemonade_client is None:
             # Return empty stats if not using local LLM
             return {
                 "time_to_first_token": None,
@@ -524,22 +531,9 @@ class LLMClient:
             }
 
         try:
-            # Use the Lemonade API v1 stats endpoint
-            # This returns both timing stats and token counts
-            stats_url = f"{self.base_url}/stats"
-            response = requests.get(stats_url)
-
-            if response.status_code == 200:
-                stats = response.json()
-                # Remove decode_token_times as it's too verbose
-                if "decode_token_times" in stats:
-                    del stats["decode_token_times"]
-                return stats
-            else:
-                logger.warning(
-                    f"Failed to get stats: {response.status_code} - {response.text}"
-                )
-                return {}
+            # Use LemonadeClient to get stats
+            stats = self.lemonade_client.get_stats()
+            return stats
         except Exception as e:
             logger.warning(f"Error fetching performance stats: {str(e)}")
             return {}

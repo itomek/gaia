@@ -1352,6 +1352,7 @@ class LemonadeClient:
         echo: bool = False,
         timeout: int = DEFAULT_REQUEST_TIMEOUT,
         logprobs: Optional[bool] = None,
+        auto_download: bool = True,
         **kwargs,
     ) -> Generator[Dict[str, Any], None, None]:
         """
