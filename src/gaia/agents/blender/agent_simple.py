@@ -3,7 +3,7 @@
 
 from typing import Any, Dict, Optional, Tuple
 
-from gaia.llm.llm_client import LLMClient
+from gaia.llm import create_client
 from gaia.mcp.blender_mcp_client import MCPClient
 
 
@@ -55,9 +55,8 @@ Example: "Make a tall cylinder" → CYLINDER,0,0,0,1,1,3
         self.llm = (
             llm
             if llm
-            else LLMClient(
-                use_local=use_local, system_prompt=self.SYSTEM_PROMPT, base_url=base_url
-            )
+            else create_client("lemonade", base_url=base_url)
+            # Note: system_prompt handling may need to be added to provider implementations if needed
         )
         self.mcp = mcp if mcp else MCPClient()
 

@@ -8,7 +8,7 @@ import pytest
 
 from gaia.agents.blender.agent_simple import BlenderAgentSimple
 from gaia.agents.blender.mcp.mcp_client import MCPClient
-from gaia.llm.llm_client import LLMClient
+from gaia.llm import create_client
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -34,7 +34,8 @@ For testing purposes:
 - For any other request, respond with: CYLINDER,0,2,0,0.5,0.5,3
 """
     # Using local LLM for faster testing
-    return LLMClient(system_prompt=system_prompt)
+    return create_client("lemonade")
+    # Note: system_prompt handling may need to be added to provider implementations if needed
 
 
 @pytest.fixture

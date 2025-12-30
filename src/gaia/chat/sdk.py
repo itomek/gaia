@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from gaia.chat.prompts import Prompts
+from gaia.llm import create_client
 from gaia.llm.lemonade_client import DEFAULT_MODEL_NAME
-from gaia.llm.llm_client import LLMClient
 from gaia.logger import get_logger
 
 
@@ -87,19 +87,12 @@ class ChatSDK:
         self.log = get_logger(__name__)
         self.log.setLevel(getattr(logging, self.config.logging_level))
 
-        # Validate that both providers aren't specified
-        if self.config.use_claude and self.config.use_chatgpt:
-            raise ValueError(
-                "Cannot specify both use_claude and use_chatgpt. Please choose one."
-            )
-
-        # Initialize LLM client - it will compute use_local automatically
-        self.llm_client = LLMClient(
+        # Initialize LLM client - factory auto-detects provider and validates
+        self.llm_client = create_client(
             use_claude=self.config.use_claude,
             use_openai=self.config.use_chatgpt,
-            claude_model=self.config.claude_model,
+            model=self.config.claude_model if self.config.use_claude else self.config.model,
             base_url=self.config.base_url,
-            system_prompt=None,  # We handle system prompts through Prompts class
         )
 
         # Store conversation history

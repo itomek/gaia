@@ -11,6 +11,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from gaia.llm import create_client
 from gaia.llm.lemonade_client import (
     DEFAULT_HOST,
     DEFAULT_LEMONADE_URL,
@@ -20,7 +21,6 @@ from gaia.llm.lemonade_client import (
     LemonadeClientError,
     _get_lemonade_config,
 )
-from gaia.llm.llm_client import LLMClient
 from gaia.logger import get_logger
 from gaia.version import version
 
@@ -400,7 +400,7 @@ class GaiaCliClient:
         self.show_stats = show_stats
 
         # Initialize LLM client for local inference
-        self.llm_client = LLMClient()
+        self.llm_client = create_client("lemonade")
 
         self.log.debug("Gaia CLI client initialized.")
         self.log.debug(f"model: {self.model}\n max_tokens: {self.max_tokens}")

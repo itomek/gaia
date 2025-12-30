@@ -431,6 +431,7 @@ class LemonadeClient:
         model: Optional[str] = None,
         host: Optional[str] = None,
         port: Optional[int] = None,
+        base_url: Optional[str] = None,
         verbose: bool = True,
         keep_alive: bool = False,
     ):
@@ -441,18 +442,29 @@ class LemonadeClient:
             model: Name of the model to load (optional)
             host: Host address of the Lemonade server (defaults to LEMONADE_BASE_URL env var)
             port: Port number of the Lemonade server (defaults to LEMONADE_BASE_URL env var)
+            base_url: Base URL for the Lemonade server (defaults to LEMONADE_BASE_URL env var)
             verbose: If False, reduce logging verbosity during initialization
             keep_alive: If True, don't terminate server in __del__
         """
+        from urllib.parse import urlparse
+
         # Use provided host/port, or get from env var, or use defaults
         env_host, env_port, env_base_url = _get_lemonade_config()
-        self.host = host if host is not None else env_host
-        self.port = port if port is not None else env_port
-        # If host/port explicitly provided, construct URL; otherwise use env URL directly
-        if host is not None or port is not None:
-            self.base_url = f"http://{self.host}:{self.port}/api/{LEMONADE_API_VERSION}"
+
+        # Parse base_url if provided (explicit host/port takes precedence)
+        if base_url is not None:
+            if not base_url.rstrip("/").endswith(f"/api/{LEMONADE_API_VERSION}"):
+                base_url = f"{base_url.rstrip('/')}/api/{LEMONADE_API_VERSION}"
+            parsed = urlparse(base_url)
+            url_host = parsed.hostname or DEFAULT_HOST
+            url_port = parsed.port or DEFAULT_PORT
         else:
-            self.base_url = env_base_url
+            url_host = env_host
+            url_port = env_port
+
+        self.host = host if host is not None else url_host
+        self.port = port if port is not None else url_port
+        self.base_url = f"http://{self.host}:{self.port}/api/{LEMONADE_API_VERSION}"
         self.model = model
         self.server_process = None
         self.log = get_logger(__name__)
