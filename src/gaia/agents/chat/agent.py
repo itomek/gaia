@@ -827,6 +827,30 @@ When user asks to "index my data folder" or similar:
             logger.error(f"Error saving session: {e}")
             return False
 
+    def _parse_llm_response(self, response: str) -> Dict[str, Any]:
+        """
+        Parse LLM response, handling markdown code blocks.
+
+        ChatAgent-specific: Extract JSON from markdown code blocks
+        before delegating to base class parsing. This handles the case
+        where the LLM wraps its JSON response in ```json ... ``` blocks.
+        """
+        import re
+
+        response = response.strip()
+
+        # Extract JSON from markdown code blocks if present
+        if response.startswith("```"):
+            # Pattern matches ```json ... ``` or ``` ... ```
+            match = re.search(r"```(?:json)?\s*(.*?)\s*```", response, re.DOTALL)
+            if match:
+                extracted = match.group(1).strip()
+                if extracted.startswith("{"):
+                    response = extracted
+
+        # Delegate to base class
+        return super()._parse_llm_response(response)
+
     def __del__(self):
         """Cleanup when agent is destroyed."""
         try:

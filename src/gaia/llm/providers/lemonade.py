@@ -48,6 +48,9 @@ class LemonadeProvider(LLMClient):
         # Use provided model, instance model, or default CPU model
         effective_model = model or self._model or DEFAULT_MODEL_NAME
 
+        # Default to low temperature for deterministic responses (matches old LLMClient behavior)
+        kwargs.setdefault("temperature", 0.1)
+
         response = self._backend.completions(
             model=effective_model, prompt=prompt, stream=stream, **kwargs
         )
@@ -64,6 +67,9 @@ class LemonadeProvider(LLMClient):
     ) -> Union[str, Iterator[str]]:
         # Use provided model, instance model, or default CPU model
         effective_model = model or self._model or DEFAULT_MODEL_NAME
+
+        # Default to low temperature for deterministic responses (matches old LLMClient behavior)
+        kwargs.setdefault("temperature", 0.1)
 
         response = self._backend.chat_completions(
             model=effective_model, messages=messages, stream=stream, **kwargs
