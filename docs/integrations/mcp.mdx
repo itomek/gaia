@@ -4,6 +4,10 @@ description: 'HTTP-native bridge exposing GAIA AI agents through REST and JSON-R
 icon: 'network-wired'
 ---
 
+<Info>
+  **Source Code:** [`src/gaia/mcp/`](https://github.com/amd/gaia/blob/main/src/gaia/mcp/)
+</Info>
+
 # GAIA MCP Server
 
 <Badge text="development" color="orange" />
@@ -84,11 +88,13 @@ The GAIA MCP Server provides an HTTP-native bridge that exposes GAIA's AI agents
 
 ### Verify Installation
 
+Check server status:
 ```bash
-# Check server status
 gaia mcp status
+```
 
-# Test with a simple query
+Test with a simple query:
+```bash
 gaia mcp test --query "Hello GAIA!"
 ```
 
@@ -134,14 +140,18 @@ gaia mcp test --query "Hello GAIA!"
 
 ### Managing the Server
 
+Check if server is running:
 ```bash
-# Check if server is running
 gaia mcp status
+```
 
-# Test with a simple query
+Test with a simple query:
+```bash
 gaia mcp test --query "Hello, GAIA!"
+```
 
-# Stop the server
+Stop the server:
+```bash
 gaia mcp stop
 ```
 
@@ -200,13 +210,15 @@ The MCP Server acts as an HTTP bridge between external applications and GAIA's n
   </Tab>
 
   <Tab title="Chat (Conversational)">
+    First message:
     ```bash
-    # First message
     curl -X POST http://localhost:8765/chat \
       -H "Content-Type: application/json" \
       -d '{"query": "Hello! My name is Alice."}'
+    ```
 
-    # Follow-up (remembers context)
+    Follow-up (remembers context):
+    ```bash
     curl -X POST http://localhost:8765/chat \
       -H "Content-Type: application/json" \
       -d '{"query": "What is my name?"}'
@@ -230,11 +242,13 @@ The MCP Server acts as an HTTP bridge between external applications and GAIA's n
   </Tab>
 
   <Tab title="Docker Operations">
+    Start Docker MCP server:
     ```bash
-    # Start Docker MCP server
     gaia mcp docker --port 8080
+    ```
 
-    # Containerize application via JSON-RPC
+    Containerize application via JSON-RPC:
+    ```bash
     curl -X POST http://localhost:8080/ \
       -H "Content-Type: application/json" \
       -d '{
@@ -284,8 +298,10 @@ The MCP Server acts as an HTTP bridge between external applications and GAIA's n
             json={'query': query}
         )
         return response.json()
+    ```
 
-    # Example usage
+    Example usage:
+    ```python
     result = chat_with_gaia("What is machine learning?")
     print(result['result'])
     ```
@@ -302,26 +318,32 @@ The MCP Server acts as an HTTP bridge between external applications and GAIA's n
         );
         return response.data;
     }
+    ```
 
-    // Example usage
+    Example usage:
+    ```javascript
     const result = await chatWithGAIA('What is AI?');
     console.log(result.result);
     ```
   </Tab>
 
   <Tab title="cURL">
+    Chat query (maintains conversation context):
     ```bash
-    # Chat query (maintains conversation context)
     curl -X POST http://localhost:8765/chat \
       -H "Content-Type: application/json" \
       -d '{"query": "Explain neural networks"}'
+    ```
 
-    # Direct LLM query (no context)
+    Direct LLM query (no context):
+    ```bash
     curl -X POST http://localhost:8765/llm \
       -H "Content-Type: application/json" \
       -d '{"query": "What is quantum computing?"}'
+    ```
 
-    # Jira operations
+    Jira operations:
+    ```bash
     curl -X POST http://localhost:8765/jira \
       -H "Content-Type: application/json" \
       -d '{"query": "create idea: Add dark mode feature"}'
@@ -421,40 +443,52 @@ The MCP server exposes the following GAIA agents as tools:
 
 Use GAIA's built-in MCP commands:
 
+Check server status:
 ```bash
-# Check server status
 gaia mcp status
+```
 
-# Test with a query
+Test with a query:
+```bash
 gaia mcp test --query "What is artificial intelligence?"
+```
 
-# Start with verbose logging
+Start with verbose logging:
+```bash
 gaia mcp start --verbose
+```
 
-# Test specific host/port
+Test specific host/port:
+```bash
 gaia mcp test --host localhost --port 8765
 ```
 
 ### Validation Scripts
 
-GAIA provides test scripts in the `tests/mcp/` directory to validate the MCP bridge:
+GAIA provides test scripts in the `tests/mcp/` directory to validate the MCP bridge. Run from the project root directory:
 
+Simple validation test:
 ```bash
-# Run from the project root directory
-
-# Simple validation test
 python tests/mcp/test_mcp_simple.py
+```
 
-# Comprehensive HTTP validation test
+Comprehensive HTTP validation test:
+```bash
 python tests/mcp/test_mcp_http_validation.py
+```
 
-# Jira-specific MCP tests
+Jira-specific MCP tests:
+```bash
 python tests/mcp/test_mcp_jira.py
+```
 
-# Docker-specific MCP tests
+Docker-specific MCP tests:
+```bash
 python tests/mcp/test_mcp_docker.py
+```
 
-# Integration tests
+Integration tests:
+```bash
 python tests/mcp/test_mcp_integration.py
 ```
 

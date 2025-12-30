@@ -3,6 +3,10 @@ title: API Server
 description: OpenAI-compatible REST API for VSCode and IDE integrations
 ---
 
+<Info>
+  **Source Code:** [`src/gaia/api/`](https://github.com/amd/gaia/tree/main/src/gaia/api)
+</Info>
+
 <Badge text="development" color="orange" />
 
 <Info>
@@ -88,29 +92,33 @@ The GAIA API Server exposes GAIA agents as "models" through an OpenAI-compatible
 
 <Tabs>
   <Tab title="Basic">
+    Start in foreground:
+
     ```bash
-    # Start in foreground
     gaia api start
     ```
   </Tab>
 
   <Tab title="Background">
+    Start in background:
+
     ```bash
-    # Start in background
     gaia api start --background
     ```
   </Tab>
 
   <Tab title="Debug">
+    Start with debug logging:
+
     ```bash
-    # Start with debug logging
     gaia api start --debug
     ```
   </Tab>
 
   <Tab title="Custom">
+    Custom host/port:
+
     ```bash
-    # Custom host/port
     gaia api start --host 0.0.0.0 --port 8888
     ```
   </Tab>
@@ -143,7 +151,6 @@ client = OpenAI(
     api_key="not-needed"
 )
 
-# TypeScript/Express backend (routing detects "Express" → TypeScript)
 response = client.chat.completions.create(
     model="gaia-code",
     messages=[{"role": "user", "content": "Create a REST API with Express and SQLite"}]
@@ -152,8 +159,16 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
+TypeScript/Express backend (routing detects "Express" → TypeScript)
+
 ```python Python Backend
-# Python backend (routing detects "Django" → Python)
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key="not-needed"
+)
+
 response = client.chat.completions.create(
     model="gaia-code",
     messages=[{"role": "user", "content": "Create a Django REST API with authentication"}]
@@ -162,7 +177,16 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
+Python backend (routing detects "Django" → Python)
+
 ```python Streaming
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key="not-needed"
+)
+
 stream = client.chat.completions.create(
     model="gaia-code",
     messages=[{"role": "user", "content": "Write a calculator class"}],
@@ -194,12 +218,14 @@ async function chat(message) {
     return response.data.choices[0].message.content;
 }
 
-// TypeScript/React frontend (routing detects "React" → TypeScript frontend)
 chat('Build me a todo app using nextjs').then(console.log);
 
-// Python script (routing detects Python for generic functions)
 chat('Write a Python function to calculate factorial').then(console.log);
 ```
+
+TypeScript/React frontend (routing detects "React" → TypeScript frontend)
+
+Python script (routing detects Python for generic functions)
 
 ```javascript Fetch
 async function chat(message) {
@@ -349,8 +375,15 @@ async function chat(message) {
 
 <Steps>
   <Step title="Start Servers">
+    Start Lemonade server with extended context:
+
     ```bash
     lemonade-server serve --ctx-size 32768
+    ```
+
+    Start GAIA API server:
+
+    ```bash
     gaia api start
     ```
   </Step>

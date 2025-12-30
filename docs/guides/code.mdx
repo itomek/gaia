@@ -3,6 +3,10 @@ title: "Code Agent"
 description: "AI-powered code analysis, generation, and autonomous development for Python and TypeScript projects"
 ---
 
+<Info>
+  **Source Code:** [`src/gaia/agents/code/agent.py`](https://github.com/amd/gaia/blob/main/src/gaia/agents/code/agent.py) · [`src/gaia/agents/code/tools/`](https://github.com/amd/gaia/tree/main/src/gaia/agents/code/tools)
+</Info>
+
 <Badge text="development" color="orange" />
 
 <Note>
@@ -77,11 +81,13 @@ The GAIA Code Agent is an autonomous agent that handles coding tasks from requir
   </Step>
 
   <Step title="Try your first command">
+    Initialize GAIA.md for existing project:
     ```bash
-    # Initialize GAIA.md for existing project
     gaia code /init
+    ```
 
-    # Generate a function
+    Or generate a function:
+    ```bash
     gaia code "Create a function to calculate factorial"
     ```
   </Step>
@@ -91,46 +97,48 @@ The GAIA Code Agent is an autonomous agent that handles coding tasks from requir
 
 <Tabs>
   <Tab title="Function Generation">
+    Generate a function:
     ```bash
-    # Generate a function
     gaia code "Create a function to calculate factorial"
     ```
   </Tab>
 
   <Tab title="Unit Tests">
+    Generate tests for existing code:
     ```bash
-    # Generate tests for existing code
     gaia code "Generate tests for my_module.py"
     ```
   </Tab>
 
   <Tab title="Fix Linting">
+    Fix linting issues:
     ```bash
-    # Fix linting issues
     gaia code "Fix linting issues in script.py"
     ```
   </Tab>
 
   <Tab title="Full Project">
+    Create complete project with architecture:
     ```bash
-    # Create complete project with architecture
     gaia code "Create a task management API with user authentication"
     ```
   </Tab>
 
   <Tab title="Interactive Mode">
+    Interactive mode for continuous development:
     ```bash
-    # Interactive mode for continuous development
     gaia code --interactive
     ```
   </Tab>
 
   <Tab title="Cloud LLMs">
+    Use with Claude API (no server setup required):
     ```bash
-    # Use with Claude API (no server setup required)
     gaia code "Create a REST API" --use-claude
+    ```
 
-    # Use with ChatGPT API
+    Use with ChatGPT API:
+    ```bash
     gaia code "Create a REST API" --use-chatgpt
     ```
   </Tab>
@@ -140,14 +148,18 @@ The GAIA Code Agent is an autonomous agent that handles coding tasks from requir
 
 The Code Agent can generate complete Next.js applications with database integration:
 
+Generate a todo app with Prisma + SQLite:
 ```bash
-# Generate a todo app with Prisma + SQLite
 gaia code "Create a todo app" --use-claude
+```
 
-# Generate a blog with posts
+Generate a blog with posts:
+```bash
 gaia code "Create a blog with posts that have title, content, and published date"
+```
 
-# Generate a task tracker with categories
+Generate a task tracker with categories:
+```bash
 gaia code "Create a task tracker with categories and priority levels"
 ```
 
@@ -259,20 +271,28 @@ gaia code "Build an HRMS SaaS app with role-based access (HR, employee), employe
 
 ## Testing
 
+Run all Code Agent tests:
 ```bash
-# Run all Code Agent tests
 python -m pytest tests/test_code_agent.py -v
+```
 
-# Run orchestration tests (Next.js generation)
+Run orchestration tests (Next.js generation):
+```bash
 python -m pytest tests/test_checklist_orchestration.py -v
+```
 
-# Test specific features
+Test specific features:
+```bash
 python -m pytest tests/test_code_agent.py::TestCodeAgent::test_generate_function -xvs
+```
 
-# Test LLM code generation
+Test LLM code generation:
+```bash
 python -m pytest tests/test_checklist_orchestration.py::TestLLMCodeGeneration -xvs
+```
 
-# Test error recovery
+Test error recovery:
+```bash
 python -m pytest tests/test_checklist_orchestration.py::TestErrorRecovery -xvs
 ```
 
@@ -508,8 +528,9 @@ The Code Agent can automatically look up documentation and web information when 
   Works only if `PERPLEXITY_API_KEY` environment variable is set
 </Info>
 
+Set Perplexity API key in .env file:
+
 ```bash title=".env"
-# Set Perplexity API key in .env file
 PERPLEXITY_API_KEY=your_api_key_here
 ```
 
@@ -539,12 +560,26 @@ Benefits:
   </Accordion>
 
   <Accordion title="Other Common Issues">
-    - **LLM timeout errors**: Ensure Lemonade server is running with `--ctx-size 32768`
-    - **Import errors**: Install with `uv pip install -e ".[dev]"`
-    - **File not found**: Check working directory and file paths
-    - **Incomplete code generation**: Restart Lemonade server with larger context size
-    - **Pylint not found**: Ensure pylint is installed (`uv pip install pylint`)
-    - **Black not found**: Ensure black is installed (`uv pip install black`)
+    **LLM timeout errors**: Ensure Lemonade server is running with `--ctx-size 32768`
+
+    **Import errors**: Install with development dependencies:
+    ```bash
+    uv pip install -e ".[dev]"
+    ```
+
+    **File not found**: Check working directory and file paths
+
+    **Incomplete code generation**: Restart Lemonade server with larger context size
+
+    **Pylint not found**: Ensure pylint is installed:
+    ```bash
+    uv pip install pylint
+    ```
+
+    **Black not found**: Ensure black is installed:
+    ```bash
+    uv pip install black
+    ```
   </Accordion>
 </AccordionGroup>
 

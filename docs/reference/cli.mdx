@@ -3,6 +3,10 @@ title: CLI Reference
 description: Complete command-line interface reference for GAIA with examples and options
 ---
 
+<Info>
+  **Source Code:** [`src/gaia/cli.py`](https://github.com/amd/gaia/blob/main/src/gaia/cli.py)
+</Info>
+
 GAIA provides a comprehensive command-line interface (CLI) for interacting with AI models and agents. The CLI allows you to query models directly, manage chat sessions, and access various utilities without writing code.
 
 ## Platform Support
@@ -133,14 +137,15 @@ gaia chat
 gaia chat --query "What is machine learning?"
 ```
 
-```bash With Documents
-# Single document
+```bash Single Document
 gaia chat --index manual.pdf
+```
 
-# Multiple documents
+```bash Multiple Documents
 gaia chat --index doc1.pdf doc2.pdf doc3.pdf
+```
 
-# Index and query
+```bash Index and Query
 gaia chat --index report.pdf --query "Summarize the report"
 ```
 
@@ -187,16 +192,20 @@ gaia prompt "MESSAGE" [OPTIONS]
 
 **Examples:**
 
+Basic prompt:
 ```bash
-# Basic prompt
 gaia prompt "What is the weather like today?"
+```
 
-# Use different model with stats
+Use different model with stats:
+```bash
 gaia prompt "Create a poem about AI" \
   --model Qwen2.5-0.5B-Instruct-CPU \
   --stats
+```
 
-# Custom token limit
+Custom token limit:
+```bash
 gaia prompt "Write a story" \
   --model Qwen2.5-0.5B-Instruct-CPU \
   --max-tokens 1000
@@ -231,22 +240,28 @@ lemonade-server serve --ctx-size 32768
 
 **Quick Examples:**
 
+Routing detects "Express" and uses TypeScript:
 <CodeGroup>
 ```bash TypeScript/Express
-# Routing detects "Express" → TypeScript
 gaia code "Create a REST API with Express and SQLite for managing products"
 ```
+</CodeGroup>
 
+Routing detects "Django" and uses Python:
+<CodeGroup>
 ```bash Python/Django
-# Routing detects "Django" → Python
 gaia code "Create a Django REST API with authentication"
 ```
+</CodeGroup>
 
+Routing detects "React" and uses TypeScript frontend:
+<CodeGroup>
 ```bash React Frontend
-# Routing detects "React" → TypeScript frontend
 gaia code "Create a React dashboard with user management"
 ```
+</CodeGroup>
 
+<CodeGroup>
 ```bash Interactive Mode
 gaia code --interactive
 ```
@@ -275,14 +290,18 @@ gaia code "Create a REST API" --use-claude
 
 **Examples:**
 
+Interactive Blender mode:
 ```bash
-# Interactive Blender mode
 gaia blender --interactive
+```
 
-# Create specific objects
+Create specific objects:
+```bash
 gaia blender --query "Create a red cube and blue sphere arranged in a line"
+```
 
-# Run built-in examples
+Run built-in examples:
+```bash
 gaia blender --example 2
 ```
 
@@ -315,14 +334,18 @@ gaia talk [OPTIONS]
 
 **Examples:**
 
+Basic voice chat:
 ```bash
-# Basic voice chat
 gaia talk
+```
 
-# Voice + document Q&A
+Voice chat with document Q&A:
+```bash
 gaia talk --index manual.pdf
+```
 
-# Document Q&A, no TTS
+Document Q&A without TTS:
+```bash
 gaia talk -i guide.pdf --no-tts
 ```
 
@@ -338,14 +361,18 @@ gaia talk -i guide.pdf --no-tts
 
 ### Quick Start
 
+1. Start Lemonade with extended context:
 ```bash
-# 1. Start Lemonade with extended context
 lemonade-server serve --ctx-size 32768
+```
 
-# 2. Start GAIA API server
+2. Start GAIA API server:
+```bash
 gaia api start
+```
 
-# 3. Test the server
+3. Test the server:
+```bash
 curl http://localhost:8080/health
 ```
 
@@ -364,14 +391,19 @@ curl http://localhost:8080/health
     - `--debug` - Enable debug logging
 
     **Examples:**
+
+    Foreground:
     ```bash
-    # Foreground
     gaia api start
+    ```
 
-    # Background with debug
+    Background with debug:
+    ```bash
     gaia api start --background --debug
+    ```
 
-    # Custom host/port
+    Custom host/port:
+    ```bash
     gaia api start --host 0.0.0.0 --port 8888
     ```
   </Tab>
@@ -405,14 +437,18 @@ curl http://localhost:8080/health
 
 ### Quick Start
 
+Install MCP support:
 ```bash
-# Install MCP support
 uv pip install -e ".[mcp]"
+```
 
-# Start MCP bridge
+Start MCP bridge:
+```bash
 gaia mcp start
+```
 
-# Test basic functionality
+Test basic functionality:
+```bash
 gaia mcp test --query "Hello from GAIA MCP!"
 ```
 
@@ -456,20 +492,30 @@ chat, code, talk, rag, blender, jira, docker, vlm, minimal, mcp
 
 **Examples:**
 
+List all models:
 <CodeGroup>
-```bash List Models
-# List all models
+```bash List All Models
 gaia download --list
+```
+</CodeGroup>
 
-# List for specific agent
+List models for specific agent:
+<CodeGroup>
+```bash List Agent Models
 gaia download --list --agent chat
 ```
+</CodeGroup>
 
-```bash Download Models
-# Download all models
+Download all models:
+<CodeGroup>
+```bash Download All
 gaia download
+```
+</CodeGroup>
 
-# Download for specific agent
+Download for specific agent:
+<CodeGroup>
+```bash Download Agent Models
 gaia download --agent code
 ```
 </CodeGroup>
@@ -568,19 +614,33 @@ Use the `user.` prefix for custom models not in the official registry. Custom mo
 
 **Quick Examples:**
 
+Generate evaluation data:
 ```bash
-# Generate evaluation data
 gaia groundtruth -f ./data/document.html
+```
 
-# Run systematic experiments
+Create sample experiment configuration:
+```bash
 gaia batch-experiment --create-sample-config experiments.json
+```
+
+Run systematic experiments:
+```bash
 gaia batch-experiment -c experiments.json -i ./data -o ./results
+```
 
-# Evaluate and report
+Evaluate results:
+```bash
 gaia eval -f ./results/experiment.json
-gaia report -d ./eval_results
+```
 
-# Launch visualizer
+Generate report:
+```bash
+gaia report -d ./eval_results
+```
+
+Launch visualizer:
+```bash
 gaia visualize
 ```
 
@@ -609,16 +669,20 @@ gaia visualize [OPTIONS]
 
 **Examples:**
 
+Default settings:
 ```bash
-# Default settings
 gaia visualize
+```
 
-# Custom directories
+Custom directories:
+```bash
 gaia visualize \
   --experiments-dir ./my_experiments \
   --evaluations-dir ./my_evaluations
+```
 
-# Custom port, no browser
+Custom port, no browser:
+```bash
 gaia visualize --port 8080 --no-browser
 ```
 
@@ -667,14 +731,19 @@ gaia test --test-type TYPE [OPTIONS]
     - `--output-audio-file` - Output file path (default: output.wav)
 
     **Examples:**
+
+    Test preprocessing:
     ```bash
-    # Test preprocessing
     gaia test --test-type tts-preprocessing --test-text "Hello, world!"
+    ```
 
-    # Test streaming
+    Test streaming:
+    ```bash
     gaia test --test-type tts-streaming --test-text "Testing streaming"
+    ```
 
-    # Generate audio file
+    Generate audio file:
+    ```bash
     gaia test --test-type tts-audio-file \
       --test-text "Save this as audio" \
       --output-audio-file speech.wav
@@ -694,15 +763,20 @@ gaia test --test-type TYPE [OPTIONS]
     - `--whisper-model-size` - Whisper model size (default: base)
 
     **Examples:**
+
+    Test file transcription:
     ```bash
-    # Test file transcription
     gaia test --test-type asr-file-transcription \
       --input-audio-file ./data/audio/test.m4a
+    ```
 
-    # Test microphone (30 seconds)
+    Test microphone (30 seconds):
+    ```bash
     gaia test --test-type asr-microphone --recording-duration 30
+    ```
 
-    # List audio devices
+    List audio devices:
+    ```bash
     gaia test --test-type asr-list-audio-devices
     ```
   </Tab>
@@ -742,8 +816,8 @@ gaia kill --port PORT_NUMBER
 
 **Example:**
 
+Kill process on port 8000:
 ```bash
-# Kill process on port 8000
 gaia kill --port 8000
 ```
 

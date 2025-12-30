@@ -2,6 +2,10 @@
 title: "Docker Agent"
 ---
 
+<Info>
+  **Source Code:** [`src/gaia/agents/docker/agent.py`](https://github.com/amd/gaia/blob/main/src/gaia/agents/docker/agent.py) · [`src/gaia/apps/docker/app.py`](https://github.com/amd/gaia/blob/main/src/gaia/apps/docker/app.py)
+</Info>
+
 ## Overview
 
 The GAIA Docker Agent provides a natural language interface for containerizing applications. The agent analyzes your application structure, generates appropriate Dockerfiles, and provides guidance for building and running containers - all through conversational commands. No Docker expertise required.
@@ -36,22 +40,35 @@ The GAIA Docker Agent provides a natural language interface for containerizing a
 
 ### Verify Installation
 
+Check Docker is installed:
+
 ```bash
-# Check Docker is installed
 docker --version
+```
 
-# Check that GAIA is installed correctly
+Check that GAIA is installed correctly:
+
+```bash
 gaia --version
+```
 
-# Test Docker agent with a Flask application
+Test Docker agent with a Flask application:
+
+```bash
 gaia docker "create a Dockerfile for my app" -d ./app
 ```
 
 ### Basic Usage
 
+Generate Dockerfile for your application:
+
 ```bash
-# Generate Dockerfile for your application
 gaia docker "create a Dockerfile for my application" -d ./app
+```
+
+Create Dockerfile, build, and run the container:
+
+```bash
 gaia docker "create a Dockerfile for my application and then build and run the container" -d ./app
 ```
 
@@ -92,18 +109,31 @@ gaia docker "create a Dockerfile for my application and then build and run the c
 
 ### Natural Language Commands
 
+Just create a Dockerfile:
+
 ```bash
-# Just create a Dockerfile
 gaia docker "create a Dockerfile for my application" -d ./app
+```
+
+```bash
 gaia docker "create a Dockerfile for my application" -d "C:\Users\user\src\test\netscan"
+```
 
-# Framework-specific with requirements
+Framework-specific with requirements:
+
+```bash
 gaia docker "containerize this Flask app with gunicorn" -d ./flask-app
+```
 
-# Full workflow: create Dockerfile, build image, and run container
+Full workflow - create Dockerfile, build image, and run container:
+
+```bash
 gaia docker "create a Dockerfile for my application and then build and run the container" -d "C:\Users\user\src\test\netscan"
+```
 
-# Specify Python version
+Specify Python version:
+
+```bash
 gaia docker "create Dockerfile with Python 3.11" -d ./project
 ```
 
@@ -288,20 +318,25 @@ The `command` is a natural language instruction that tells the agent what Docker
 
 #### "Docker Not Installed"
 
-```bash
-# Check Docker installation
-docker --version
+Check Docker installation:
 
-# If not installed, download from docker.com
+```bash
+docker --version
 ```
+
+If not installed, download from [docker.com](https://www.docker.com/).
 
 #### "Lemonade Server Not Running"
 
-```bash
-# Start the Lemonade server
-lemonade-server serve
+Start the Lemonade server:
 
-# Verify it's running
+```bash
+lemonade-server serve
+```
+
+Verify it's running:
+
+```bash
 curl http://localhost:8000/health
 ```
 
@@ -315,32 +350,42 @@ If the agent doesn't generate a Dockerfile:
 
 #### "Model Not Found"
 
-```bash
-# Verify the Qwen3-Coder model is downloaded
-# Open Lemonade UI: http://localhost:8000
-# Check Models section for Qwen3-Coder-30B-A3B-Instruct-GGUF
-```
+Verify the Qwen3-Coder model is downloaded:
+
+1. Open Lemonade UI: http://localhost:8000
+2. Check Models section for Qwen3-Coder-30B-A3B-Instruct-GGUF
 
 #### MCP Integration Issues
 
-```bash
-# Check if MCP bridge is running
-gaia mcp status
+Check if MCP bridge is running:
 
-# Restart the bridge if needed
+```bash
+gaia mcp status
+```
+
+Restart the bridge if needed:
+
+```bash
 gaia mcp stop
+```
+
+```bash
 gaia mcp start
 ```
 
 ### Debug Mode
 
-For detailed troubleshooting, check the agent logs:
+For detailed troubleshooting, check the agent logs.
+
+Logs are written to gaia.log:
 
 ```bash
-# Logs are written to gaia.log
 tail -f gaia.log
+```
 
-# MCP logs (if using MCP bridge)
+MCP logs (if using MCP bridge):
+
+```bash
 tail -f gaia.mcp.log
 ```
 
@@ -373,6 +418,7 @@ print("✅ Success!" if result['status'] == 'success' else "❌ Failed")
 ```
 
 **MCP Test:**
+
 ```bash
 gaia mcp start && python tests/mcp/test_mcp_docker.py
 ```
