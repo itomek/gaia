@@ -5,7 +5,7 @@
 from typing import Iterator, Optional, Union
 
 from ..base_client import LLMClient
-from ..lemonade_client import LemonadeClient
+from ..lemonade_client import DEFAULT_MODEL_NAME, LemonadeClient
 
 
 class LemonadeProvider(LLMClient):
@@ -45,8 +45,11 @@ class LemonadeProvider(LLMClient):
         stream: bool = False,
         **kwargs,
     ) -> Union[str, Iterator[str]]:
+        # Use provided model, instance model, or default CPU model
+        effective_model = model or self._model or DEFAULT_MODEL_NAME
+
         response = self._backend.completions(
-            model=model or self._model, prompt=prompt, stream=stream, **kwargs
+            model=effective_model, prompt=prompt, stream=stream, **kwargs
         )
         if stream:
             return self._handle_stream(response)
@@ -59,8 +62,11 @@ class LemonadeProvider(LLMClient):
         stream: bool = False,
         **kwargs,
     ) -> Union[str, Iterator[str]]:
+        # Use provided model, instance model, or default CPU model
+        effective_model = model or self._model or DEFAULT_MODEL_NAME
+
         response = self._backend.chat_completions(
-            model=model or self._model, messages=messages, stream=stream, **kwargs
+            model=effective_model, messages=messages, stream=stream, **kwargs
         )
         if stream:
             return self._handle_stream(response)

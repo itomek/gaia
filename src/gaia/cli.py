@@ -400,7 +400,7 @@ class GaiaCliClient:
         self.show_stats = show_stats
 
         # Initialize LLM client for local inference
-        self.llm_client = create_client("lemonade")
+        self.llm_client = create_client("lemonade", model=model)
 
         self.log.debug("Gaia CLI client initialized.")
         self.log.debug(f"model: {self.model}\n max_tokens: {self.max_tokens}")
