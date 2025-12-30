@@ -3,6 +3,16 @@ title: "Tool Mixins"
 ---
 
 <Note>
+⚡ **You are viewing:** Quick Reference - Common mixin usage patterns
+
+**See also:** [17 Detailed Mixin Specifications](/spec/file-tools-mixin) (under Specifications → Tool Mixins)
+</Note>
+
+<Info>
+  **Source Code:** [`src/gaia/agents/mixins/`](https://github.com/amd/gaia/tree/main/src/gaia/agents/mixins/), [`src/gaia/agents/chat/tools/`](https://github.com/amd/gaia/tree/main/src/gaia/agents/chat/tools/)
+</Info>
+
+<Note>
 **Import:** `from gaia.agents.chat.tools.file_tools import FileToolsMixin`
 </Note>
 ---
@@ -11,7 +21,11 @@ title: "Tool Mixins"
 
 **Purpose:** Reusable tool sets that can be mixed into your agents.
 
+**Available Mixins:** For complete API specifications of all 17 mixins, see [Specifications → Tool Mixins](/spec/file-tools-mixin)
+
 ## 9.1 File Operations Mixin
+
+**Detailed Spec:** [FileToolsMixin](/spec/file-tools-mixin)
 
 ```python
 from gaia.agents.base.agent import Agent
@@ -39,6 +53,7 @@ result = agent.process_query("Read the config.json file")
 ## 9.2 RAG Tools Mixin
 
 **Import:** `from gaia.agents.chat.tools.rag_tools import RAGToolsMixin`
+**Detailed Spec:** [RAGToolsMixin](/spec/rag-tools-mixin)
 
 ```python
 from gaia.agents.base.agent import Agent
@@ -69,6 +84,7 @@ result = agent.process_query("What does the manual say about installation?")
 ## 9.3 Shell Commands Mixin
 
 **Import:** `from gaia.agents.chat.tools.shell_tools import ShellToolsMixin`
+**Detailed Spec:** [ShellToolsMixin](/spec/shell-tools-mixin)
 
 ```python
 from gaia.agents.base.agent import Agent
@@ -93,6 +109,7 @@ result = agent.process_query("List files in the current directory")
 ## 9.4 File Search Mixin
 
 **Import:** `from gaia.agents.tools.file_search import FileSearchToolsMixin`
+**Detailed Spec:** [FileSearchToolsMixin](/spec/file-search-mixin)
 
 ```python
 from gaia.agents.base.agent import Agent

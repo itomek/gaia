@@ -2,6 +2,10 @@
 title: "Evaluation Framework"
 ---
 
+<Info>
+  **Source Code:** [`src/gaia/eval/`](https://github.com/amd/gaia/tree/main/src/gaia/eval)
+</Info>
+
 <Badge text="development" color="orange" />
 
 ## Overview
@@ -95,11 +99,17 @@ Before using the evaluation framework, ensure you have completed the initial GAI
 
 ```bash
 uv pip install -e ".[eval]"
+```
 
-# Set up Claude API for synthetic data generation
+Set up Claude API for synthetic data generation:
+
+```bash
 export ANTHROPIC_API_KEY=your_key_here
+```
 
-# Optional: Start Lemonade for local LLM processing if not running
+Optional: Start Lemonade for local LLM processing if not running:
+
+```bash
 lemonade-server serve
 ```
 
@@ -110,6 +120,9 @@ lemonade-server serve
 
     ```bash
     node -v
+    ```
+
+    ```bash
     npm -v
     ```
 
@@ -122,12 +135,25 @@ lemonade-server serve
 
 **Try your first evaluation in 5 minutes with minimal commands:**
 
+Ultra-simplified workflow using all defaults:
+
 ```bash
-# Ultra-simplified workflow using all defaults
 gaia generate --meeting-transcript --meeting-types standup --count-per-type 1
+```
+
+```bash
 gaia groundtruth
+```
+
+```bash
 gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json
+```
+
+```bash
 gaia eval
+```
+
+```bash
 gaia visualize
 ```
 
@@ -166,27 +192,47 @@ Follow these complete workflows to reproduce evaluation experiments from start t
 
 **Complete example: Evaluate how well different models summarize meeting transcripts**
 
+Step 1: Generate synthetic meeting transcripts
+
 ```bash
-# Step 1: Generate synthetic meeting transcripts
 gaia generate --meeting-transcript -o ./output/test_data/meetings --meeting-types standup planning --count-per-type 2
+```
 
-# Step 2: Create evaluation standards (ground truth)
+Step 2: Create evaluation standards (ground truth)
+
+```bash
 gaia groundtruth -d ./output/test_data/meetings --use-case summarization -o ./output/groundtruth
+```
 
-# Step 3: Run experiments with multiple models
-# Note: Edit ./src/gaia/eval/configs/basic_summarization.json to customize models or create your own config
+Step 3: Run experiments with multiple models
+
+Note: Edit `./src/gaia/eval/configs/basic_summarization.json` to customize models or create your own config
+
+```bash
 gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/experiments
+```
 
-# Optional: If interrupted, resume (automatically skips completed experiments)
-# gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/experiments
+Optional: If interrupted, resume (automatically skips completed experiments)
 
-# Step 4: Evaluate results and calculate scores
+```bash
+gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/experiments
+```
+
+Step 4: Evaluate results and calculate scores
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
+```
 
-# Step 5: Generate human-readable report
+Step 5: Generate human-readable report
+
+```bash
 gaia report -d ./output/evaluations -o ./reports/meeting_summarization_report.md
+```
 
-# Step 6: Launch interactive visualizer for detailed analysis
+Step 6: Launch interactive visualizer for detailed analysis
+
+```bash
 gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output/evaluations
 ```
 
@@ -202,22 +248,39 @@ gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output
 
 **Complete example: Compare models on business email summarization**
 
+Step 1: Generate synthetic business emails
+
 ```bash
-# Step 1: Generate synthetic business emails
 gaia generate --email -o ./output/test_data/emails --email-types customer_support project_update meeting_request --count-per-type 2
+```
 
-# Step 2: Create evaluation standards
+Step 2: Create evaluation standards
+
+```bash
 gaia groundtruth -d ./output/test_data/emails --use-case email -o ./output/groundtruth
+```
 
-# Step 3: Run experiments
-# Note: Edit ./src/gaia/eval/configs/basic_summarization.json to customize models or create your own config
+Step 3: Run experiments
+
+Note: Edit `./src/gaia/eval/configs/basic_summarization.json` to customize models or create your own config
+
+```bash
 gaia batch-experiment -c ./src/gaia/eval/configs/basic_summarization.json -i ./output/groundtruth/consolidated_email_groundtruth.json -o ./output/experiments
+```
 
-# Step 4: Evaluate and report
+Step 4: Evaluate and report
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
-gaia report -d ./output/evaluations -o ./reports/email_summarization_report.md
+```
 
-# Step 5: View results interactively
+```bash
+gaia report -d ./output/evaluations -o ./reports/email_summarization_report.md
+```
+
+Step 5: View results interactively
+
+```bash
 gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output/evaluations
 ```
 
@@ -225,21 +288,37 @@ gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output
 
 **Complete example: Test question-answering capabilities on documents**
 
+Step 1: Create Q&A evaluation standards directly from existing PDF directory
+
+Important: Use `--num-samples 3` to match the `qa_config.num_qa_pairs: 3` in `basic_qa.json`
+
 ```bash
-# Step 1: Create Q&A evaluation standards directly from existing PDF directory
-# Important: Use --num-samples 3 to match the qa_config.num_qa_pairs: 3 in basic_qa.json
 gaia groundtruth -d ./data/pdf --use-case qa --num-samples 3 -o ./output/groundtruth
+```
 
-# Step 2: Run experiments (use basic_qa.json for Q&A experiments)
-# Note: Edit ./src/gaia/eval/configs/basic_qa.json to customize models or create your own config
+Step 2: Run experiments (use `basic_qa.json` for Q&A experiments)
+
+Note: Edit `./src/gaia/eval/configs/basic_qa.json` to customize models or create your own config
+
+```bash
 gaia batch-experiment -c ./src/gaia/eval/configs/basic_qa.json -i ./output/groundtruth/consolidated_qa_groundtruth.json -o ./output/experiments
+```
 
-# Step 3: Evaluate and report
+Step 3: Evaluate and report
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
-gaia report -d ./output/evaluations -o ./reports/document_qa_report.md
+```
 
-# Step 4: Analyze results
-# Note: Include test-data-dir and groundtruth-dir to view source PDFs and Q&A pairs
+```bash
+gaia report -d ./output/evaluations -o ./reports/document_qa_report.md
+```
+
+Step 4: Analyze results
+
+Note: Include `test-data-dir` and `groundtruth-dir` to view source PDFs and Q&A pairs
+
+```bash
 gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output/evaluations --test-data-dir ./data/pdf --groundtruth-dir ./output/groundtruth
 ```
 
@@ -247,19 +326,33 @@ gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output
 
 **Complete example: Test external models (OpenAI, etc.) that can't be integrated directly**
 
+Step 1: Generate test data and standards
+
 ```bash
-# Step 1: Generate test data and standards
 gaia generate --meeting-transcript -o ./output/test_data/meetings --meeting-types standup --count-per-type 2
+```
+
+```bash
 gaia groundtruth -d ./output/test_data/meetings --use-case summarization -o ./output/groundtruth
+```
 
-# Step 2: Create template for manual testing
+Step 2: Create template for manual testing
+
+```bash
 gaia create-template -d ./output/groundtruth --use-case summarization -o ./templates/
+```
 
-# Step 3: Manual step - Fill template with third-party responses
-# Edit ./templates/*.template.json - paste responses into "response" fields
+Step 3: Manual step - Fill template with third-party responses
 
-# Step 4: Evaluate completed template
+Edit `./templates/*.template.json` - paste responses into "response" fields
+
+Step 4: Evaluate completed template
+
+```bash
 gaia eval -d ./templates -o ./output/evaluations
+```
+
+```bash
 gaia report -d ./output/evaluations -o ./reports/third_party_report.md
 ```
 
@@ -279,26 +372,48 @@ gaia report -d ./output/evaluations -o ./reports/third_party_report.md
 The evaluation system supports **two different workflows** for handling groundtruth data:
 
 ### Method 1: Embedded Groundtruth (Recommended)
+
+Use groundtruth files as input to batch-experiment:
+
 ```bash
-# Use groundtruth files as input to batch-experiment
 gaia batch-experiment -i ./output/groundtruth/consolidated_*.json -o ./output/experiments
-gaia eval -d ./output/experiments -o ./output/evaluations  # No -g flag needed
 ```
+
+```bash
+gaia eval -d ./output/experiments -o ./output/evaluations
+```
+
+No `-g` flag needed.
+
 **Advantages:** Self-contained experiment files, no risk of missing groundtruth, simpler eval command
 
 ### Method 2: External Groundtruth
+
+Use test data as input to batch-experiment:
+
 ```bash
-# Use test data as input to batch-experiment  
 gaia batch-experiment -i ./output/test_data -o ./output/experiments
-gaia eval -d ./output/experiments -g ./output/groundtruth/consolidated_*.json -o ./output/evaluations  # -g flag required
 ```
+
+```bash
+gaia eval -d ./output/experiments -g ./output/groundtruth/consolidated_*.json -o ./output/evaluations
+```
+
+Note: `-g` flag required
+
 **Advantages:** Separate concerns, easier to swap different groundtruth files for comparison
 
 ### ⚠️ Important: Q&A RAG Use Cases
+
 **For Q&A and RAG evaluations, you MUST use Method 1 (Embedded Groundtruth):**
+
+Required for Q&A - groundtruth contains the input queries:
+
 ```bash
-# Required for Q&A - groundtruth contains the input queries
 gaia batch-experiment -i ./output/groundtruth/consolidated_qa_groundtruth.json -o ./output/experiments
+```
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
 ```
 
@@ -313,11 +428,16 @@ gaia eval -d ./output/experiments -o ./output/evaluations
 The evaluation system operates in two distinct modes depending on groundtruth availability:
 
 ### 🎯 Comparative Evaluation (Recommended)
+
 **When groundtruth data is available** (embedded or via `-g` flag):
 
+Example: Comparative evaluation with embedded groundtruth
+
 ```bash
-# Example: Comparative evaluation with embedded groundtruth
 gaia batch-experiment -i ./output/groundtruth/consolidated_*.json -o ./output/experiments
+```
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
 ```
 
@@ -336,13 +456,22 @@ gaia eval -d ./output/experiments -o ./output/evaluations
 - Topic **Coverage**: Are all discussed topics included vs reference?
 
 ### 🔍 Standalone Quality Assessment (Fallback)
+
 **When no groundtruth data is available**:
 
+Example: Standalone assessment (not recommended for production evaluation)
+
 ```bash
-# Example: Standalone assessment (not recommended for production evaluation)
-gaia batch-experiment -i ./output/test_data -o ./output/experiments  # No groundtruth embedded
-gaia eval -d ./output/experiments -o ./output/evaluations              # No -g flag provided
+gaia batch-experiment -i ./output/test_data -o ./output/experiments
 ```
+
+No groundtruth embedded
+
+```bash
+gaia eval -d ./output/experiments -o ./output/evaluations
+```
+
+No `-g` flag provided
 
 **What it does:**
 - **Analyzes** summary quality based on general best practices
@@ -394,8 +523,9 @@ Generate realistic test scenarios for evaluation purposes.
 
 #### Meeting Transcripts
 
+Generate meeting transcripts with full options:
+
 ```bash
-# Generate meeting transcripts with full options
 gaia generate --meeting-transcript -o ./output/test_data/meetings --meeting-types standup planning design_review --count-per-type 1 --target-tokens 1000
 ```
 
@@ -411,8 +541,9 @@ gaia generate --meeting-transcript -o ./output/test_data/meetings --meeting-type
 
 #### Business Emails
 
+Generate business emails with full options:
+
 ```bash
-# Generate business emails with full options
 gaia generate --email -o ./output/test_data/emails --email-types project_update meeting_request customer_support --count-per-type 1 --target-tokens 1000
 ```
 
@@ -430,16 +561,29 @@ gaia generate --email -o ./output/test_data/emails --email-types project_update 
 
 Transform synthetic data into evaluation standards.
 
+Create evaluation standards with all options:
+
 ```bash
-# Create evaluation standards with all options
 gaia groundtruth -d ./output/test_data -p "*.txt" --use-case summarization -o ./output/groundtruth
+```
+
+```bash
 gaia groundtruth -d ./output/test_data -p "*.pdf" --use-case qa -o ./output/groundtruth
+```
+
+```bash
 gaia groundtruth -d ./output/test_data -p "*.txt" --use-case email -o ./output/groundtruth
+```
 
-# Default behavior: skip files that already have ground truth generated
+Default behavior: skip files that already have ground truth generated
+
+```bash
 gaia groundtruth -d ./output/test_data -o ./output/groundtruth
+```
 
-# Force regeneration of ALL ground truth files (useful for testing prompt changes)
+Force regeneration of ALL ground truth files (useful for testing prompt changes):
+
+```bash
 gaia groundtruth -d ./output/test_data -o ./output/groundtruth --force
 ```
 
@@ -466,14 +610,18 @@ Ground truth generation automatically skips files that already have ground truth
 **Usage Scenarios:**
 
 **Resume Interrupted Ground Truth Generation:**
+
+Default behavior: automatically skip any files that already have ground truth
+
 ```bash
-# Default behavior: automatically skip any files that already have ground truth
 gaia groundtruth -d ./output/test_data -o ./output/groundtruth
 ```
 
 **Force Regeneration After Prompt Changes:**
+
+Force regeneration of ALL ground truth files (useful for testing new prompts):
+
 ```bash
-# Force regeneration of ALL ground truth files (useful for testing new prompts)
 gaia groundtruth -d ./output/test_data -o ./output/groundtruth --force
 ```
 
@@ -487,18 +635,31 @@ gaia groundtruth -d ./output/test_data -o ./output/groundtruth --force
 
 Run systematic model comparisons.
 
+Create and run batch experiments (can also use your own config, see `./src/gaia/eval/configs` for examples):
+
 ```bash
-# Create and run batch experiments, can also use your own config, see ./src/gaia/eval/configs for examples.
 gaia batch-experiment --create-sample-config experiment_config.json
+```
+
+```bash
 gaia batch-experiment -c experiment_config.json -i ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/experiments
+```
 
-# Alternative: Use test data directly (requires -g flag during eval)
-# gaia batch-experiment -c experiment_config.json -i ./output/test_data -o ./output/experiments
+Alternative: Use test data directly (requires `-g` flag during eval):
 
-# Default behavior: skip experiments that have already been generated 
+```bash
+gaia batch-experiment -c experiment_config.json -i ./output/test_data -o ./output/experiments
+```
+
+Default behavior: skip experiments that have already been generated
+
+```bash
 gaia batch-experiment -c experiment_config.json -i ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/experiments
+```
 
-# Force regeneration of ALL experiments (useful for testing configuration changes)
+Force regeneration of ALL experiments (useful for testing configuration changes):
+
+```bash
 gaia batch-experiment -c experiment_config.json -i ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/experiments --force
 ```
 
@@ -518,14 +679,20 @@ gaia batch-experiment -c experiment_config.json -i ./output/groundtruth/consolid
 - Logs which experiments were skipped vs newly generated
 
 **Example workflow:**
-```bash
-# Initial run (gets interrupted after 3 of 5 experiments)
-gaia batch-experiment -c config.json -i ./data -o ./output/experiments
 
-# Resume run (automatically skips existing 3, only runs remaining 2 experiments)
+Initial run (gets interrupted after 3 of 5 experiments):
+
+```bash
 gaia batch-experiment -c config.json -i ./data -o ./output/experiments
-# Output: "Completed 2 new experiments, skipped 3 existing"
 ```
+
+Resume run (automatically skips existing 3, only runs remaining 2 experiments):
+
+```bash
+gaia batch-experiment -c config.json -i ./data -o ./output/experiments
+```
+
+Output: "Completed 2 new experiments, skipped 3 existing"
 
 **Sample configuration structure:**
 ```json
@@ -549,9 +716,13 @@ gaia batch-experiment -c config.json -i ./data -o ./output/experiments
 
 Create standardized templates for external model evaluation.
 
+Generate templates for manual testing:
+
 ```bash
-# Generate templates for manual testing
 gaia create-template -d ./output/test_data --use-case summarization --format json -o ./templates/
+```
+
+```bash
 gaia create-template -d ./output/test_data --use-case qa --format csv -o ./templates/
 ```
 
@@ -561,24 +732,43 @@ gaia create-template -d ./output/test_data --use-case qa --format csv -o ./templ
 
 Analyze experiment results and generate reports.
 
+Evaluate results and generate reports:
+
 ```bash
-# Evaluate results and generate reports
 gaia eval -d ./output/experiments -o ./output/evaluations
+```
+
+```bash
 gaia report -d ./output/evaluations -o ./reports/report.md
+```
 
-# Default behavior: skip existing evaluations automatically
+Default behavior: skip existing evaluations automatically
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
+```
 
-# Force regeneration of ALL evaluations (overrides default skip behavior)
+Force regeneration of ALL evaluations (overrides default skip behavior):
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations --force
+```
 
-# Update consolidated report incrementally with new evaluations only
+Update consolidated report incrementally with new evaluations only:
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations --incremental-update
+```
 
-# Force regeneration of consolidated report (useful after manual changes)
+Force regeneration of consolidated report (useful after manual changes):
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations --regenerate-report
+```
 
-# Launch interactive web visualizer for comparing results
+Launch interactive web visualizer for comparing results:
+
+```bash
 gaia visualize --experiments-dir ./results --evaluations-dir ./output/evaluations
 ```
 
@@ -597,38 +787,54 @@ The evaluation system supports skipping existing evaluations and incremental rep
 **Usage Scenarios:**
 
 **Resume Interrupted Evaluation Run:**
+
+Default behavior: automatically skip any evaluations that already exist
+
 ```bash
-# Default behavior: automatically skip any evaluations that already exist
 gaia eval -d ./output/experiments -o ./output/evaluations
 ```
 
 **Add New Experiments Without Re-evaluating Existing Ones:**
+
+Default behavior: only evaluate new experiments, skip existing ones, and update consolidated report
+
 ```bash
-# Default behavior: only evaluate new experiments, skip existing ones, and update consolidated report
 gaia eval -d ./output/experiments -o ./output/evaluations --incremental-update
 ```
 
 **Force Re-evaluation of All Files:**
+
+Force regeneration of ALL evaluations (useful for testing configuration changes):
+
 ```bash
-# Force regeneration of ALL evaluations (useful for testing configuration changes)
 gaia eval -d ./output/experiments -o ./output/evaluations --force
 ```
 
 **Update Consolidated Report After Manual Changes:**
+
+Force regeneration of the entire consolidated report:
+
 ```bash
-# Force regeneration of the entire consolidated report
 gaia eval -d ./output/experiments -o ./output/evaluations --regenerate-report
 ```
 
 **Development/Testing Workflow:**
+
+Step 1: Run initial evaluation (skips existing files automatically)
+
 ```bash
-# Step 1: Run initial evaluation (skips existing files automatically)
 gaia eval -d ./output/experiments -o ./output/evaluations
+```
 
-# Step 2: Add new experiments and only evaluate those (default behavior)
+Step 2: Add new experiments and only evaluate those (default behavior)
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations
+```
 
-# Step 3: Update consolidated report with new results
+Step 3: Update consolidated report with new results
+
+```bash
 gaia eval -d ./output/experiments -o ./output/evaluations --incremental-update
 ```
 
@@ -672,20 +878,30 @@ The system maintains backwards compatibility while adding enhanced metadata trac
 The `gaia eval` command supports multiple input modes and groundtruth handling:
 
 **Single File Mode (`-f`):**
-```bash
-# Evaluate a single experiment file (with embedded groundtruth)
-gaia eval -f ./output/experiments/Claude-Sonnet-Basic-Summary.experiment.json -o ./output/evaluations
 
-# Or with external groundtruth
+Evaluate a single experiment file (with embedded groundtruth):
+
+```bash
+gaia eval -f ./output/experiments/Claude-Sonnet-Basic-Summary.experiment.json -o ./output/evaluations
+```
+
+Or with external groundtruth:
+
+```bash
 gaia eval -f ./output/experiments/Claude-Sonnet-Basic-Summary.experiment.json -g ./output/groundtruth/file.json -o ./output/evaluations
 ```
 
 **Directory Mode (`-d`):**
-```bash
-# Evaluate all JSON files in a directory (with embedded groundtruth)
-gaia eval -d ./output/experiments -o ./output/evaluations
 
-# Or with external groundtruth (if experiments were created from test_data)
+Evaluate all JSON files in a directory (with embedded groundtruth):
+
+```bash
+gaia eval -d ./output/experiments -o ./output/evaluations
+```
+
+Or with external groundtruth (if experiments were created from `test_data`):
+
+```bash
 gaia eval -d ./output/experiments -g ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/evaluations
 ```
 
@@ -694,12 +910,18 @@ gaia eval -d ./output/experiments -g ./output/groundtruth/consolidated_summariza
 - **With `-g` flag**: Uses external groundtruth file (when batch-experiment input was test_data files)
 
 **Alternative Workflow - External Groundtruth:**
-You can also use external groundtruth files directly with the eval command:
-```bash
-# Generate experiments from test data (no embedded groundtruth)
-gaia batch-experiment -c config.json -i ./output/test_data -o ./output/experiments
 
-# Evaluate using external groundtruth file
+You can also use external groundtruth files directly with the eval command.
+
+Generate experiments from test data (no embedded groundtruth):
+
+```bash
+gaia batch-experiment -c config.json -i ./output/test_data -o ./output/experiments
+```
+
+Evaluate using external groundtruth file:
+
+```bash
 gaia eval -d ./output/experiments -g ./output/groundtruth/consolidated_summarization_groundtruth.json -o ./output/evaluations
 ```
 
@@ -726,14 +948,21 @@ The visualizer provides a user-friendly interface to:
 
 ### Launch the Visualizer
 
+Launch with default settings (looks for `./output/experiments`, `./output/evaluations`, `./output/test_data`, and `./output/groundtruth` directories):
+
 ```bash
-# Launch with default settings (looks for ./output/experiments, ./output/evaluations, ./output/test_data, and ./output/groundtruth directories)
 gaia visualize
+```
 
-# Specify custom data directories
+Specify custom data directories:
+
+```bash
 gaia visualize --experiments-dir ./my_results --evaluations-dir ./my_evaluations --test-data-dir ./my_test_data --groundtruth-dir ./my_groundtruth
+```
 
-# Launch on different port or host
+Launch on different port or host:
+
+```bash
 gaia visualize --port 8080 --host 0.0.0.0 --no-browser
 ```
 
@@ -759,10 +988,11 @@ gaia visualize --port 8080 --host 0.0.0.0 --no-browser
 
 ### Integrated Workflow
 
-The visualizer integrates seamlessly with the evaluation pipeline. After running any of the Step-by-Step Workflows above, simply launch the visualizer to explore your results interactively:
+The visualizer integrates seamlessly with the evaluation pipeline. After running any of the Step-by-Step Workflows above, simply launch the visualizer to explore your results interactively.
+
+Launch visualizer with all data directories:
 
 ```bash
-# Launch visualizer with all data directories
 gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output/evaluations --test-data-dir ./output/test_data --groundtruth-dir ./output/groundtruth
 ```
 
@@ -792,11 +1022,16 @@ The evaluation framework supports **combined prompt** as an optional optimizatio
 - **⚠️ Model Limitations**: Smaller LLMs (e.g., less than 3B parameters) may struggle with complex combined prompts, leading to incomplete outputs or format errors
 
 To enable combined prompt (for cost/speed optimization):
-```bash
-# CLI: Use --combined-prompt flag to enable optimization
-gaia summarize -i meeting.txt --styles all --combined-prompt
 
-# Config: Set "combined_prompt": true in parameters to enable
+CLI: Use `--combined-prompt` flag to enable optimization
+
+```bash
+gaia summarize -i meeting.txt --styles all --combined-prompt
+```
+
+Config: Set `"combined_prompt": true` in parameters to enable
+
+```json
 {
   "parameters": {
     "combined_prompt": true
@@ -918,30 +1153,46 @@ If your Q&A batch-experiment fails with "No queries found" or similar errors:
 - 🔍 **Why**: Q&A groundtruth contains the specific questions models need to answer consistently
 
 **Dependency Compatibility Issues:**
+
 If you encounter numpy/pandas/sklearn import errors after installation:
 - ❓ **Symptoms**: `ValueError: numpy.dtype size changed` or `ImportError: cannot import name 'ComplexWarning'`
 - ✅ **Fix**: Reinstall dependencies to rebuild against current numpy version:
+
   ```bash
   pip uninstall -y numpy pandas scikit-learn
+  ```
+
+  ```bash
   uv pip install -e ".[eval]"
   ```
+
 - 🔍 **Why**: Binary incompatibility between numpy 2.x and older pandas/sklearn versions
 
 **API Key Issues:**
-```bash
-# Verify API key is set
-echo $ANTHROPIC_API_KEY
 
-# Test API connectivity
+Verify API key is set:
+
+```bash
+echo $ANTHROPIC_API_KEY
+```
+
+Test API connectivity:
+
+```bash
 gaia generate --meeting-transcript -o ./test --count-per-type 1
 ```
 
 **Lemonade Server Connection:**
-```bash
-# Check if server is running
-curl http://localhost:8000/api/v1/health
 
-# Start server if needed
+Check if server is running:
+
+```bash
+curl http://localhost:8000/api/v1/health
+```
+
+Start server if needed:
+
+```bash
 lemonade-server serve
 ```
 
@@ -985,12 +1236,14 @@ The system tracks inference costs with distinction between cloud and local model
 **Accessing Timing Data:**
 
 1. **Via Webapp Visualizer** (Recommended):
+
 ```bash
 gaia visualize --experiments-dir ./output/experiments --evaluations-dir ./output/evaluations
 ```
+
 The webapp displays:
 - **Inference Type**: Clear indicators for Cloud (☁️) vs Local (🖥️) models
-- **Cost Information**: 
+- **Cost Information**:
   - Cloud models show actual costs with breakdown
   - Local models show "FREE" with celebratory banner
 - **Timing Metrics**:
@@ -999,14 +1252,22 @@ The webapp displays:
   - Min/Max/Average breakdowns for each processing phase
 
 2. **Via JSON Files**:
+
+View timing in experiment files:
+
 ```bash
-# View timing in experiment files
 cat ./output/experiments/[filename].experiment.json | jq '.metadata.timing'
+```
 
-# View timing in evaluation files
+View timing in evaluation files:
+
+```bash
 cat ./output/evaluations/[filename].eval.json | jq '.timing'
+```
 
-# Check consolidated report timing
+Check consolidated report timing:
+
+```bash
 cat ./output/experiments/consolidated_experiments_report.json | jq '.metadata.total_execution_time_seconds'
 ```
 
