@@ -33,7 +33,7 @@ def create_client(
         The design in using these flags is to maintain backward compatibility
         while allowing explicit provider selection. If both use_claude and
         use_openai are False and provider is not specified, the default
-        provider "lemonade" is used. This was deemed better than updating all 
+        provider "lemonade" is used. This was deemed better than updating all
         existing callers with conditional logic and multiple `create_client` calls.
 
     Returns:

@@ -19,7 +19,8 @@ class ClaudeProvider(LLMClient):
         self,
         api_key: Optional[str] = None,
         model: str = "claude-3-5-sonnet-20241022",
-        **kwargs,
+        system_prompt: Optional[str] = None,
+        **_kwargs,
     ):
         if anthropic is None:
             raise ImportError(
@@ -29,6 +30,7 @@ class ClaudeProvider(LLMClient):
 
         self._client = anthropic.Anthropic(api_key=api_key)
         self._model = model
+        self._system_prompt = system_prompt
 
     @property
     def provider_name(self) -> str:
@@ -55,6 +57,12 @@ class ClaudeProvider(LLMClient):
         stream: bool = False,
         **kwargs,
     ) -> Union[str, Iterator[str]]:
+        # Prepend system prompt if set
+        if self._system_prompt:
+            messages = [{"role": "system", "content": self._system_prompt}] + list(
+                messages
+            )
+
         response = self._client.messages.create(
             model=model or self._model, messages=messages, stream=stream, **kwargs
         )

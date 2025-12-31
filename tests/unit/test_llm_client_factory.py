@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: MIT
 """TDD tests for LLM client factory - write BEFORE implementation."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
+import pytest
 
 # =============================================================================
 # Import Tests (will fail until modules exist)
@@ -18,8 +18,9 @@ class TestImports:
         assert callable(create_client)
 
     def test_can_import_llm_client_abc(self):
-        from gaia.llm import LLMClient
         from abc import ABC
+
+        from gaia.llm import LLMClient
 
         assert issubclass(LLMClient, ABC)
 
@@ -85,7 +86,7 @@ class TestNotSupportedError:
 class TestClaudeNotSupported:
     def test_claude_embed_raises_not_supported(self):
         with patch("gaia.llm.providers.claude.anthropic"):
-            from gaia.llm import create_client, NotSupportedError
+            from gaia.llm import NotSupportedError, create_client
 
             client = create_client("claude", api_key="test")
 
@@ -96,7 +97,7 @@ class TestClaudeNotSupported:
 
     def test_claude_load_model_raises_not_supported(self):
         with patch("gaia.llm.providers.claude.anthropic"):
-            from gaia.llm import create_client, NotSupportedError
+            from gaia.llm import NotSupportedError, create_client
 
             client = create_client("claude", api_key="test")
 
@@ -107,7 +108,7 @@ class TestClaudeNotSupported:
 class TestOpenAINotSupported:
     def test_openai_vision_raises_not_supported(self):
         with patch("openai.OpenAI"):
-            from gaia.llm import create_client, NotSupportedError
+            from gaia.llm import NotSupportedError, create_client
 
             client = create_client("openai", api_key="test")
 

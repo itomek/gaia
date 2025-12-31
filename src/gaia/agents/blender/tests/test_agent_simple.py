@@ -7,8 +7,9 @@ import logging
 import pytest
 
 from gaia.agents.blender.agent_simple import BlenderAgentSimple
-from gaia.agents.blender.mcp.mcp_client import MCPClient
+from gaia.mcp.blender_mcp_client import MCPClient
 from gaia.llm import create_client
+from gaia.llm.base_client import LLMClient
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -35,7 +36,6 @@ For testing purposes:
 """
     # Using local LLM for faster testing
     return create_client("lemonade")
-    # Note: system_prompt handling may need to be added to provider implementations if needed
 
 
 @pytest.fixture
@@ -167,8 +167,8 @@ def test_agent_initialization():
     assert isinstance(agent.mcp, MCPClient)
 
     # Verify default system prompt is set
-    logger.debug(f"System prompt: {agent.llm.system_prompt}")
-    assert agent.llm.system_prompt == agent.SYSTEM_PROMPT
+    logger.debug(f"System prompt: {agent.llm._system_prompt}")
+    assert agent.llm._system_prompt == agent.SYSTEM_PROMPT
 
 
 if __name__ == "__main__":

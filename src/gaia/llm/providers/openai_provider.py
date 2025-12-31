@@ -14,12 +14,14 @@ class OpenAIProvider(LLMClient):
         self,
         api_key: Optional[str] = None,
         model: str = "gpt-4o",
-        **kwargs,
+        system_prompt: Optional[str] = None,
+        **_kwargs,
     ):
         import openai
 
         self._client = openai.OpenAI(api_key=api_key)
         self._model = model
+        self._system_prompt = system_prompt
 
     @property
     def provider_name(self) -> str:
@@ -47,6 +49,12 @@ class OpenAIProvider(LLMClient):
         stream: bool = False,
         **kwargs,
     ) -> Union[str, Iterator[str]]:
+        # Prepend system prompt if set
+        if self._system_prompt:
+            messages = [{"role": "system", "content": self._system_prompt}] + list(
+                messages
+            )
+
         response = self._client.chat.completions.create(
             model=model or self._model, messages=messages, stream=stream, **kwargs
         )
@@ -54,10 +62,10 @@ class OpenAIProvider(LLMClient):
             return self._handle_stream(response)
         return response.choices[0].message.content
 
-    def embed(self, texts: list[str], model: str = "text-embedding-3-small", **kwargs) -> list[list[float]]:
-        response = self._client.embeddings.create(
-            model=model, input=texts, **kwargs
-        )
+    def embed(
+        self, texts: list[str], model: str = "text-embedding-3-small", **kwargs
+    ) -> list[list[float]]:
+        response = self._client.embeddings.create(model=model, input=texts, **kwargs)
         return [item.embedding for item in response.data]
 
     # vision() inherited from ABC - raises NotSupportedError

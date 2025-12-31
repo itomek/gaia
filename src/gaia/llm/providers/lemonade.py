@@ -17,6 +17,7 @@ class LemonadeProvider(LLMClient):
         base_url: Optional[str] = None,
         host: Optional[str] = None,
         port: Optional[int] = None,
+        system_prompt: Optional[str] = None,
         **kwargs,
     ):
         # Build kwargs for LemonadeClient, only including non-None values
@@ -33,6 +34,7 @@ class LemonadeProvider(LLMClient):
 
         self._backend = LemonadeClient(**backend_kwargs)
         self._model = model
+        self._system_prompt = system_prompt
 
     @property
     def provider_name(self) -> str:
@@ -67,6 +69,12 @@ class LemonadeProvider(LLMClient):
     ) -> Union[str, Iterator[str]]:
         # Use provided model, instance model, or default CPU model
         effective_model = model or self._model or DEFAULT_MODEL_NAME
+
+        # Prepend system prompt if set
+        if self._system_prompt:
+            messages = [{"role": "system", "content": self._system_prompt}] + list(
+                messages
+            )
 
         # Default to low temperature for deterministic responses (matches old LLMClient behavior)
         kwargs.setdefault("temperature", 0.1)

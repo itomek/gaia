@@ -2049,7 +2049,9 @@ class LemonadeClient:
 
             # Prompt user for confirmation (if prompt=True)
             if prompt:
-                if not _prompt_user_for_download(model_name, size_gb, estimated_minutes):
+                if not _prompt_user_for_download(
+                    model_name, size_gb, estimated_minutes
+                ):
                     raise ModelDownloadCancelledError(
                         f"User declined download of {model_name}"
                     )

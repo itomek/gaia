@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 """Unit tests for LemonadeClient model loading functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
+
 from gaia.llm.lemonade_client import LemonadeClient, LemonadeStatus
 
 
@@ -101,7 +101,7 @@ class TestStreamCompletionsModelLoading:
         mock_openai_instance.completions.create.return_value = iter([mock_chunk])
 
         # Execute - consume the generator
-        result = list(
+        list(
             client._stream_completions_with_openai(
                 model="test-model",
                 prompt="test prompt",
@@ -149,7 +149,7 @@ class TestStreamChatCompletionsModelLoading:
         mock_openai_instance.chat.completions.create.return_value = iter([mock_chunk])
 
         # Execute - consume the generator
-        result = list(
+        list(
             client._stream_chat_completions_with_openai(
                 model="test-model",
                 messages=[{"role": "user", "content": "test"}],
@@ -224,7 +224,7 @@ class TestModelLoadingIntegration:
         mock_openai_instance.completions.create.return_value = iter([mock_chunk])
 
         # Execute - consume the generator
-        result = list(
+        list(
             client._stream_completions_with_openai(
                 model="new-model",
                 prompt="test",
@@ -266,7 +266,7 @@ class TestModelLoadingIntegration:
         mock_openai_instance.completions.create.return_value = iter([mock_chunk])
 
         # Execute - consume the generator
-        result = list(
+        list(
             client._stream_completions_with_openai(
                 model="existing-model",
                 prompt="test",

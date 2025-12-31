@@ -42,7 +42,7 @@ class AudioClient:
 
         # Initialize LLM client - factory auto-detects provider from flags
         self.llm_client = create_client(use_claude=use_claude, use_openai=use_chatgpt)
-        # Note: system_prompt handling may need to be added to provider implementations if needed
+        self.system_prompt = system_prompt  # Store for potential future use
 
         self.log.info("Audio client initialized.")
 

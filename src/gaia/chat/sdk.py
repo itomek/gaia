@@ -91,7 +91,11 @@ class ChatSDK:
         self.llm_client = create_client(
             use_claude=self.config.use_claude,
             use_openai=self.config.use_chatgpt,
-            model=self.config.claude_model if self.config.use_claude else self.config.model,
+            model=(
+                self.config.claude_model
+                if self.config.use_claude
+                else self.config.model
+            ),
             base_url=self.config.base_url,
         )
 

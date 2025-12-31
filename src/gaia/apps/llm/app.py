@@ -29,7 +29,7 @@ class LlmApp:
         """
         self.log = get_logger(__name__)
         self.client = create_client("lemonade", base_url=base_url)
-        # Note: system_prompt handling may need to be added to provider implementations if needed
+        self.system_prompt = system_prompt  # Store for potential future use
         self.log.debug("LLM app initialized")
 
     def query(
