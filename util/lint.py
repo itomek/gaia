@@ -277,7 +277,6 @@ def check_imports() -> CheckResult:
     imports = [
         ("gaia.cli", "CLI module"),
         ("gaia.chat.sdk", "Chat SDK"),
-        ("gaia.llm.llm_client", "LLM client"),
         ("gaia.agents.base.agent", "Base agent"),
     ]
 

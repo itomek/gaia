@@ -7,9 +7,9 @@ import logging
 import pytest
 
 from gaia.agents.blender.agent_simple import BlenderAgentSimple
-from gaia.mcp.blender_mcp_client import MCPClient
 from gaia.llm import create_client
 from gaia.llm.base_client import LLMClient
+from gaia.mcp.blender_mcp_client import MCPClient
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
