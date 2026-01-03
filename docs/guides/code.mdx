@@ -10,7 +10,7 @@ description: "AI-powered full-stack Next.js application generation with TypeScri
 <Badge text="development" color="orange" />
 
 <Note>
-  The Code Agent now focuses on generating full-stack TypeScript web applications (Next.js 15 + Prisma + Tailwind). Python code generation is no longer supported.
+  The Code Agent now focuses on generating full-stack TypeScript web applications (Next.js + Prisma + Tailwind). Python code generation is no longer supported.
 </Note>
 
 <Info>
@@ -19,11 +19,15 @@ description: "AI-powered full-stack Next.js application generation with TypeScri
 
 The GAIA Code Agent turns a natural-language prompt into a working Next.js application. It designs the data model, builds Prisma schemas, generates REST API routes with Zod validation, creates React pages, applies Tailwind styling, validates TypeScript, and iterates until the app builds successfully.
 
+<Note>
+  End-to-end generation and auto-debugging for a full-stack app usually takes 10–20 minutes. Timing depends on how much context is created and how many debugging loops are needed. We prioritize output quality while continuously improving speed, and contributions that enhance either are welcome in the [GAIA repository](https://github.com/amd/gaia).
+</Note>
+
 ## Key Features
 
 <CardGroup cols={2}>
   <Card title="Full-Stack Generation" icon="robot">
-    Next.js 15 apps with API routes, React pages, and Tailwind styling
+    Next.js apps with API routes, React pages, and Tailwind styling
   </Card>
 
   <Card title="Prisma Data Modeling" icon="database">
@@ -49,9 +53,24 @@ The GAIA Code Agent turns a natural-language prompt into a working Next.js appli
 
 ## Quick Start
 
+**Prerequisite:** Install Node.js v20.19.x
+- Download from [nodejs.org](https://nodejs.org/en/download) (Windows Installer for v20.x LTS)
+- Verify installation: `node --version` (should show v20.19.x)
+- Node.js is required to build and run the web application that the GAIA Code Agent generates.
+
 <Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/amd/gaia.git
+    cd gaia
+    ```
+  </Step>
+
   <Step title="Install development dependencies">
     ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    uv venv .venv --python 3.12
+    source .venv/bin/activate
     uv pip install -e ".[dev]"
     ```
   </Step>
@@ -88,13 +107,13 @@ The GAIA Code Agent turns a natural-language prompt into a working Next.js appli
 
   <Tab title="Restaurant Reviews">
     ```bash
-    gaia code "Build me a restaurant rating application. I want to be able to put the location of the restaurant, the food that I ate, and my review"
+    gaia code "Build me a restaurant rating application in nextjs. I want to be able to put the location of the restaurant, the food that I ate, and my review"
     ```
   </Tab>
 
   <Tab title="AI Tool Leaderboard">
     ```bash
-    gaia code "Build me an AI tool rating app in nextjs that scores speed and quality out of 10, shows a leaderboard, and captures a description"
+    gaia code "Build me an AI tool rater in nextjs where I can give the name of the AI programming tool, give it a score out of 10 for speed and quality in a text box, as well as provide a description. Show a little leaderboard that will show the highest performing to lowest performing tools by averaging those scores."
     ```
   </Tab>
 
@@ -106,23 +125,15 @@ The GAIA Code Agent turns a natural-language prompt into a working Next.js appli
 
   <Tab title="Interactive Mode">
     ```bash
-    gaia code --interactive "Create a movie tracker with title, genre, date watched, and score out of 10"
-    ```
-  </Tab>
-
-  <Tab title="Cloud LLMs">
-    ```bash
-    gaia code "Create a task tracker with categories and priority levels" --use-claude
-    ```
-    ```bash
-    gaia code "Create a task tracker with categories and priority levels" --use-chatgpt
+    gaia code --interactive
+    # then type your prompt when prompted
     ```
   </Tab>
 </Tabs>
 
 ## Next.js Full-Stack App Generation
 
-The Code Agent outputs a complete Next.js 15 project with Prisma, Zod, and Tailwind baked in.
+The Code Agent outputs a complete Next.js project with Prisma, Zod, and Tailwind baked in.
 
 ```
 your-app/
@@ -150,7 +161,7 @@ your-app/
 ```
 
 **Stack defaults:**
-- Next.js 15 with the App Router
+- Next.js with the App Router
 - TypeScript + strict typing
 - Prisma ORM with SQLite
 - REST API routes validated with Zod
@@ -161,56 +172,28 @@ your-app/
 <CardGroup cols={2}>
   <Card title="Debug Logging" icon="bug">
     ```bash
-    gaia code "Create app" --debug
+    gaia code "Create a todo tracking app in nextjs" --debug
     ```
     See internal decision logs
   </Card>
 
-  <Card title="Show Prompts" icon="eye">
-    ```bash
-    gaia code "Create app" --show-prompts
-    ```
-    Display prompts sent to LLM
-  </Card>
-
   <Card title="JSON Trace" icon="file-code">
     ```bash
-    gaia code "Create app" --trace
+    gaia code "Create a todo tracking app in nextjs" --trace
     ```
     Save detailed execution trace
   </Card>
 
-  <Card title="Silent Mode" icon="volume-xmark">
-    ```bash
-    gaia code "Create app" --silent
-    ```
-    JSON output only (for automation)
-  </Card>
-
   <Card title="Step-Through" icon="forward-step">
     ```bash
-    gaia code "Create app" --step-through
+    gaia code "Create a todo tracking app in nextjs" --step-through
     ```
     Pause at each agent step
   </Card>
 
-  <Card title="Max Steps Control" icon="gauge-high">
-    ```bash
-    gaia code "Create app" --max-steps 150
-    ```
-    Override default maximum steps
-  </Card>
-
-  <Card title="Performance Stats" icon="chart-line">
-    ```bash
-    gaia code "Create app" --show-stats
-    ```
-    Display LLM performance metrics
-  </Card>
-
   <Card title="Full Debug" icon="magnifying-glass-chart">
     ```bash
-    gaia code "Create app" --debug --show-prompts --trace
+    gaia code "Create a todo tracking app in nextjs" --debug --trace
     ```
     Maximum debugging information
   </Card>
@@ -236,44 +219,6 @@ The `--trace` flag saves a complete trace with detailed information:
   "total_output_tokens": 8000,
   "output_file": "/absolute/path/to/output.json"
 }
-```
-
-## Advanced Application Examples
-
-```bash
-# HR system MVP
-gaia code "Build an HRMS app in nextjs with employees, departments, and leave requests that can be approved or rejected"
-
-# Inventory tracker
-gaia code "Create an inventory tracker in nextjs with products, stock counts, and reorder thresholds"
-
-# CRM starter
-gaia code "Create a simple CRM in nextjs with contacts, companies, and notes"
-```
-
-<Accordion title="What Gets Generated">
-  - Prisma schema with entities, IDs, timestamps, and relations when implied
-  - API routes for CRUD with Zod validation
-  - React pages for list, create, and detail flows
-  - Tailwind styling for layouts, forms, and state handling
-  - TypeScript validation and Next.js build with auto-fix loop
-</Accordion>
-
-<Warning>
-  Generated apps are starting points. Review logic, add auth/authorization, and harden edge cases before production use.
-</Warning>
-
-## Testing
-
-Run targeted checks for the TypeScript and Next.js toolchain:
-```bash
-python -m pytest tests/test_typescript_tools.py -v
-python -m pytest tests/test_checklist_orchestration.py -m "not slow and not integration" -v
-```
-
-Full suite (slower):
-```bash
-python -m pytest -m "not slow and not integration"
 ```
 
 ## API & VSCode Integration
@@ -318,14 +263,11 @@ python -m pytest -m "not slow and not integration"
 ### API Highlights
 
 - **OpenAI Compatible**: Works with OpenAI clients and compatible tooling
-- **Workspace Awareness**: Uses your current repo as context
 - **Streaming Support**: Real-time updates while generating
 - **Multi-Turn**: Maintain context across requests
 
 <CardGroup cols={2}>
-  <Card title="VSCode Integration Guide" icon="code" href="/integrations/vscode">
-    IDE setup for calling `gaia-code`
-  </Card>
+  <Card title="VSCode Integration Guide" icon="code" href="/integrations/vscode" />
 
   <Card title="API Server Documentation" icon="server" href="/reference/api">
     REST examples and usage
@@ -363,38 +305,6 @@ python -m pytest -m "not slow and not integration"
     Apply targeted fixes and re-run validation/build until clean
   </Step>
 </Steps>
-
-<Note>
-  Success depends on task complexity and LLM context. Review the generated app before shipping.
-</Note>
-
-## File Management
-
-<CardGroup cols={2}>
-  <Card title="Data Model" icon="database">
-    `prisma/schema.prisma`
-  </Card>
-
-  <Card title="API Routes" icon="network-wired">
-    `src/app/api/[resource]/route.ts` and `src/app/api/[resource]/[id]/route.ts`
-  </Card>
-
-  <Card title="UI Pages" icon="desktop">
-    `src/app/[resource]/page.tsx`, `src/app/[resource]/new/page.tsx`, `src/app/[resource]/[id]/page.tsx`
-  </Card>
-
-  <Card title="Prisma Client" icon="plug">
-    `src/lib/prisma.ts`
-  </Card>
-
-  <Card title="Styling" icon="palette">
-    `src/app/globals.css` and `tailwind.config.ts`
-  </Card>
-
-  <Card title="Config" icon="gear">
-    `tsconfig.json`, `next.config.js`, `package.json`
-  </Card>
-</CardGroup>
 
 ## Available Tools
 
@@ -453,7 +363,12 @@ The agent can optionally use web search (Perplexity) when `PERPLEXITY_API_KEY` i
     - Ensure dependencies are installed: `npm install`
     - Regenerate Prisma client: `npx prisma generate`
     - Push schema: `npx prisma db push`
-    - Re-run the agent with `--debug --show-prompts` to inspect fixes
+    - Re-run the agent with `--debug --trace` to inspect fixes
+  </Accordion>
+
+  <Accordion title="Agent gets stuck on a simple bug">
+    - Occasionally the agent can loop on a minor issue; try rerunning the command
+    - If it persists, update the prompt to call out the failing component or file
   </Accordion>
 
   <Accordion title="Prisma client issues">
@@ -507,9 +422,7 @@ Use the existing launch configurations to step through the agent when it generat
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="VSCode Integration" icon="code" href="/integrations/vscode">
-    Use Code Agent directly in VSCode
-  </Card>
+  <Card title="VSCode Integration" icon="code" href="/integrations/vscode" />
 
   <Card title="API Server" icon="server" href="/reference/api">
     Integrate via OpenAI-compatible API
