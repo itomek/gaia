@@ -968,53 +968,69 @@ class MedicalIntakeAgent(Agent, DatabaseMixin, FileWatcherMixin):
         and text extraction. This dramatically improves processing speed for
         high-resolution scans and photos.
 
+        Images are padded to square dimensions to avoid a Vulkan backend bug
+        in llama.cpp where the UPSCALE operator is unsupported for certain
+        non-square aspect ratios (particularly landscape orientations).
+
         Args:
             image_bytes: Raw image bytes (PNG, JPEG, etc.)
             max_dimension: Maximum width or height (default: 1024px)
             jpeg_quality: JPEG compression quality 1-100 (default: 85)
 
         Returns:
-            Optimized image bytes (JPEG format for smaller size)
+            Optimized image bytes (JPEG format, square dimensions)
         """
         import io
 
         try:
-            from PIL import Image
+            from PIL import Image, ImageOps
 
             # Load image from bytes
             img = Image.open(io.BytesIO(image_bytes))
+
+            # Apply EXIF orientation - phone photos are often stored landscape
+            # but have EXIF metadata indicating they should be displayed as portrait
+            img = ImageOps.exif_transpose(img)
+
             original_width, original_height = img.size
             original_size_kb = len(image_bytes) / 1024
 
-            # Check if resizing is needed
-            if original_width <= max_dimension and original_height <= max_dimension:
-                # Image is small enough, but still convert to JPEG for consistency
-                if img.mode in ("RGBA", "P"):
-                    # Convert RGBA/palette to RGB for JPEG
-                    img = img.convert("RGB")
-
-                output = io.BytesIO()
-                img.save(output, format="JPEG", quality=jpeg_quality, optimize=True)
-                optimized_bytes = output.getvalue()
-                optimized_size_kb = len(optimized_bytes) / 1024
-
-                self.console.print_info(
-                    f"Image: {original_width}x{original_height} "
-                    f"({original_size_kb:.0f}KB → {optimized_size_kb:.0f}KB)"
-                )
-                return optimized_bytes
-
-            # Calculate new dimensions maintaining aspect ratio
-            scale = min(max_dimension / original_width, max_dimension / original_height)
-            new_width = int(original_width * scale)
-            new_height = int(original_height * scale)
-
-            # Resize with high-quality LANCZOS filter
-            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-            # Convert to RGB if needed (for JPEG output)
+            # Convert to RGB early if needed (for JPEG output)
             if img.mode in ("RGBA", "P"):
                 img = img.convert("RGB")
+
+            # Check if resizing is needed
+            if original_width <= max_dimension and original_height <= max_dimension:
+                new_width, new_height = original_width, original_height
+            else:
+                # Calculate new dimensions maintaining aspect ratio
+                scale = min(
+                    max_dimension / original_width, max_dimension / original_height
+                )
+                new_width = int(original_width * scale)
+                new_height = int(original_height * scale)
+
+                # Resize with high-quality LANCZOS filter
+                img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+            # Pad to square to avoid Vulkan UPSCALE bug with non-square images
+            # The bug causes timeouts with landscape orientations (e.g., 1024x768)
+            if new_width != new_height:
+                square_size = max(new_width, new_height)
+                # Create white square canvas
+                square_img = Image.new(
+                    "RGB", (square_size, square_size), (255, 255, 255)
+                )
+                # Center the image on the canvas
+                x_offset = (square_size - new_width) // 2
+                y_offset = (square_size - new_height) // 2
+                square_img.paste(img, (x_offset, y_offset))
+                img = square_img
+                final_size = square_size
+                was_padded = True
+            else:
+                final_size = new_width
+                was_padded = False
 
             # Save as optimized JPEG
             output = io.BytesIO()
@@ -1025,16 +1041,25 @@ class MedicalIntakeAgent(Agent, DatabaseMixin, FileWatcherMixin):
             reduction_pct = (1 - optimized_size_kb / original_size_kb) * 100
 
             # Show optimization results to user
-            self.console.print_info(
-                f"Image resized: {original_width}x{original_height} → "
-                f"{new_width}x{new_height} ({original_size_kb:.0f}KB → "
-                f"{optimized_size_kb:.0f}KB, {reduction_pct:.0f}% smaller)"
-            )
+            if was_padded:
+                self.console.print_info(
+                    f"Image resized: {original_width}x{original_height} → "
+                    f"{final_size}x{final_size} (padded to square, "
+                    f"{original_size_kb:.0f}KB → {optimized_size_kb:.0f}KB, "
+                    f"{reduction_pct:.0f}% smaller)"
+                )
+            else:
+                self.console.print_info(
+                    f"Image resized: {original_width}x{original_height} → "
+                    f"{new_width}x{new_height} ({original_size_kb:.0f}KB → "
+                    f"{optimized_size_kb:.0f}KB, {reduction_pct:.0f}% smaller)"
+                )
 
             logger.info(
                 f"Image optimized: {original_width}x{original_height} → "
-                f"{new_width}x{new_height}, {original_size_kb:.0f}KB → "
+                f"{final_size}x{final_size}, {original_size_kb:.0f}KB → "
                 f"{optimized_size_kb:.0f}KB ({reduction_pct:.0f}% reduction)"
+                f"{' (padded to square)' if was_padded else ''}"
             )
 
             return optimized_bytes
@@ -1223,8 +1248,13 @@ Use the available tools to search and retrieve patient information."""
 
             if results:
                 patient = results[0]
-                # Remove raw extraction for cleaner output
+                # Remove large/binary fields - don't send to LLM
                 patient.pop("raw_extraction", None)
+                patient.pop("file_content", None)  # Image bytes
+                patient.pop("embedding", None)  # Vector embedding
+                # Truncate file_hash for display
+                if patient.get("file_hash"):
+                    patient["file_hash"] = patient["file_hash"][:12] + "..."
                 return {"found": True, "patient": patient}
             return {"found": False, "message": f"Patient ID {patient_id} not found"}
 

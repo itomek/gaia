@@ -192,24 +192,23 @@ gaia prompt "MESSAGE" [OPTIONS]
 
 **Examples:**
 
-Basic prompt:
-```bash
+<CodeGroup>
+```bash Basic
 gaia prompt "What is the weather like today?"
 ```
 
-Use different model with stats:
-```bash
+```bash With Stats
 gaia prompt "Create a poem about AI" \
   --model Qwen2.5-0.5B-Instruct-CPU \
   --stats
 ```
 
-Custom token limit:
-```bash
+```bash Custom Tokens
 gaia prompt "Write a story" \
   --model Qwen2.5-0.5B-Instruct-CPU \
   --max-tokens 1000
 ```
+</CodeGroup>
 
 ---
 
@@ -334,20 +333,19 @@ gaia talk [OPTIONS]
 
 **Examples:**
 
-Basic voice chat:
-```bash
+<CodeGroup>
+```bash Basic
 gaia talk
 ```
 
-Voice chat with document Q&A:
-```bash
+```bash With Document
 gaia talk --index manual.pdf
 ```
 
-Document Q&A without TTS:
-```bash
+```bash No TTS
 gaia talk -i guide.pdf --no-tts
 ```
+</CodeGroup>
 
 [→ Full Voice Interaction Guide](/guides/talk)
 
@@ -669,22 +667,21 @@ gaia visualize [OPTIONS]
 
 **Examples:**
 
-Default settings:
-```bash
+<CodeGroup>
+```bash Default
 gaia visualize
 ```
 
-Custom directories:
-```bash
+```bash Custom Directories
 gaia visualize \
   --experiments-dir ./my_experiments \
   --evaluations-dir ./my_evaluations
 ```
 
-Custom port, no browser:
-```bash
+```bash Custom Port
 gaia visualize --port 8080 --no-browser
 ```
+</CodeGroup>
 
 **Features:**
 - Interactive Comparison (side-by-side)

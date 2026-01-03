@@ -109,33 +109,27 @@ gaia docker "create a Dockerfile for my application and then build and run the c
 
 ### Natural Language Commands
 
-Just create a Dockerfile:
-
-```bash
+<CodeGroup>
+```bash Basic
 gaia docker "create a Dockerfile for my application" -d ./app
 ```
 
-```bash
+```bash Windows Path
 gaia docker "create a Dockerfile for my application" -d "C:\Users\user\src\test\netscan"
 ```
 
-Framework-specific with requirements:
-
-```bash
+```bash Framework-Specific
 gaia docker "containerize this Flask app with gunicorn" -d ./flask-app
 ```
 
-Full workflow - create Dockerfile, build image, and run container:
-
-```bash
+```bash Full Workflow
 gaia docker "create a Dockerfile for my application and then build and run the container" -d "C:\Users\user\src\test\netscan"
 ```
 
-Specify Python version:
-
-```bash
+```bash Python Version
 gaia docker "create Dockerfile with Python 3.11" -d ./project
 ```
+</CodeGroup>
 
 The `command` parameter accepts natural language instructions. The agent can:
 - Create just a Dockerfile (analyzes app, generates and saves Dockerfile)

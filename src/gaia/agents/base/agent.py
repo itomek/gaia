@@ -910,7 +910,8 @@ You must respond ONLY in valid JSON. No text before { or after }.
         """
         truncated_result = tool_result
         if isinstance(tool_result, (dict, list)):
-            result_str = json.dumps(tool_result)
+            # Use custom encoder to handle bytes and other non-serializable types
+            result_str = json.dumps(tool_result, default=self._json_serialize_fallback)
             if (
                 len(result_str) > 30000
             ):  # Threshold for truncation (appropriate for 32K context)
@@ -960,6 +961,24 @@ You must respond ONLY in valid JSON. No text before { or after }.
             "content": [{"type": "text", "text": text_content}],
         }
 
+    def _json_serialize_fallback(self, obj: Any) -> Any:
+        """
+        Fallback serializer for JSON encoding non-standard types.
+
+        Handles bytes, datetime, and other common non-serializable types.
+        """
+        if isinstance(obj, bytes):
+            # For binary data, return a placeholder (don't expose raw bytes to LLM)
+            return f"<binary data: {len(obj)} bytes>"
+        elif hasattr(obj, "isoformat"):
+            # Handle datetime objects
+            return obj.isoformat()
+        elif hasattr(obj, "__dict__"):
+            # Handle objects with __dict__
+            return obj.__dict__
+        else:
+            return str(obj)
+
     def _truncate_large_content(self, content: Any, max_chars: int = 2000) -> str:
         """
         Truncate large content to prevent overwhelming the LLM.
@@ -972,14 +991,14 @@ You must respond ONLY in valid JSON. No text before { or after }.
         if isinstance(content, dict) and (
             "test_results" in content or "run_tests" in content
         ):
-            return json.dumps(content)
+            return json.dumps(content, default=self._json_serialize_fallback)
 
         # Convert to string (use compact JSON first to check size)
         if isinstance(content, (dict, list)):
-            compact_str = json.dumps(content)
+            compact_str = json.dumps(content, default=self._json_serialize_fallback)
             # Only use indented format if we need to truncate anyway
             content_str = (
-                json.dumps(content, indent=2)
+                json.dumps(content, indent=2, default=self._json_serialize_fallback)
                 if len(compact_str) > max_chars
                 else compact_str
             )

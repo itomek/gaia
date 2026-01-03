@@ -33,6 +33,56 @@
             ]
           },
           {
+            "group": "User Guides",
+            "pages": [
+              "guides/hardware-advisor",
+              "guides/chat",
+              "guides/talk",
+              "guides/code",
+              "guides/emr",
+              "guides/blender",
+              "guides/jira",
+              "guides/docker",
+              "guides/routing"
+            ]
+          },
+          {
+            "group": "Playbooks",
+            "pages": [
+              "playbooks/index",
+              {
+                "group": "Hardware Advisor Agent",
+                "pages": [
+                  "playbooks/hardware-advisor/part-1-getting-started"
+                ]
+              },
+              {
+                "group": "Document Q&A Agent",
+                "pages": [
+                  "playbooks/chat-agent/part-1-getting-started",
+                  "playbooks/chat-agent/part-2-advanced-features",
+                  "playbooks/chat-agent/part-3-deployment"
+                ]
+              },
+              {
+                "group": "Code Generation Agent",
+                "pages": [
+                  "playbooks/code-agent/part-1-introduction",
+                  "playbooks/code-agent/part-2-app-creation",
+                  "playbooks/code-agent/part-3-validation-building"
+                ]
+              },
+              {
+                "group": "Medical Intake Agent",
+                "pages": [
+                  "playbooks/emr-agent/part-1-getting-started",
+                  "playbooks/emr-agent/part-2-dashboard",
+                  "playbooks/emr-agent/part-3-architecture"
+                ]
+              }
+            ]
+          },
+          {
             "group": "SDK Reference",
             "pages": [
               "sdk/index",
@@ -96,56 +146,6 @@
                   "sdk/api-reference",
                   "sdk/migration",
                   "sdk/troubleshooting"
-                ]
-              }
-            ]
-          },
-          {
-            "group": "User Guides",
-            "pages": [
-              "guides/hardware-advisor",
-              "guides/chat",
-              "guides/talk",
-              "guides/code",
-              "guides/emr",
-              "guides/blender",
-              "guides/jira",
-              "guides/docker",
-              "guides/routing"
-            ]
-          },
-          {
-            "group": "Playbooks",
-            "pages": [
-              "playbooks/index",
-              {
-                "group": "Hardware Advisor Agent",
-                "pages": [
-                  "playbooks/hardware-advisor/part-1-getting-started"
-                ]
-              },
-              {
-                "group": "Document Q&A Agent",
-                "pages": [
-                  "playbooks/chat-agent/part-1-getting-started",
-                  "playbooks/chat-agent/part-2-advanced-features",
-                  "playbooks/chat-agent/part-3-deployment"
-                ]
-              },
-              {
-                "group": "Medical Intake Agent",
-                "pages": [
-                  "playbooks/emr-agent/part-1-getting-started",
-                  "playbooks/emr-agent/part-2-dashboard",
-                  "playbooks/emr-agent/part-3-architecture"
-                ]
-              },
-              {
-                "group": "Code Generation Agent",
-                "pages": [
-                  "playbooks/code-agent/part-1-introduction",
-                  "playbooks/code-agent/part-2-app-creation",
-                  "playbooks/code-agent/part-3-validation-building"
                 ]
               }
             ]
