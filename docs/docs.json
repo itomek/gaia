@@ -28,13 +28,13 @@
             "pages": [
               "index",
               "setup",
-              "quickstart",
-              "next-steps"
+              "quickstart"
             ]
           },
           {
             "group": "User Guides",
             "pages": [
+              "guides/index",
               "guides/hardware-advisor",
               "guides/chat",
               "guides/talk",
