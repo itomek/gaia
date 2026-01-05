@@ -952,7 +952,9 @@ You must respond ONLY in valid JSON. No text before { or after }.
             text_content = self._truncate_large_content(tool_output, max_chars=2000)
 
         if not isinstance(text_content, str):
-            text_content = json.dumps(tool_output)
+            text_content = json.dumps(
+                tool_output, default=self._json_serialize_fallback
+            )
 
         return {
             "role": "tool",
@@ -967,17 +969,33 @@ You must respond ONLY in valid JSON. No text before { or after }.
 
         Handles bytes, datetime, and other common non-serializable types.
         """
+        try:
+            import numpy as np  # Local import to avoid hard dependency at module import time
+
+            if isinstance(obj, np.generic):
+                return obj.item()
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+        except Exception:
+            pass
+
         if isinstance(obj, bytes):
             # For binary data, return a placeholder (don't expose raw bytes to LLM)
             return f"<binary data: {len(obj)} bytes>"
-        elif hasattr(obj, "isoformat"):
+        if hasattr(obj, "isoformat"):
             # Handle datetime objects
             return obj.isoformat()
-        elif hasattr(obj, "__dict__"):
+        if hasattr(obj, "__dict__"):
             # Handle objects with __dict__
             return obj.__dict__
-        else:
-            return str(obj)
+
+        for caster in (float, int, str):
+            try:
+                return caster(obj)
+            except Exception:
+                continue
+
+        return "<non-serializable>"
 
     def _truncate_large_content(self, content: Any, max_chars: int = 2000) -> str:
         """
@@ -1030,13 +1048,17 @@ You must respond ONLY in valid JSON. No text before { or after }.
                                 + chunk["content"][-CHUNK_TRUNCATION_SIZE:]
                             )
 
-            result_str = json.dumps(truncated, indent=2)
+            result_str = json.dumps(
+                truncated, indent=2, default=self._json_serialize_fallback
+            )
             # Use larger limit for chunked responses since chunks are the actual data
             if len(result_str) <= max_chars * 3:  # Allow up to 60KB for chunked data
                 return result_str
             # If still too large, keep first 3 chunks only
             truncated["chunks"] = truncated["chunks"][:3]
-            return json.dumps(truncated, indent=2)
+            return json.dumps(
+                truncated, indent=2, default=self._json_serialize_fallback
+            )
 
         # For Jira responses, keep first 3 issues
         if (
@@ -1050,7 +1072,9 @@ You must respond ONLY in valid JSON. No text before { or after }.
                 "truncated": True,
                 "total": len(content["issues"]),
             }
-            return json.dumps(truncated, indent=2)[:max_chars]
+            return json.dumps(
+                truncated, indent=2, default=self._json_serialize_fallback
+            )[:max_chars]
 
         # For lists, keep first 3 items
         if isinstance(content, list):
@@ -1059,7 +1083,9 @@ You must respond ONLY in valid JSON. No text before { or after }.
                 if len(content) > 3
                 else content
             )
-            return json.dumps(truncated, indent=2)[:max_chars]
+            return json.dumps(
+                truncated, indent=2, default=self._json_serialize_fallback
+            )[:max_chars]
 
         # Simple truncation
         half = max_chars // 2 - 20
@@ -1344,7 +1370,9 @@ You must respond ONLY in valid JSON. No text before { or after }.
                                 "completed_plan": self.current_plan,
                                 "total_steps": self.total_plan_steps,
                             }
-                            plan_context_raw = json.dumps(plan_context)
+                            plan_context_raw = json.dumps(
+                                plan_context, default=self._json_serialize_fallback
+                            )
                             if len(plan_context_raw) > 20000:
                                 plan_context_str = self._truncate_large_content(
                                     plan_context, max_chars=20000
@@ -1657,7 +1685,7 @@ You must respond ONLY in valid JSON. No text before { or after }.
                 if deferred_tool:
                     plan_prompt += (
                         f"You initially wanted to use the {deferred_tool} tool with these arguments:\n"
-                        f"{json.dumps(deferred_args, indent=2)}\n\n"
+                        f"{json.dumps(deferred_args, indent=2, default=self._json_serialize_fallback)}\n\n"
                         "However, you MUST first create a plan. Please create a plan that includes this tool usage as a step.\n\n"
                     )
 

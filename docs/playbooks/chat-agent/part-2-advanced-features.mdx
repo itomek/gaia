@@ -209,7 +209,7 @@ observer.start()
 Implement session persistence to avoid re-indexing on every restart.
 
 <CodeGroup>
-```python step6_with_sessions.py
+```python step6_create_session.py
 from gaia.agents.chat.agent import ChatAgent, ChatAgentConfig
 
 config = ChatAgentConfig(
@@ -224,12 +224,17 @@ print(result)
 # Save session (includes indexed documents, conversation history)
 if agent.save_current_session():
     print(f"✓ Session saved! ID: {agent.current_session.session_id}")
+```
 
-# Later... (new Python session)
-agent2 = ChatAgent()
-agent2.load_session("session-2024-12-11-14-30")
+```python step6_load_session.py
+from gaia.agents.chat.agent import ChatAgent
+
+agent = ChatAgent()
+
+# Replace with the session ID you want to load
+agent.load_session("session_20241211_143000")
 # All indexed documents and conversation history are restored!
-agent2.process_query("What was I asking about?")
+agent.process_query("What are the current indexed files")
 # Agent knows the context!
 ```
 </CodeGroup>

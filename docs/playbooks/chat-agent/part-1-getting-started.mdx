@@ -110,6 +110,7 @@ Get a working agent running to understand the basic flow.
     Create `my_chat_agent.py`:
 
     ```python title="my_chat_agent.py"
+    import json
     from gaia.agents.chat.agent import ChatAgent, ChatAgentConfig
 
     # Create agent with a document
@@ -120,7 +121,9 @@ Get a working agent running to understand the basic flow.
 
     # Ask a question
     result = agent.process_query("What does the manual say about installation?")
-    print(result)
+    import json
+
+    print(json.dumps(result, indent=2))
     ```
   </Step>
 
@@ -530,6 +533,11 @@ Add RAG capability to enable document search and retrieval.
                     "sources": response.source_files,
                     "answer": response.text
                 }
+
+# Use it
+agent = DocQAAgent(documents=["./manual.pdf"])
+response = agent.process_query("What does the manual say about installation?")
+print(response)
     ```
   </Tab>
 
@@ -606,6 +614,7 @@ from gaia.agents.base.agent import Agent
 from gaia.agents.base.console import AgentConsole
 from gaia.agents.base.tools import tool
 from gaia.rag.sdk import RAGSDK, RAGConfig
+from fnmatch import fnmatch
 from pathlib import Path
 
 class SmartDocAgent(Agent):
@@ -647,12 +656,18 @@ This creates a more natural user experience where file paths don't need to be sp
                 Path.cwd(),
             ]
 
+            # Support "*" wildcards (agent sends patterns with them) and fall back to
+            # substring matching by wrapping non-wildcard patterns with "*".
+            normalized_pattern = pattern.lower()
+            if "*" not in normalized_pattern and "?" not in normalized_pattern:
+                normalized_pattern = f"*{normalized_pattern}*"
+
             found_files = []
             for search_path in search_paths:
                 if search_path.exists():
                     # Find PDF files matching pattern
                     for pdf in search_path.rglob("*.pdf"):
-                        if pattern.lower() in pdf.name.lower():
+                        if fnmatch(pdf.name.lower(), normalized_pattern):
                             found_files.append(str(pdf))
 
             return {
