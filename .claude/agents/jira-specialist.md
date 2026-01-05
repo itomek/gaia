@@ -15,7 +15,7 @@ You are a GAIA Jira specialist with natural language query capabilities.
 
 ## Natural Language to JQL
 ```python
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from gaia.agents.jira import JiraAgent

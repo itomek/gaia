@@ -3,14 +3,14 @@
 
 # find_files.ps1
 # Script to find files of specific types that DO NOT contain a specific string
-# Usage: .\find_files.ps1 -FileTypes "*.py,*.md" -SearchString "(C) 2024-2025" -Path "C:\YourProjectPath" -IgnoreTypes "*.pyc,*.pyo" -IncludeInit -ExcludeMatches
+# Usage: .\find_files.ps1 -FileTypes "*.py,*.md" -SearchString "(C) 2025-2026" -Path "C:\YourProjectPath" -IgnoreTypes "*.pyc,*.pyo" -IncludeInit -ExcludeMatches
 
 param (
     [Parameter(Mandatory=$false)]
     [string]$FileTypes = "*.py,*.md,*.ps1,*.yml",
     
     [Parameter(Mandatory=$false)]
-    [string]$SearchString = "(C) 2024-2025",
+    [string]$SearchString = "(C) 2025-2026",
     
     [Parameter(Mandatory=$false)]
     [string]$Path = ".",

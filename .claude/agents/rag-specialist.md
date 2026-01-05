@@ -15,7 +15,7 @@ You are a GAIA RAG specialist focusing on retrieval-augmented generation and age
 
 ## Core Components
 ```python
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from gaia.rag.sdk import RAGSDK, RAGConfig
@@ -221,7 +221,7 @@ gaia rag clear-cache
 
 ## RAG Pipeline Testing
 ```python
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 import pytest

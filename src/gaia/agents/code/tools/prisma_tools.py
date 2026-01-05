@@ -16,7 +16,7 @@ from gaia.agents.base.tools import tool
 logger = logging.getLogger(__name__)
 
 # Prisma singleton template for Next.js (prevents connection pool exhaustion)
-PRISMA_SINGLETON_TEMPLATE = """// Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+PRISMA_SINGLETON_TEMPLATE = """// Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 // SPDX-License-Identifier: MIT
 import { PrismaClient } from "@prisma/client";
 

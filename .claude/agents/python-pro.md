@@ -10,7 +10,7 @@ You are a Python expert specializing in GAIA framework development.
 ## GAIA-Specific Requirements
 1. **Copyright Header** (REQUIRED):
    ```python
-   # Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+   # Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
    # SPDX-License-Identifier: MIT
    ```
 

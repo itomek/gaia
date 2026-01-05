@@ -17,7 +17,7 @@ You are a GAIA agent development specialist focused on creating WebSocket-based 
 ## Key Requirements
 1. All new files MUST start with:
    ```
-   Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+   Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
    SPDX-License-Identifier: MIT
    ```
 

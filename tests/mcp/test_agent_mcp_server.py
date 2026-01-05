@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 """
@@ -153,7 +153,7 @@ def test_flask_app(tmp_path) -> str:
     # Create app.py
     app_py = app_dir / "app.py"
     app_py.write_text(
-        """# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+        """# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from flask import Flask
@@ -729,7 +729,7 @@ class TestDockerOperations:
         """Save Dockerfile creates file with correct content"""
         agent = DockerAgent(silent_mode=True, allowed_paths=[test_flask_app])
 
-        dockerfile_content = """# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+        dockerfile_content = """# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 FROM python:3.9-slim
@@ -765,7 +765,7 @@ CMD ["python", "app.py"]
         agent = DockerAgent(silent_mode=True, allowed_paths=[test_flask_app])
 
         # First create Dockerfile
-        dockerfile_content = """# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+        dockerfile_content = """# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 FROM python:3.9-slim

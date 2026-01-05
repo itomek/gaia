@@ -1,9 +1,9 @@
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
+#
 # GAIA SDK Documentation - Auth Proxy
 #
 # Simple Node.js proxy server for access-code protected docs.
-#
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
-# SPDX-License-Identifier: MIT
 
 FROM node:20-alpine
 

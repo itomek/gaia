@@ -352,7 +352,7 @@ function App() {
           Powered by <span className="footer-amd">AMD Ryzen AI</span> | GAIA Framework | Running 100% Locally - No Cloud Required
         </p>
         <p style={{ marginTop: '0.5rem' }}>
-          HIPAA Compliant by Design | &copy; 2024-2025 Advanced Micro Devices, Inc.
+          HIPAA Compliant by Design | &copy; 2025-2026 Advanced Micro Devices, Inc.
         </p>
       </footer>
     </div>

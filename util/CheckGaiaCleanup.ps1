@@ -1,6 +1,6 @@
 <#
-Copyright(C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-SPDX-License-Identifier: MIT
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
 
 .SYNOPSIS
 Monitors and verifies the cleanup of GAIA processes and related resources.

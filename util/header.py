@@ -19,6 +19,7 @@ IGNORE_DIRS = {
     ".venv",
     "venv",
     ".serena",
+    ".mypy_cache",
 }
 
 # Supported file extensions (excluding .md and .txt as they don't require headers)
@@ -91,14 +92,23 @@ def find_files_with_header(root_dir, header):
             file_path = os.path.join(dirpath, filename)
             try:
                 with open(file_path, "r", encoding="utf-8") as file:
-                    first_line = file.readline().strip()
-                    if header in first_line:
+                    # Check first 5 lines for copyright (handles shebangs)
+                    found_line = None
+                    for _ in range(5):
+                        line = file.readline()
+                        if not line:
+                            break
+                        if header in line:
+                            found_line = line.strip()
+                            break
+
+                    if found_line:
                         # Extract comment marker from the start of the line
                         comment_marker = ""
                         # Sort markers by length (longest first) to catch '####' before '#'
                         sorted_markers = sorted(comment_markers, key=len, reverse=True)
                         for marker in sorted_markers:
-                            if first_line.startswith(marker):
+                            if found_line.startswith(marker):
                                 comment_marker = marker
                                 break
 
@@ -112,8 +122,17 @@ def find_files_with_header(root_dir, header):
             except UnicodeDecodeError:
                 try:
                     with open(file_path, "r", encoding="latin-1") as file:
-                        first_line = file.readline().strip()
-                        if header in first_line:
+                        # Check first 5 lines for copyright (handles shebangs)
+                        found_line = None
+                        for _ in range(5):
+                            line = file.readline()
+                            if not line:
+                                break
+                            if header in line:
+                                found_line = line.strip()
+                                break
+
+                        if found_line:
                             # Extract comment marker from the start of the line
                             comment_marker = ""
                             # Sort markers by length (longest first) to catch '####' before '#'
@@ -121,7 +140,7 @@ def find_files_with_header(root_dir, header):
                                 comment_markers, key=len, reverse=True
                             )
                             for marker in sorted_markers:
-                                if first_line.startswith(marker):
+                                if found_line.startswith(marker):
                                     comment_marker = marker
                                     break
 

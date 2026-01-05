@@ -22,7 +22,7 @@ You are an MCP server development specialist for the GAIA framework.
 
 ## Implementation Requirements
 1. Follow MCP specification strictly
-2. Include copyright header (AMD 2024-2025, MIT)
+2. Include copyright header (AMD 2025-2026, MIT)
 3. Support background process management
 4. Implement health checking
 5. Handle WebSocket streaming

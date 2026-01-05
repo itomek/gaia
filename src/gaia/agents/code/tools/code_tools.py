@@ -750,7 +750,7 @@ Return ONLY the corrected code, no explanations."""
         Returns:
             Placeholder code
         """
-        return f'''# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+        return f'''# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 """
 {filename}

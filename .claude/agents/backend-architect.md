@@ -15,7 +15,7 @@ You are a GAIA backend architect specializing in agent services and WebSocket co
 
 ## Agent Service Design
 ```python
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from gaia.agents.base import Agent

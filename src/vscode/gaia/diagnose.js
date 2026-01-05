@@ -1,6 +1,9 @@
+// Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
+// SPDX-License-Identifier: MIT
+
 /*
-Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
-SPDX-License-Identifier: MIT
+# Copyright(C2025-202626 Advanced Micro Devices, Inc. All rights reserved.
+# SPDX-License-Identifier: MIT
 */
 
 /**

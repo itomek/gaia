@@ -16,7 +16,7 @@ GAIA (Generative AI Is Awesome) is AMD's open-source framework for running gener
 **IMPORTANT: All new files created in this project MUST start with the following copyright header (using appropriate comment syntax for the file type):**
 
 ```
-Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 SPDX-License-Identifier: MIT
 ```
 
