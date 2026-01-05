@@ -1,4 +1,4 @@
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 """FastAPI server for EMR Dashboard with SSE support."""
@@ -43,6 +43,22 @@ except ImportError:
 from gaia.agents.emr.agent import MedicalIntakeAgent
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_json_default(obj: Any) -> Any:
+    """Fallback serializer for non-standard JSON types."""
+    if isinstance(obj, bytes):
+        return f"<binary: {len(obj)} bytes>"
+    elif hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    elif hasattr(obj, "__dict__"):
+        return obj.__dict__
+    return str(obj)
+
+
+def _safe_json_dumps(obj: Any) -> str:
+    """JSON dumps with fallback for non-serializable types like bytes."""
+    return json.dumps(obj, default=_safe_json_default)
 
 
 # Pydantic models for request validation
@@ -94,6 +110,13 @@ _main_event_loop: Optional[asyncio.AbstractEventLoop] = None
 # Track currently processing file for status display
 _current_processing_file: Optional[str] = None
 _processing_lock = threading.Lock()
+
+# Track files being processed via upload API (to prevent file watcher double-processing)
+_api_processing_files: Set[str] = set()
+_api_processing_lock = threading.Lock()
+
+# Thread-local storage to mark API-initiated processing (skip the duplicate check)
+_thread_local = threading.local()
 
 # Track failed file hashes to show "failed" status in watch folder
 _failed_file_hashes: Set[str] = set()
@@ -333,6 +356,17 @@ def create_app(
                 filename = Path(file_path).name
                 _current_file["name"] = filename
                 _duplicate_info = {"is_duplicate": False, "patient_name": None}
+
+                # Skip if file is being processed via upload API (prevents double-processing)
+                # But don't skip if this IS the API call (marked via thread-local flag)
+                is_api_call = getattr(_thread_local, "is_api_call", False)
+                if not is_api_call:
+                    with _api_processing_lock:
+                        if filename in _api_processing_files:
+                            logger.info(
+                                f"Skipping {filename} - already being processed via API"
+                            )
+                            return None
 
                 # Compute file hash early for failed file tracking
                 current_file_hash = None
@@ -1042,7 +1076,7 @@ def create_app(
             try:
                 # First, replay recent events to populate the feed for new clients
                 for event in events_to_replay:
-                    yield f"data: {json.dumps(event)}\n\n"
+                    yield f"data: {_safe_json_dumps(event)}\n\n"
 
                 while True:
                     try:
@@ -1051,14 +1085,14 @@ def create_app(
                             event = await asyncio.wait_for(
                                 client_queue.get(), timeout=1.0
                             )
-                            yield f"data: {json.dumps(event)}\n\n"
+                            yield f"data: {_safe_json_dumps(event)}\n\n"
                         except asyncio.TimeoutError:
                             pass
 
                         # Send heartbeat every 30 seconds
                         current_time = time.time()
                         if current_time - last_heartbeat > 30:
-                            yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
+                            yield f"data: {_safe_json_dumps({'type': 'heartbeat'})}\n\n"
                             last_heartbeat = current_time
 
                     except Exception as e:
@@ -1634,6 +1668,11 @@ def create_app(
             # Ensure watch directory exists
             _agent_instance._watch_dir.mkdir(parents=True, exist_ok=True)
 
+            # Add to API processing set BEFORE saving file to prevent race condition
+            # with file watcher detecting the file before we add it to the set
+            with _api_processing_lock:
+                _api_processing_files.add(safe_filename)
+
             # Save file to watch directory
             file_path = _agent_instance._watch_dir / safe_filename
 
@@ -1652,6 +1691,9 @@ def create_app(
                     (file_hash,),
                 )
                 if existing:
+                    # Clean up from set since we're returning early
+                    with _api_processing_lock:
+                        _api_processing_files.discard(safe_filename)
                     patient = existing[0]
                     return {
                         "success": True,
@@ -1662,11 +1704,22 @@ def create_app(
                         "message": "File already processed - showing existing patient",
                     }
 
-            # Process the file in a thread pool to avoid blocking the event loop
-            # This allows SSE events to be sent in real-time during processing
-            result = await asyncio.to_thread(
-                _agent_instance._process_intake_form, str(file_path)
-            )
+            def process_with_flag(fp):
+                """Process file with thread-local flag to mark as API call."""
+                _thread_local.is_api_call = True
+                try:
+                    return _agent_instance._process_intake_form(fp)
+                finally:
+                    _thread_local.is_api_call = False
+
+            try:
+                # Process the file in a thread pool to avoid blocking the event loop
+                # This allows SSE events to be sent in real-time during processing
+                result = await asyncio.to_thread(process_with_flag, str(file_path))
+            finally:
+                # Remove from API processing set
+                with _api_processing_lock:
+                    _api_processing_files.discard(safe_filename)
 
             if result:
                 return {
@@ -1684,8 +1737,20 @@ def create_app(
                     "message": "Extraction failed - check if form is filled out correctly",
                 }
         except HTTPException:
+            # Clean up from set on error (safe_filename may not be defined if early error)
+            try:
+                with _api_processing_lock:
+                    _api_processing_files.discard(safe_filename)
+            except NameError:
+                pass
             raise
         except Exception as e:
+            # Clean up from set on error (safe_filename may not be defined if early error)
+            try:
+                with _api_processing_lock:
+                    _api_processing_files.discard(safe_filename)
+            except NameError:
+                pass
             logger.error(f"Error uploading file: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -1720,6 +1785,12 @@ def create_app(
             # Ensure watch directory exists
             _agent_instance._watch_dir.mkdir(parents=True, exist_ok=True)
 
+            # Add to API processing set BEFORE copying file to prevent race condition
+            # with file watcher detecting the file before we add it to the set
+            safe_filename = source_path.name
+            with _api_processing_lock:
+                _api_processing_files.add(safe_filename)
+
             # Copy file to watch directory
             dest_path = _agent_instance._watch_dir / source_path.name
 
@@ -1741,6 +1812,9 @@ def create_app(
                     (file_hash,),
                 )
                 if existing:
+                    # Clean up from set since we're returning early
+                    with _api_processing_lock:
+                        _api_processing_files.discard(safe_filename)
                     patient = existing[0]
                     return {
                         "success": True,
@@ -1751,11 +1825,22 @@ def create_app(
                         "message": "File already processed - showing existing patient",
                     }
 
-            # Process the file in a thread pool to avoid blocking the event loop
-            # This allows SSE events to be sent in real-time during processing
-            result = await asyncio.to_thread(
-                _agent_instance._process_intake_form, str(dest_path)
-            )
+            def process_with_flag(fp):
+                """Process file with thread-local flag to mark as API call."""
+                _thread_local.is_api_call = True
+                try:
+                    return _agent_instance._process_intake_form(fp)
+                finally:
+                    _thread_local.is_api_call = False
+
+            try:
+                # Process the file in a thread pool to avoid blocking the event loop
+                # This allows SSE events to be sent in real-time during processing
+                result = await asyncio.to_thread(process_with_flag, str(dest_path))
+            finally:
+                # Remove from API processing set
+                with _api_processing_lock:
+                    _api_processing_files.discard(safe_filename)
 
             if result:
                 return {
@@ -1773,8 +1858,20 @@ def create_app(
                     "message": "Extraction failed - check if form is filled out correctly",
                 }
         except HTTPException:
+            # Clean up from set on error
+            try:
+                with _api_processing_lock:
+                    _api_processing_files.discard(safe_filename)
+            except NameError:
+                pass
             raise
         except Exception as e:
+            # Clean up from set on error
+            try:
+                with _api_processing_lock:
+                    _api_processing_files.discard(safe_filename)
+            except NameError:
+                pass
             logger.error(f"Error processing file by path: {e}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 

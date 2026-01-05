@@ -291,7 +291,7 @@ Start with a minimal agent that just has a system prompt.
 <Tabs>
   <Tab title="Implementation">
     ```python title="step1_basic.py"
-    from gaia import Agent
+    from gaia.agents.base.agent import Agent
 
     class SimpleAdvisorAgent(Agent):
         """Minimal hardware advisor with no tools."""
@@ -351,7 +351,8 @@ Add the first tool to detect system specs via LemonadeClient.
   <Tab title="Implementation">
     ```python title="step2_hardware.py"
     from typing import Dict, Any
-    from gaia import Agent, tool
+    from gaia.agents.base.agent import Agent
+    from gaia.agents.base.tools import tool
     from gaia.llm.lemonade_client import LemonadeClient
 
     class HardwareDetectorAgent(Agent):
@@ -458,6 +459,11 @@ Add a tool to list available models with their sizes.
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    # Test it
+    agent = HardwareDetectorAgent()
+    result = agent.process_query("What models are available?")
+    print(result)
     ```
   </Tab>
 
@@ -530,6 +536,11 @@ Add the final tool that combines hardware info with model sizes to give recommen
             }
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    # Test it
+    agent = HardwareDetectorAgent()
+    result = agent.process_query("What size LLM can I run?")
+    print(result)
     ```
   </Tab>
 

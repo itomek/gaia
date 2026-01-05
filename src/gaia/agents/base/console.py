@@ -1,4 +1,4 @@
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 import json
@@ -351,6 +351,28 @@ class AgentConsole(OutputHandler):
             data: Dictionary data to print
             title: Optional title for the panel
         """
+
+        def _safe_default(obj: Any) -> Any:
+            """
+            JSON serializer fallback that handles common non-serializable types like numpy scalars/arrays.
+            """
+            try:
+                import numpy as np  # Local import to avoid hard dependency at module import time
+
+                if isinstance(obj, np.generic):
+                    return obj.item()
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+            except Exception:
+                pass
+
+            for caster in (float, int, str):
+                try:
+                    return caster(obj)
+                except Exception:
+                    continue
+            return "<non-serializable>"
+
         if self.rich_available:
             # Check if this is a command execution result
             if "command" in data and "stdout" in data:
@@ -381,8 +403,13 @@ class AgentConsole(OutputHandler):
                 )
             else:
                 # Regular JSON output
-                # Convert to formatted JSON string
-                json_str = json.dumps(data, indent=2)
+                # Convert to formatted JSON string with safe fallback for non-serializable types (e.g., numpy.float32)
+                print(data)
+                try:
+                    json_str = json.dumps(data, indent=2)
+                except TypeError:
+                    json_str = json.dumps(data, indent=2, default=_safe_default)
+
                 # Create a syntax object with JSON highlighting
                 syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False)
                 # Create a panel with a title if provided
@@ -403,7 +430,10 @@ class AgentConsole(OutputHandler):
                     if len(stdout) > 500:
                         print("... (output truncated)")
             else:
-                print(json.dumps(data, indent=2))
+                try:
+                    print(json.dumps(data, indent=2))
+                except TypeError:
+                    print(json.dumps(data, indent=2, default=_safe_default))
 
     def print_header(self, text: str) -> None:
         """

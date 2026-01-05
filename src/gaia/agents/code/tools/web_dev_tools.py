@@ -1,4 +1,4 @@
-# Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright(C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 # SPDX-License-Identifier: MIT
 """Generic web development tools for Code Agent.
 
@@ -346,7 +346,6 @@ class WebToolsMixin:
                 # Generate validation schema if needed
                 validation_schema = ""
                 if needs_validation:
-                    print("WE ARE IN THE DUDUUUUUUDE")
                     validation_schema = generate_zod_schema(Resource, fields)
 
                 # Generate handlers based on operations
