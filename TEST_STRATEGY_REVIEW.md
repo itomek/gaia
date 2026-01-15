@@ -464,7 +464,517 @@ addopts = "--tb=short --strict-markers -n auto"  # pytest-xdist
 
 ---
 
-## Appendix A: Files to Migrate to amd/gaia-agents
+## Appendix A: Recommended Test Structure for `amd/gaia-agents`
+
+The `gaia-agents` repository should be set up with proper testing patterns from the start. This structure assumes agents will depend on `gaia` as a library.
+
+### Directory Structure
+
+```
+gaia-agents/
+├── src/
+│   └── gaia_agents/
+│       ├── __init__.py
+│       ├── chat/
+│       │   ├── __init__.py
+│       │   ├── agent.py
+│       │   └── tools/
+│       ├── code/
+│       │   ├── __init__.py
+│       │   ├── agent.py
+│       │   ├── orchestration/
+│       │   └── tools/
+│       ├── jira/
+│       │   ├── __init__.py
+│       │   └── agent.py
+│       ├── blender/
+│       │   ├── __init__.py
+│       │   └── agent.py
+│       ├── docker/
+│       │   ├── __init__.py
+│       │   └── agent.py
+│       ├── emr/
+│       │   ├── __init__.py
+│       │   ├── agent.py
+│       │   └── cli.py
+│       └── routing/
+│           ├── __init__.py
+│           └── agent.py
+├── tests/
+│   ├── conftest.py                # Shared fixtures
+│   ├── unit/                      # Pure unit tests (mocked dependencies)
+│   │   ├── conftest.py
+│   │   ├── chat/
+│   │   │   ├── test_agent.py
+│   │   │   └── test_tools.py
+│   │   ├── code/
+│   │   │   ├── test_agent.py
+│   │   │   ├── test_orchestration.py
+│   │   │   └── test_tools.py
+│   │   ├── jira/
+│   │   │   └── test_agent.py
+│   │   ├── blender/
+│   │   │   └── test_agent.py
+│   │   ├── docker/
+│   │   │   └── test_agent.py
+│   │   ├── emr/
+│   │   │   ├── test_agent.py
+│   │   │   └── test_cli.py
+│   │   └── routing/
+│   │       └── test_agent.py
+│   ├── integration/               # Tests requiring gaia services
+│   │   ├── conftest.py
+│   │   ├── test_chat_with_rag.py
+│   │   ├── test_code_with_llm.py
+│   │   └── test_jira_with_api.py
+│   ├── contract/                  # Contract tests against gaia SDK
+│   │   ├── test_base_agent_contract.py
+│   │   └── test_tool_registry_contract.py
+│   └── e2e/                       # End-to-end agent workflows
+│       ├── test_chat_conversation.py
+│       └── test_code_generation.py
+├── pyproject.toml
+└── README.md
+```
+
+### Root conftest.py
+
+```python
+# tests/conftest.py
+"""
+Shared fixtures for gaia-agents test suite.
+"""
+import pytest
+from unittest.mock import MagicMock, AsyncMock
+
+
+# =============================================================================
+# TOOL REGISTRY ISOLATION (CRITICAL)
+# =============================================================================
+
+@pytest.fixture(autouse=True)
+def isolate_tool_registry():
+    """
+    Automatically isolate tool registry for every test.
+    Prevents global state pollution between tests.
+    """
+    from gaia.agents.base.tools import _TOOL_REGISTRY
+    original_state = _TOOL_REGISTRY.copy()
+    yield
+    _TOOL_REGISTRY.clear()
+    _TOOL_REGISTRY.update(original_state)
+
+
+# =============================================================================
+# LLM MOCKING
+# =============================================================================
+
+@pytest.fixture
+def mock_llm_client():
+    """
+    Mock LLM client for unit tests.
+    Returns predictable responses without network calls.
+    """
+    client = MagicMock()
+    client.chat.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(content="Mock response"))]
+    )
+    client.chat_stream = AsyncMock(return_value=iter([
+        MagicMock(choices=[MagicMock(delta=MagicMock(content="Mock "))])
+    ]))
+    return client
+
+
+@pytest.fixture
+def mock_chat_sdk(mock_llm_client):
+    """
+    Mock ChatSDK for agent testing.
+    """
+    from unittest.mock import patch
+    with patch("gaia.chat.sdk.ChatSDK") as MockChatSDK:
+        instance = MockChatSDK.return_value
+        instance.chat.return_value = "Mock agent response"
+        instance.chat_stream = AsyncMock()
+        yield instance
+
+
+# =============================================================================
+# AGENT FIXTURES
+# =============================================================================
+
+@pytest.fixture
+def base_agent_config():
+    """Base configuration for agent instantiation."""
+    return {
+        "model": "test-model",
+        "max_tokens": 100,
+        "temperature": 0.0,
+    }
+
+
+@pytest.fixture
+def temp_workspace(tmp_path):
+    """
+    Isolated temporary workspace for file operations.
+    Each test gets a fresh directory.
+    """
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    return workspace
+
+
+# =============================================================================
+# SERVICE AVAILABILITY CHECKS
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def gaia_sdk_available():
+    """Check if gaia SDK is importable."""
+    try:
+        import gaia
+        return True
+    except ImportError:
+        return False
+
+
+@pytest.fixture
+def require_gaia_sdk(gaia_sdk_available):
+    """Skip test if gaia SDK not available."""
+    if not gaia_sdk_available:
+        pytest.skip("gaia SDK not installed")
+```
+
+### Unit Test conftest.py
+
+```python
+# tests/unit/conftest.py
+"""
+Unit test fixtures - no external dependencies.
+"""
+import pytest
+from unittest.mock import MagicMock, patch
+
+
+@pytest.fixture
+def mock_file_system(temp_workspace):
+    """
+    Mock file system operations.
+    Redirects all file I/O to temp workspace.
+    """
+    with patch("builtins.open", create=True) as mock_open:
+        yield mock_open
+
+
+@pytest.fixture
+def mock_subprocess():
+    """
+    Mock subprocess calls for shell tool tests.
+    """
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout="success",
+            stderr=""
+        )
+        yield mock_run
+```
+
+### Integration Test conftest.py
+
+```python
+# tests/integration/conftest.py
+"""
+Integration test fixtures - require gaia services.
+"""
+import pytest
+import requests
+
+
+@pytest.fixture(scope="session")
+def lemonade_available():
+    """Check if Lemonade server is running."""
+    try:
+        response = requests.get("http://localhost:8000/api/v1/health", timeout=5)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
+@pytest.fixture
+def require_lemonade(lemonade_available):
+    """Skip integration test if Lemonade not available."""
+    if not lemonade_available:
+        pytest.skip("Lemonade server not available")
+
+
+@pytest.fixture
+def live_llm_client(require_lemonade):
+    """
+    Real LLM client for integration tests.
+    Only created when Lemonade is available.
+    """
+    from gaia.llm import LLMClient
+    return LLMClient(base_url="http://localhost:8000")
+```
+
+### pyproject.toml Configuration
+
+```toml
+[project]
+name = "gaia-agents"
+version = "0.1.0"
+dependencies = [
+    "gaia>=0.1.0",  # Core SDK dependency
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-xdist>=3.5.0",  # Parallel execution
+    "pytest-timeout>=2.2.0",
+    "responses>=0.25.0",    # HTTP mocking
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--tb=short --strict-markers -v"
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (> 5 seconds)",
+    "integration: requires external services (Lemonade, Docker)",
+    "e2e: end-to-end tests requiring full stack",
+    "contract: contract tests against gaia SDK",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["src/gaia_agents"]
+branch = true
+omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+fail_under = 80  # Enforce 80% coverage minimum
+```
+
+### Example Unit Test Pattern
+
+```python
+# tests/unit/chat/test_agent.py
+"""
+Unit tests for ChatAgent - no external dependencies.
+"""
+import pytest
+from unittest.mock import MagicMock, patch
+
+
+class TestChatAgentInit:
+    """Test ChatAgent initialization."""
+
+    def test_init_with_defaults(self, mock_chat_sdk):
+        """Agent initializes with default configuration."""
+        from gaia_agents.chat import ChatAgent
+
+        agent = ChatAgent()
+
+        assert agent.model is not None
+        assert agent.max_tokens > 0
+
+    def test_init_with_custom_config(self, mock_chat_sdk, base_agent_config):
+        """Agent accepts custom configuration."""
+        from gaia_agents.chat import ChatAgent
+
+        agent = ChatAgent(**base_agent_config)
+
+        assert agent.model == "test-model"
+        assert agent.max_tokens == 100
+
+
+class TestChatAgentTools:
+    """Test ChatAgent tool registration."""
+
+    def test_default_tools_registered(self, mock_chat_sdk):
+        """Default tools are registered on init."""
+        from gaia_agents.chat import ChatAgent
+
+        agent = ChatAgent()
+
+        assert "read_file" in agent.tools
+        assert "search_files" in agent.tools
+
+    def test_custom_tool_registration(self, mock_chat_sdk):
+        """Custom tools can be registered."""
+        from gaia_agents.chat import ChatAgent
+
+        agent = ChatAgent()
+
+        @agent.tool
+        def custom_tool(x: int) -> int:
+            return x * 2
+
+        assert "custom_tool" in agent.tools
+
+
+class TestChatAgentChat:
+    """Test ChatAgent chat functionality."""
+
+    def test_chat_returns_response(self, mock_chat_sdk):
+        """Chat method returns LLM response."""
+        from gaia_agents.chat import ChatAgent
+
+        agent = ChatAgent()
+        response = agent.chat("Hello")
+
+        assert response == "Mock agent response"
+        mock_chat_sdk.chat.assert_called_once()
+
+    def test_chat_with_context(self, mock_chat_sdk, temp_workspace):
+        """Chat uses provided context."""
+        from gaia_agents.chat import ChatAgent
+
+        agent = ChatAgent(workspace=temp_workspace)
+        agent.chat("Summarize the files")
+
+        # Verify context was included in chat call
+        call_args = mock_chat_sdk.chat.call_args
+        assert call_args is not None
+```
+
+### Example Integration Test Pattern
+
+```python
+# tests/integration/test_chat_with_rag.py
+"""
+Integration tests for ChatAgent with RAG.
+Requires Lemonade server running.
+"""
+import pytest
+
+
+@pytest.mark.integration
+class TestChatAgentRAGIntegration:
+    """Test ChatAgent with real RAG functionality."""
+
+    def test_chat_with_indexed_documents(
+        self, require_lemonade, live_llm_client, temp_workspace
+    ):
+        """Agent can answer questions from indexed documents."""
+        from gaia_agents.chat import ChatAgent
+        from gaia.rag import RAGSDK
+
+        # Setup: Create and index a test document
+        doc_path = temp_workspace / "test.txt"
+        doc_path.write_text("The answer is 42.")
+
+        rag = RAGSDK()
+        rag.index_document(doc_path)
+
+        # Test: Agent answers from indexed content
+        agent = ChatAgent(rag=rag, llm_client=live_llm_client)
+        response = agent.chat("What is the answer?")
+
+        assert "42" in response
+```
+
+### CI/CD Configuration for gaia-agents
+
+```yaml
+# .github/workflows/test.yml
+name: Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install -e ".[dev]"
+      - name: Run unit tests with coverage
+        run: |
+          pytest tests/unit/ -v --cov --cov-report=xml --cov-fail-under=80
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+
+  contract-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install -e ".[dev]"
+      - name: Run contract tests
+        run: pytest tests/contract/ -v
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      lemonade:
+        image: amd/lemonade:latest
+        ports:
+          - 8000:8000
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv pip install -e ".[dev]"
+      - name: Wait for Lemonade
+        run: |
+          timeout 60 bash -c 'until curl -s http://localhost:8000/api/v1/health; do sleep 2; done'
+      - name: Run integration tests
+        run: pytest tests/integration/ -v -m integration
+```
+
+### Key Principles for gaia-agents Testing
+
+1. **Isolation First**: Every test should be independent. The `isolate_tool_registry` fixture is `autouse=True`.
+
+2. **Mock by Default**: Unit tests mock all external dependencies (LLM, file system, network).
+
+3. **Contract Tests**: Verify compatibility with the gaia SDK API to catch breaking changes early.
+
+4. **Coverage Enforcement**: `fail_under = 80` in pyproject.toml prevents coverage regression.
+
+5. **Parallel Execution**: Use `pytest-xdist` with dynamic port allocation for CI speed.
+
+6. **Clear Test Categories**:
+   - `unit/` - Fast, isolated, no I/O
+   - `integration/` - Requires services
+   - `contract/` - SDK compatibility
+   - `e2e/` - Full workflow tests
+
+---
+
+## Appendix B: Files to Migrate to amd/gaia-agents
 
 ```
 # Root level
