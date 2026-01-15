@@ -371,40 +371,67 @@ class TestFileWatcher:  # No inheritance
 
 ## 8. Target Test Structure
 
+Tests should be organized by **test type** (unit/integration), not by technology (mcp/electron). This ensures consistent patterns and makes it clear what dependencies each test requires.
+
 ```
 tests/
 ├── conftest.py                    # Global fixtures
-├── unit/                          # Pure unit tests (no I/O)
+├── unit/                          # Pure unit tests (no I/O, mocked deps)
 │   ├── conftest.py
-│   ├── test_llm_client.py
-│   ├── test_chat_sdk.py
-│   ├── test_rag_sdk.py
-│   ├── test_mcp_protocol.py
-│   ├── test_file_watcher.py
-│   ├── test_database_mixin.py
-│   ├── test_errors.py
-│   ├── test_asr.py
-│   └── test_tts.py
-├── integration/                   # Service integration tests
+│   ├── llm/
+│   │   ├── test_llm_client.py
+│   │   └── test_lemonade_manager.py
+│   ├── rag/
+│   │   └── test_rag_sdk.py
+│   ├── chat/
+│   │   └── test_chat_sdk.py
+│   ├── mcp/                       # MCP protocol parsing, validation
+│   │   ├── test_protocol.py
+│   │   └── test_message_validation.py
+│   ├── utils/
+│   │   ├── test_file_watcher.py
+│   │   └── test_parsing.py
+│   ├── database/
+│   │   └── test_mixin.py
+│   └── audio/
+│       ├── test_asr.py
+│       └── test_tts.py
+├── integration/                   # Tests requiring external services
 │   ├── conftest.py
-│   ├── test_api_server.py
-│   ├── test_lemonade_client.py
-│   ├── test_rag_pipeline.py
-│   └── test_vlm_pipeline.py
-├── mcp/                           # MCP protocol tests
-│   ├── conftest.py
-│   ├── test_mcp_http.py
-│   ├── test_mcp_bridge.py
-│   └── test_mcp_jira.py
-├── electron/                      # JavaScript Electron tests
+│   ├── llm/
+│   │   └── test_lemonade_client.py
+│   ├── api/
+│   │   └── test_api_server.py
+│   ├── rag/
+│   │   └── test_rag_pipeline.py
+│   ├── mcp/                       # MCP with real bridge/servers
+│   │   ├── test_mcp_bridge.py
+│   │   ├── test_mcp_jira.py
+│   │   └── test_mcp_http.py
+│   └── vlm/
+│       └── test_vlm_pipeline.py
+├── e2e/                           # End-to-end workflows
 │   └── ...
-└── agent/                         # TEMPORARY - pending migration
+├── js/                            # JavaScript tests (separate toolchain)
+│   ├── package.json               # Jest/Vitest config
+│   ├── unit/
+│   │   └── test_ipc_handler.js
+│   └── integration/
+│       ├── test_electron_app.js
+│       └── test_jira_app.js
+└── _migrating/                    # TEMPORARY - pending move to gaia-agents
     ├── README.md                  # Migration notes
-    ├── test_chat_agent.py
-    ├── test_code_agent.py
-    ├── test_jira_agent.py
     └── ...
 ```
+
+### Why This Structure?
+
+| Principle | Rationale |
+|-----------|-----------|
+| **Organize by test type, not technology** | MCP tests can be unit (protocol parsing) or integration (real servers) |
+| **Subdirectories mirror source** | `tests/unit/llm/` tests `src/gaia/llm/` |
+| **Separate JS tests** | Different toolchain (Jest/Vitest), different conftest |
+| **Clear dependencies** | `unit/` = no I/O; `integration/` = services required |
 
 ---
 
@@ -418,7 +445,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - run: pytest tests/unit/ -v --tb=short
+      - run: pytest tests/unit/ -v --cov --cov-report=xml
 
   integration-tests:
     runs-on: ubuntu-latest
@@ -426,15 +453,18 @@ jobs:
     services:
       lemonade:
         image: amd/lemonade:latest
+        ports:
+          - 8000:8000
     steps:
-      - run: pytest tests/integration/ -m integration -v
+      - run: pytest tests/integration/ -v -m integration
 
-  mcp-tests:
+  js-tests:
     runs-on: ubuntu-latest
-    needs: unit-tests
     steps:
-      - run: pytest tests/mcp/ -v --tb=short
+      - run: cd tests/js && npm ci && npm test
 ```
+
+Note: MCP tests are distributed across `unit/mcp/` and `integration/mcp/` based on whether they need real servers.
 
 ### Parallel Execution Support
 
