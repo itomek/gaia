@@ -3,6 +3,7 @@
 > **Date:** 2026-01-15
 > **Repository:** amd/gaia (gaia-pirate)
 > **Reviewer:** Claude Code Analysis
+> **Methodology:** Actual `pytest --cov` execution + code analysis
 
 ---
 
@@ -10,13 +11,14 @@
 
 The GAIA test suite has **solid foundations** but suffers from **organizational inconsistencies**, **significant coverage gaps**, and **mixed test classifications**. This review identifies issues and provides actionable recommendations for cleanup, consolidation, and alignment with proper testing patterns.
 
-**Key Findings:**
-- **176 source modules** with only **~12 having proper unit tests** (~7% coverage)
-- **~20% of integration tests should be unit tests**
+**Key Findings (MEASURED):**
+- **141 source modules** (excluding `__init__.py`) with **9% statement coverage**
+- **22,660 total statements**, **20,653 not covered** by unit tests
+- **218 unit tests pass**, 13 skipped (hardware-dependent)
 - **17 agent-related test files** to be migrated to `amd/gaia-agents`
 - Inconsistent frameworks (unittest.TestCase vs pytest)
-- Hardcoded ports prevent parallel test execution
-- Global state pollution between tests
+- Hardcoded ports (8000, 8080, 8765) prevent parallel test execution
+- Global `_TOOL_REGISTRY` pollution (13 manual `.clear()` calls across tests)
 
 ---
 
@@ -36,49 +38,67 @@ tests/
 src/gaia/agents/blender/tests/     # 3 files (embedded in source)
 ```
 
-### Test Statistics
+### Test Statistics (MEASURED)
 
 | Metric | Value |
 |--------|-------|
 | Total Python test files | 36 |
-| Total test functions | ~765+ |
-| Total test classes | ~111+ |
-| Lines of test code | ~21,600 |
-| Source modules | 176 |
-| Modules with unit tests | ~12 |
-| **Estimated unit coverage** | **~7%** |
+| Unit tests collected | 231 |
+| Unit tests passed | 218 |
+| Unit tests skipped | 13 |
+| Source modules (non-init) | 141 |
+| Total statements | 22,660 |
+| Statements covered | 2,007 |
+| **Measured unit coverage** | **9%** |
 
 ---
 
-## 2. Coverage Analysis
+## 2. Coverage Analysis (MEASURED via pytest-cov)
 
-### Modules WITH Unit Tests
+### Modules WITH Good Coverage (>50%)
 
-| Module | Coverage | Quality |
-|--------|----------|---------|
-| `gaia.utils.file_watcher` | Good | 24 test methods |
-| `gaia.database.mixin` | Excellent | Full CRUD, transactions |
-| `gaia.agents.base.errors` | Good | Error formatting |
-| `gaia.audio.whisper_asr` | Fair | Hardware-dependent |
-| `gaia.audio.kokoro_tts` | Fair | Hardware-dependent |
-| `gaia.llm.llm_client` | Partial | Only URL normalization |
-| `gaia.testing` | Good | Test utilities |
-| `gaia.agents.emr` | Partial | Init/parsing only |
+| Module | Statements | Coverage | Notes |
+|--------|------------|----------|-------|
+| `gaia.database.mixin` | 82 | **100%** | Excellent - full CRUD, transactions |
+| `gaia.testing.assertions` | 67 | **85%** | Good test utilities |
+| `gaia.testing.mocks` | 119 | **83%** | MockLLMProvider, MockVLMClient |
+| `gaia.utils.file_watcher` | 208 | **78%** | File watching, hashing |
+| `gaia.logger` | 84 | **73%** | Logging utilities |
+| `gaia.utils.parsing` | 70 | **66%** | JSON extraction |
+| `gaia.llm.lemonade_manager` | 123 | **61%** | Context messages |
+| `gaia.database.testing` | 16 | **50%** | Test fixtures |
 
-### CRITICAL Modules WITHOUT Unit Tests
+### Modules WITH Partial Coverage (10-50%)
 
-| Module | Priority | Risk |
-|--------|----------|------|
-| `gaia.agents.base.agent` (6.4K LOC) | **CRITICAL** | Core framework |
-| `gaia.agents.chat.agent` | **CRITICAL** | User-facing |
-| `gaia.agents.code.agent` | **CRITICAL** | User-facing |
-| `gaia.agents.jira.agent` | HIGH | User-facing |
-| `gaia.agents.docker.agent` | HIGH | Infrastructure |
-| `gaia.mcp.*` (all modules) | HIGH | Integration layer |
-| `gaia.rag.sdk` | HIGH | Core feature |
-| `gaia.chat.sdk` | HIGH | Core SDK |
-| `gaia.api.app` | MEDIUM | API layer |
-| `gaia.llm.lemonade_client` | MEDIUM | Backend client |
+| Module | Statements | Coverage | Notes |
+|--------|------------|----------|-------|
+| `gaia.agents.emr.cli` | 636 | **44%** | CLI tested, not watch/dashboard |
+| `gaia.version` | 42 | **36%** | Version utilities |
+| `gaia.agents.emr.agent` | 595 | **32%** | Init/parsing only |
+| `gaia.testing.fixtures` | 104 | **28%** | Temp dir/file fixtures |
+| `gaia.llm.vlm_client` | 131 | **21%** | Only MIME detection |
+| `gaia.chat.sdk` | 477 | **17%** | Minimal coverage |
+| `gaia.apps.llm.app` | 71 | **17%** | Basic app tests |
+| `gaia.llm.llm_client` | 307 | **15%** | Only URL normalization |
+| `gaia.eval.claude` | 190 | **15%** | Evaluation framework |
+| `gaia.llm.lemonade_client` | 1,110 | **12%** | Backend client |
+
+### CRITICAL Modules WITH 0% Coverage
+
+| Module | Statements | Priority | Risk |
+|--------|------------|----------|------|
+| `gaia.cli` | 2,520 | **CRITICAL** | Main CLI entry point |
+| `gaia.rag.sdk` | 994 | **CRITICAL** | Core RAG feature |
+| `gaia.agents.base.agent` | 1,117 | **CRITICAL** | Core framework |
+| `gaia.agents.code.tools.web_dev_tools` | 551 | HIGH | Code agent tools |
+| `gaia.agents.chat.agent` | 421 | HIGH | User-facing agent |
+| `gaia.agents.code.agent` | 406 | HIGH | User-facing agent |
+| `gaia.agents.jira.agent` | 239 | HIGH | User-facing agent |
+| `gaia.agents.docker.agent` | 188 | HIGH | Infrastructure |
+| `gaia.agents.routing.agent` | 193 | HIGH | Routing logic |
+| `gaia.api.openai_server` | 195 | MEDIUM | OpenAI compat |
+| `gaia.api.app` | 129 | MEDIUM | API layer |
+| `gaia.security` | 85 | MEDIUM | Security utils |
 
 ---
 
@@ -158,40 +178,55 @@ The following **17 test files** should be migrated to `amd/gaia-agents`:
 
 ---
 
-## 5. Anti-Patterns Identified
+## 5. Anti-Patterns Identified (VERIFIED)
 
 ### 5.1 Subprocess Testing in Unit Tests
 
 ```python
-# tests/unit/test_llm.py:22-46
-result = subprocess.run([sys.executable, "-c", f"""..."""])
+# tests/unit/test_llm.py:20-46 (VERIFIED)
+def _run_normalization_test(self, input_url, expected_url):
+    """Run a base_url normalization test in a subprocess to avoid bytecode cache issues."""
+    result = subprocess.run(
+        [sys.executable, "-c", f"""
+import sys
+sys.path.insert(0, "src")
+from gaia.llm.llm_client import LLMClient
+...
+"""],
+        capture_output=True, text=True, timeout=30,
+    )
 ```
 
 **Problem:** Spawns subprocess for unit tests, defeating isolation.
-**Fix:** Use proper mocking of LLMClient.
+**Fix:** Use proper mocking of LLMClient. The "bytecode cache" concern is not valid.
 
-### 5.2 Global State Pollution
+### 5.2 Global State Pollution (13 occurrences found)
 
 ```python
-# tests/test_code_agent.py:46-47
-def tearDown(self):
-    _TOOL_REGISTRY.clear()  # Manual cleanup required
+# VERIFIED locations of manual _TOOL_REGISTRY.clear():
+# tests/test_code_agent.py:47, 620
+# tests/test_code_agent_mixins.py:43, 78, 156, 197, 218, 267, 288, 345, 374
+# tests/test_external_tools.py:266
+# tests/test_typescript_tools.py:29
 ```
 
 **Problem:** `_TOOL_REGISTRY` is a global singleton shared between tests.
 **Fix:** Create pytest fixture that auto-clears registry.
 
-### 5.3 Hardcoded Ports
+### 5.3 Hardcoded Ports (25+ occurrences found)
 
 ```python
-# tests/conftest.py:95, tests/mcp/*.py
-api_url = "http://localhost:8080"
-lemonade_url = "http://localhost:8000"
-mcp_url = "http://localhost:8765"
+# VERIFIED locations (sample):
+# tests/conftest.py:59, 95         - localhost:8000, localhost:8080
+# tests/mcp/test_mcp_jira.py:22    - localhost:8765
+# tests/mcp/test_mcp_simple.py:24  - localhost:8765
+# tests/unit/test_llm.py:52,57,62  - localhost:8000
+# tests/test_chat_sdk.py:42        - localhost:8000
+# tests/test_rag_integration.py:17 - localhost:8000
 ```
 
-**Problem:** Cannot run tests in parallel.
-**Fix:** Use dynamic port allocation with `pytest-free-port`.
+**Problem:** Cannot run tests in parallel (port conflicts).
+**Fix:** Use dynamic port allocation with `pytest-free-port` or socket binding to port 0.
 
 ### 5.4 Fixed Timeouts Without Backoff
 
