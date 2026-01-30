@@ -5825,7 +5825,7 @@ def handle_mcp_test_client(args):
         # Try to get existing client or connect
         client = manager.get_client(args.name)
         if not client:
-            print(f"📡 Connecting...")
+            print("📡 Connecting...")
             manager.load_from_config()
             client = manager.get_client(args.name)
 
@@ -5834,7 +5834,7 @@ def handle_mcp_test_client(args):
             return
 
         # Test connection
-        print(f"✅ Connection: OK")
+        print("✅ Connection: OK")
         print(f"   Server: {client.server_info.get('name', 'Unknown')}")
 
         # List tools
