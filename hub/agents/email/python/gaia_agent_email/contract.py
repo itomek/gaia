@@ -759,7 +759,8 @@ class EmailSearchResponse(_Strict):
 #
 # These are MUTATING operations on the live mailbox, so — like /send — every
 # one is gated on a single-use confirmation token (minted by the confirm step
-# below). Both are reversible inside a 30s undo window via their reversal
+# below). Both are reversible inside the configurable undo window (default
+# 300s, GAIA_EMAIL_UNDO_WINDOW_SECONDS) via their reversal
 # endpoints; the reversal path is itself NOT gated (it restores, never
 # destroys). The shapes preserve the two #1738 gotchas: archive returns the
 # ``batch_id`` undo handle AND the ``post_archive_id`` (the id a folder-based

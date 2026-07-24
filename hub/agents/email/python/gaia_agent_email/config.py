@@ -39,6 +39,42 @@ class ConfigurationError(ValueError):
 _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 
 
+#: Default undo window (seconds). A single Email-agent turn on local
+#: Gemma-class hardware runs 40-140 s, so a two-turn "archive… then undo"
+#: needs a window that comfortably exceeds one turn — otherwise the batch has
+#: always expired by the time the user's next turn reaches ``undo_archive_batch``
+#: (#2456). Overridable via ``GAIA_EMAIL_UNDO_WINDOW_SECONDS``.
+DEFAULT_UNDO_WINDOW_SECONDS = 300
+
+
+def default_undo_window_seconds() -> int:
+    """Resolve the undo window from ``GAIA_EMAIL_UNDO_WINDOW_SECONDS``.
+
+    Read at call time (not import) so the env var can be set after this module
+    is imported. Returns ``DEFAULT_UNDO_WINDOW_SECONDS`` when unset; raises on a
+    present-but-invalid value so a typo surfaces immediately instead of silently
+    reverting to the default.
+    """
+    raw = os.environ.get("GAIA_EMAIL_UNDO_WINDOW_SECONDS")
+    if raw is None or raw == "":
+        return DEFAULT_UNDO_WINDOW_SECONDS
+    try:
+        value = int(raw)
+    except ValueError as e:
+        raise ConfigurationError(
+            f"GAIA_EMAIL_UNDO_WINDOW_SECONDS must be a positive integer, got "
+            f"{raw!r}. Unset it to use the default "
+            f"({DEFAULT_UNDO_WINDOW_SECONDS})."
+        ) from e
+    if value <= 0:
+        raise ConfigurationError(
+            f"GAIA_EMAIL_UNDO_WINDOW_SECONDS must be a positive integer, got "
+            f"{value}. Unset it to use the default "
+            f"({DEFAULT_UNDO_WINDOW_SECONDS})."
+        )
+    return value
+
+
 def _allowed_hosts() -> set[str]:
     out = set(_LOCAL_HOSTS)
     env = os.environ.get("LEMONADE_BASE_URL", "")
@@ -76,9 +112,12 @@ class EmailAgentConfig:
     - ``silent_mode``: suppress all console output (for JSON-only API
       usage).
     - ``output_dir``: where the agent dumps transcripts / artifacts.
-    - ``undo_window_seconds``: how long after a soft-delete the user has
-      to ``restore_message``. After this window ``restore_message``
-      raises with a "use Trash to recover" message.
+    - ``undo_window_seconds``: how long after a soft-delete/archive the user
+      has to ``restore_message`` / ``undo_archive_batch``. After this window
+      the reversal raises with a "use Trash to recover" message. Defaults to
+      ``DEFAULT_UNDO_WINDOW_SECONDS`` (must exceed one agent turn so a two-turn
+      "archive… then undo" stays in-window, #2456); override via
+      ``GAIA_EMAIL_UNDO_WINDOW_SECONDS``.
     - ``followup_window_days``: how many days a sent message may sit
       without an inbound reply before ``check_followups`` flags it
       (#1606). Must be a positive integer.
@@ -124,7 +163,7 @@ class EmailAgentConfig:
     silent_mode: bool = False
     show_stats: bool = False
     output_dir: Optional[str] = None
-    undo_window_seconds: int = 30
+    undo_window_seconds: int = field(default_factory=default_undo_window_seconds)
     followup_window_days: int = 3
     db_path: Optional[str] = None
     memory_db_path: Optional[str] = None

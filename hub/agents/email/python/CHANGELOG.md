@@ -20,6 +20,14 @@ contract version is tracked separately as
 
 ### Fixed
 
+- **Two-turn "archive several… then undo" now actually works (#2456).** The undo
+  window was 30 s — shorter than a single Gemma-class agent turn (40–140 s) — so
+  the batch had always expired by the time the user's *next* turn asked to undo.
+  The default is now 300 s and overridable via `GAIA_EMAIL_UNDO_WINDOW_SECONDS`.
+  And "undo that" with no id no longer demands an internal batch uuid: the agent
+  tracks the last archive `batch_id` per session and `undo_archive_batch` uses it
+  when none is supplied, restoring the most recent archive batch.
+
 - **Archive verifies it took effect, and same-day search finds today's mail (#2406).**
   Archiving now inspects the provider's post-mutation `INBOX` label and fails
   loudly instead of reporting a false success when the message is still in the

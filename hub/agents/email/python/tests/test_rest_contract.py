@@ -32,6 +32,7 @@ pytest.importorskip("gaia_agent_email")
 from fastapi.testclient import TestClient  # noqa: E402
 from gaia_agent_email import __version__ as package_version  # noqa: E402
 from gaia_agent_email import export_openapi  # noqa: E402
+from gaia_agent_email.config import DEFAULT_UNDO_WINDOW_SECONDS  # noqa: E402
 from gaia_agent_email.contract import (  # noqa: E402
     SCHEMA_VERSION,
     BatchTriageRequest,
@@ -601,7 +602,7 @@ def test_confirm_then_archive_round_trips(action_env):
     assert body["archived"] is True
     assert body["schema_version"] == SCHEMA_VERSION
     assert body["post_archive_id"] == "m1"  # label-based backend keeps the id
-    assert body["undo_window_seconds"] == 30
+    assert body["undo_window_seconds"] == DEFAULT_UNDO_WINDOW_SECONDS
     assert "INBOX" not in mailbox.messages["m1"]["labelIds"]
 
     # The same token cannot be replayed (single-use).

@@ -1454,7 +1454,8 @@ resolve_action_db = get_action_db
 
 
 def _undo_window_seconds() -> int:
-    """The undo window the action log honors (default 30s, #1738)."""
+    """The undo window the action log honors (default 300s, #1738/#2456;
+    override via GAIA_EMAIL_UNDO_WINDOW_SECONDS)."""
     from gaia_agent_email.config import EmailAgentConfig
 
     return int(EmailAgentConfig().undo_window_seconds)
