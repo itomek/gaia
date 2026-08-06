@@ -31,7 +31,10 @@ totals (items needing attention, messages scanned of the mailbox total),
 then one section per bucket in this order: waiting on your reply · needs a
 response · meetings to decide · needs a manual look. That order is the one
 the items arrive in, so following it keeps the numbers below ascending.
-Give every item its own line with sender, subject, and age.
+Give every item its own line with sender, subject, and age. Name the sender
+— never print their raw email address next to it, which renders as the
+address twice with a ``mailto:`` copy; fall back to the address only when
+the message carries no display name.
 
 Each item's number is its ``ref`` — copy it, never renumber. They already
 run 1, 2, 3 … in this section order, so the count continues across the
