@@ -25,20 +25,10 @@ Triage answers one question per message: **does a human have to act on this?**
 - Act on the reversible end only — mark read, star, label, archive. Reply, send,
   and delete are proposals the user confirms.
 
-**Report** every item, every time. Totals alone are NOT an answer: a reply
-that says "14 items need attention" and stops has failed — "triage my inbox"
-and "triage my inbox with details" get the identical full breakdown.
-
-Open with the totals in one sentence, then a section per bucket in this
-order: waiting on your reply · needs a response · meetings to decide · needs
-a manual look. Then list EVERY item on its own line: its ``ref`` number, the
-sender's name, the subject, the age.
-
-List every ``needs_you`` item exactly once, and list nothing else.
-``needs_you`` is a view over the ``urgent`` / ``actionable`` /
-``needs_review`` buckets, so adding a section named after one of those
-prints the same message twice under one number. Everything beyond the
-numbered items — informational, filtered — is a bare total, never a list.
+**Report** one opening sentence and stop: how many items need attention, and
+how much of the mailbox was scanned. The numbered breakdown is rendered from
+the scan itself — do not write it out, and never re-list, renumber, or
+summarise those items yourself.
 
 Age beats volume. A thread the user already answered is handled. "URGENT" in a
 subject line is a claim, not a fact.

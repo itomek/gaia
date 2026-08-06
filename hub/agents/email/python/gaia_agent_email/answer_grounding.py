@@ -409,11 +409,56 @@ def render_needs_you_list(envelope: Dict[str, Any]) -> str:
         for row in rows:
             who = _sender_label(row.get("sender"))
             what = str(row.get("subject") or "").strip() or "(no subject)"
-            age = _age_phrase(row.get("age_seconds"))
-            suffix = f" ({age})" if age else ""
+            # ``why`` is the classifier's own reason for the row, not chat-model
+            # embellishment, so it survives the rewrite.
+            notes = [
+                n
+                for n in (_age_phrase(row.get("age_seconds")), str(row.get("why") or "").strip())
+                if n
+            ]
+            suffix = f" ({' · '.join(notes)})" if notes else ""
             lines.append(f"{row.get('ref')}. {who} — {what}{suffix}")
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
+
+
+def _lead_paragraph(text: str) -> str:
+    """The answer's opening prose — the one part still worth asking a model for.
+
+    Skips headings and any block that has already turned into a list, so a
+    reply that opens straight into items contributes no lead at all rather
+    than half a list.
+    """
+    for block in (text or "").split("\n\n"):
+        candidate = block.strip()
+        if not candidate or candidate.startswith("#"):
+            continue
+        if _NUMBERED_ITEM_LINE_RE.search(candidate):
+            break
+        return candidate
+    return ""
+
+
+def rewrite_triage_answer(
+    final_answer: str, conversation: Optional[List[Dict[str, Any]]]
+) -> str:
+    """Replace a triage reply's list with one built from the scan itself.
+
+    The categories are still model judgement — a heuristic, then the
+    ``specific-ai-triage`` SLM, then an LLM fallback, all inside
+    ``pre_scan_inbox``. What is NOT a judgement is transcribing the result,
+    and asking the chat model to do it produced invented numbering, dropped
+    items, merged sections, and once no list at all. So the chat model keeps
+    the opening sentence and this renders the rest.
+    """
+    prescan = last_tool_payload(conversation, "pre_scan_inbox")
+    if not prescan:
+        return final_answer
+    rendered = render_needs_you_list(prescan)
+    if not rendered:
+        return final_answer
+    lead = _lead_paragraph(final_answer) or _honest_prescan_summary(prescan)
+    return f"{lead}\n\n{rendered}"
 
 
 def _honest_prescan_summary(envelope: Dict[str, Any]) -> str:
@@ -814,18 +859,10 @@ def ground_final_answer(result: Dict[str, Any]) -> Dict[str, Any]:
 
     final_answer = normalize_triage_list(final_answer)
 
-    # The triage list itself is tool output, not prose: if the turn scanned the
-    # inbox and the reply carries no numbered items, the model dropped a list
-    # it was handed. Build it from the envelope rather than asking again.
-    if not _NUMBERED_ITEM_LINE_RE.search(final_answer):
-        prescan = last_tool_payload(conversation, "pre_scan_inbox")
-        rendered = render_needs_you_list(prescan) if prescan else ""
-        if rendered:
-            logger.warning(
-                "email agent: reply carried no numbered triage items — "
-                "rebuilding the list from the pre-scan envelope"
-            )
-            final_answer = f"{final_answer.rstrip()}\n\n{rendered}"
+    # The list is tool output, not prose. Rendering it here rather than asking
+    # the model to retype it is what makes one list, correctly numbered, every
+    # time — see rewrite_triage_answer.
+    final_answer = rewrite_triage_answer(final_answer, conversation)
 
     success_claim = find_ungrounded_success_claim(final_answer, conversation)
     if success_claim:
