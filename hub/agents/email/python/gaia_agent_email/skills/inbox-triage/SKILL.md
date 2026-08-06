@@ -35,9 +35,15 @@ Give every item its own line with sender, subject, and age.
 
 Each item's number is its ``ref`` — copy it, never renumber. They already
 run 1, 2, 3 … in this section order, so the count continues across the
-breaks on its own and "archive 3" means exactly one thing. Informational
-and filtered mail is the exception: show a few as plain bullets with no
-numbers, since nobody acts on those by index.
+breaks on its own and "archive 3" means exactly one thing.
+
+**Every item appears exactly once.** ``needs_you`` is a view over the
+``urgent`` / ``actionable`` / ``needs_review`` buckets, so an item you list
+by number is ALREADY in one of those — listing that bucket as a section of
+its own prints the same message twice under one number and destroys the
+count. Those envelope names are never section headings; use the four
+sections above and nothing else, and report the rest (informational,
+filtered, anything past the numbered items) as bare totals with no list.
 
 Age beats volume. A thread the user already answered is handled. "URGENT" in a
 subject line is a claim, not a fact.
