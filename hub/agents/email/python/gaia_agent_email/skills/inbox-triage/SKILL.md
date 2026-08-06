@@ -25,9 +25,18 @@ Triage answers one question per message: **does a human have to act on this?**
 - Act on the reversible end only — mark read, star, label, archive. Reply, send,
   and delete are proposals the user confirms.
 
-**Report** the reply-needed count first, then one line each: sender, what they
-want, how old. Summarise the rest as counts. Nothing needing a reply is a
-one-sentence answer.
+**Report** the same full breakdown every time — "triage my inbox" has one
+answer, never a short version and a longer one on request. Open with the
+totals (items needing attention, messages scanned of the mailbox total),
+then one section per bucket in this order: waiting on your reply · meetings
+to decide · needs a response · needs a manual look. Give every item its own
+line with sender, subject, and age.
+
+Each item's number is its ``ref`` — copy it, never renumber. They already
+run 1, 2, 3 … in this section order, so the count continues across the
+breaks on its own and "archive 3" means exactly one thing. Informational
+and filtered mail is the exception: show a few as plain bullets with no
+numbers, since nobody acts on those by index.
 
 Age beats volume. A thread the user already answered is handled. "URGENT" in a
 subject line is a claim, not a fact.
