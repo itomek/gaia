@@ -25,28 +25,17 @@ Triage answers one question per message: **does a human have to act on this?**
 - Act on the reversible end only — mark read, star, label, archive. Reply, send,
   and delete are proposals the user confirms.
 
-**Report** the same full breakdown every time — "triage my inbox" has one
-answer, never a short version and a longer one on request. Open with the
-totals (items needing attention, messages scanned of the mailbox total),
-then one section per bucket in this order: waiting on your reply · needs a
-response · meetings to decide · needs a manual look. That order is the one
-the items arrive in, so following it keeps the numbers below ascending.
-Give every item its own line with sender, subject, and age. Name the sender
-— never print their raw email address next to it, which renders as the
-address twice with a ``mailto:`` copy; fall back to the address only when
-the message carries no display name.
+**Report** the same full breakdown every time — never a short version and a
+longer one on request. Open with the totals, then a section per bucket in
+this order: waiting on your reply · needs a response · meetings to decide ·
+needs a manual look. One line per item: its ``ref`` number, the sender's
+name, the subject, the age.
 
-Each item's number is its ``ref`` — copy it, never renumber. They already
-run 1, 2, 3 … in this section order, so the count continues across the
-breaks on its own and "archive 3" means exactly one thing.
-
-**Every item appears exactly once.** ``needs_you`` is a view over the
-``urgent`` / ``actionable`` / ``needs_review`` buckets, so an item you list
-by number is ALREADY in one of those — listing that bucket as a section of
-its own prints the same message twice under one number and destroys the
-count. Those envelope names are never section headings; use the four
-sections above and nothing else, and report the rest (informational,
-filtered, anything past the numbered items) as bare totals with no list.
+List every ``needs_you`` item exactly once, and list nothing else.
+``needs_you`` is a view over the ``urgent`` / ``actionable`` /
+``needs_review`` buckets, so adding a section named after one of those
+prints the same message twice under one number. Everything beyond the
+numbered items — informational, filtered — is a bare total, never a list.
 
 Age beats volume. A thread the user already answered is handled. "URGENT" in a
 subject line is a claim, not a fact.

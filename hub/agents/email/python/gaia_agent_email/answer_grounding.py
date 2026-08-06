@@ -298,6 +298,42 @@ def strip_scaffolding_leaks(text: str) -> str:
     return cleaned.strip()
 
 
+# A numbered triage item at the start of a line -- the shape the list is
+# supposed to have, and the signal that this answer IS a triage list.
+_NUMBERED_ITEM_LINE_RE = re.compile(r"^[ \t]*\d{1,3}\.[ \t]", re.MULTILINE)
+
+# A numbered item that ran on mid-line instead of starting its own, e.g.
+# "...scheduling meetings: 4. Tomasz ... 5. Tomasz ...".
+_INLINE_NUMBERED_ITEM_RE = re.compile(r"(?<=\S)[ \t]+(?=\d{1,3}\.[ \t]+\S)")
+
+# A bare address on an item line. The sender is already named beside it, so
+# this renders as the address twice -- once as text, once as a mailto: link
+# the markdown renderer expands.
+_ITEM_LINE_EMAIL_RE = re.compile(
+    r"[ \t]+<?[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}>?(?=[ \t]*[:|,]|[ \t]*$)"
+)
+
+
+def normalize_triage_list(text: str) -> str:
+    """Give a numbered triage list the shape the skill asks for and the model
+    keeps missing: one item per line, no duplicated sender address.
+
+    Formatting a list the tool already computed is not a judgement call, so it
+    is enforced here rather than requested in the prompt — three consecutive
+    live runs showed the instruction alone does not hold. Applies only to an
+    answer that already contains a numbered item at the start of a line, so
+    ordinary prose that happens to say "in 5. Then" is untouched.
+    """
+    if not text or not _NUMBERED_ITEM_LINE_RE.search(text):
+        return text
+    out = _INLINE_NUMBERED_ITEM_RE.sub("\n", text)
+    out = "\n".join(
+        _ITEM_LINE_EMAIL_RE.sub("", line) if _NUMBERED_ITEM_LINE_RE.match(line) else line
+        for line in out.split("\n")
+    )
+    return out
+
+
 def _honest_prescan_summary(envelope: Dict[str, Any]) -> str:
     """A minimal, always-grounded pre-scan sentence built straight from the
     envelope's own counts — the fallback used when the model's own framing
@@ -693,6 +729,8 @@ def ground_final_answer(result: Dict[str, Any]) -> Dict[str, Any]:
 
     if find_scaffolding_leak(final_answer):
         final_answer = strip_scaffolding_leaks(final_answer)
+
+    final_answer = normalize_triage_list(final_answer)
 
     success_claim = find_ungrounded_success_claim(final_answer, conversation)
     if success_claim:
