@@ -23,7 +23,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from gaia_agent_email.attention_cache import ATTENTION_CACHE_TTL_SECONDS
 from gaia_agent_email.attention_cache import peek as _peek_attention_cache
@@ -332,6 +332,60 @@ def normalize_triage_list(text: str) -> str:
         for line in out.split("\n")
     )
     return out
+
+
+# needs_you ``kind`` → the section it belongs under, in the order refs are
+# assigned (_NEEDS_YOU_KIND_ORDER, read_tools.py), so the numbers ascend down
+# the page without the renderer sorting anything.
+_TRIAGE_SECTIONS: List[Tuple[str, Tuple[str, ...]]] = [
+    ("Waiting on your reply", ("urgent", "waiting_on_you")),
+    ("Needs a response", ("needs_response",)),
+    ("Meetings to decide", ("meeting_request",)),
+    ("Needs a manual look", ("needs_review", "action_item")),
+]
+
+
+def _age_phrase(age_seconds: Any) -> str:
+    if not isinstance(age_seconds, (int, float)) or age_seconds < 0:
+        return ""
+    days = int(age_seconds // 86400)
+    if days >= 1:
+        return f"{days}d ago"
+    hours = int(age_seconds // 3600)
+    return f"{hours}h ago" if hours >= 1 else "just now"
+
+
+def render_needs_you_list(envelope: Dict[str, Any]) -> str:
+    """Build the numbered triage list straight from ``needs_you``.
+
+    The list is entirely determined by the tool's own output — every field is
+    already computed, and the refs are already in display order — so composing
+    it is not a judgement the model should be making. Five consecutive live
+    runs had it drop items, renumber them, merge sections, or answer with
+    totals alone; none of those are possible here.
+    """
+    items = envelope.get("needs_you") or []
+    if not items:
+        return ""
+    by_kind: Dict[str, List[Dict[str, Any]]] = {}
+    for item in items:
+        by_kind.setdefault(str(item.get("kind") or ""), []).append(item)
+
+    blocks: List[str] = []
+    for heading, kinds in _TRIAGE_SECTIONS:
+        rows = [row for kind in kinds for row in by_kind.get(kind, [])]
+        if not rows:
+            continue
+        rows.sort(key=lambda r: r.get("ref") or 0)
+        lines = [f"### {heading}", ""]
+        for row in rows:
+            who = str(row.get("sender") or "").strip() or "unknown sender"
+            what = str(row.get("subject") or "").strip() or "(no subject)"
+            age = _age_phrase(row.get("age_seconds"))
+            suffix = f" ({age})" if age else ""
+            lines.append(f"{row.get('ref')}. {who} — {what}{suffix}")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
 
 
 def _honest_prescan_summary(envelope: Dict[str, Any]) -> str:
@@ -731,6 +785,19 @@ def ground_final_answer(result: Dict[str, Any]) -> Dict[str, Any]:
         final_answer = strip_scaffolding_leaks(final_answer)
 
     final_answer = normalize_triage_list(final_answer)
+
+    # The triage list itself is tool output, not prose: if the turn scanned the
+    # inbox and the reply carries no numbered items, the model dropped a list
+    # it was handed. Build it from the envelope rather than asking again.
+    if not _NUMBERED_ITEM_LINE_RE.search(final_answer):
+        prescan = last_tool_payload(conversation, "pre_scan_inbox")
+        rendered = render_needs_you_list(prescan) if prescan else ""
+        if rendered:
+            logger.warning(
+                "email agent: reply carried no numbered triage items — "
+                "rebuilding the list from the pre-scan envelope"
+            )
+            final_answer = f"{final_answer.rstrip()}\n\n{rendered}"
 
     success_claim = find_ungrounded_success_claim(final_answer, conversation)
     if success_claim:
