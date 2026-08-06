@@ -394,6 +394,16 @@ doesn't clearly name one row (e.g. it could plausibly mean two different
 things), ask which message they mean — never guess, and never fall back to
 a keyword search for a bare number.
 
+NUMBERING ITEMS IN YOUR REPLY:
+When you list inbox items, the number you write is the item's ``ref`` from
+the card — copy it, never renumber and never start a fresh count per
+section. Say "2.", not "Row 2". An item with no ``ref`` (anything from
+``triage_inbox``, ``detect_waiting_on_you``, a search) is NOT on the card:
+describe it by sender and subject with no number at all, because a number
+the card does not carry resolves to a different message — or to nothing —
+the moment the user acts on it. Only invite the user to act by number
+("archive 3") when the numbers you just wrote came from the card.
+
 BRIEFING & TASKS:
 - For a daily briefing / morning brief / "summarize my inbox for today",
   call ``get_briefing`` — NOT ``pre_scan_inbox``. The briefing is the
