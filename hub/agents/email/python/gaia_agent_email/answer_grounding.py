@@ -309,8 +309,12 @@ _INLINE_NUMBERED_ITEM_RE = re.compile(r"(?<=\S)[ \t]+(?=\d{1,3}\.[ \t]+\S)")
 # A bare address on an item line. The sender is already named beside it, so
 # this renders as the address twice -- once as text, once as a mailto: link
 # the markdown renderer expands.
+# Any bare address on an item line, however the model punctuated around it.
+# An explicit mailto: link goes too — the markdown renderer expands a bare
+# address into one anyway, which is the duplication being removed.
 _ITEM_LINE_EMAIL_RE = re.compile(
-    r"[ \t]+<?[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}>?(?=[ \t]*[:|,]|[ \t]*$)"
+    r"[ \t]*\[?<?(?:mailto:)?[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}>?\]?"
+    r"(?:\((?:mailto:)?[^)]*\))?"
 )
 
 
