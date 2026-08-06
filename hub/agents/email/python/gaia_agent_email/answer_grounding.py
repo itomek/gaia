@@ -300,7 +300,12 @@ def strip_scaffolding_leaks(text: str) -> str:
 
 # A numbered triage item at the start of a line -- the shape the list is
 # supposed to have, and the signal that this answer IS a triage list.
-_NUMBERED_ITEM_LINE_RE = re.compile(r"^[ \t]*\d{1,3}\.[ \t]", re.MULTILINE)
+# Tolerates the shapes a model reaches for around the number — a bullet, bold
+# markers, or both ("- **9.** …"). Missing one of them makes the rebuild below
+# think the reply has no list and append a second copy of it.
+_NUMBERED_ITEM_LINE_RE = re.compile(
+    r"^[ \t]*(?:[-*+•·][ \t]*)?\*{0,2}\d{1,3}\.\*{0,2}[ \t]", re.MULTILINE
+)
 
 # A numbered item that ran on mid-line instead of starting its own, e.g.
 # "...scheduling meetings: 4. Tomasz ... 5. Tomasz ...".
@@ -349,6 +354,25 @@ _TRIAGE_SECTIONS: List[Tuple[str, Tuple[str, ...]]] = [
 ]
 
 
+# ``needs_you.sender`` carries a display name, an address, or both. Only the
+# name is worth a row -- an address renders twice once the markdown renderer
+# turns it into a mailto: link.
+_SENDER_EMAIL_RE = re.compile(r"\s*<?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})>?")
+
+
+def _sender_label(sender: Any) -> str:
+    text = str(sender or "").strip()
+    if not text:
+        return "unknown sender"
+    match = _SENDER_EMAIL_RE.search(text)
+    if match is None:
+        return text
+    name = _SENDER_EMAIL_RE.sub(" ", text).strip(" <>|,-–—")
+    # Address-only sender: keep it (the reader still needs to know who) but as
+    # code, so the renderer cannot autolink it into a duplicate.
+    return name or f"`{match.group(1)}`"
+
+
 def _age_phrase(age_seconds: Any) -> str:
     if not isinstance(age_seconds, (int, float)) or age_seconds < 0:
         return ""
@@ -383,7 +407,7 @@ def render_needs_you_list(envelope: Dict[str, Any]) -> str:
         rows.sort(key=lambda r: r.get("ref") or 0)
         lines = [f"### {heading}", ""]
         for row in rows:
-            who = str(row.get("sender") or "").strip() or "unknown sender"
+            who = _sender_label(row.get("sender"))
             what = str(row.get("subject") or "").strip() or "(no subject)"
             age = _age_phrase(row.get("age_seconds"))
             suffix = f" ({age})" if age else ""
