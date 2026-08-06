@@ -28,9 +28,10 @@ Triage answers one question per message: **does a human have to act on this?**
 **Report** the same full breakdown every time — "triage my inbox" has one
 answer, never a short version and a longer one on request. Open with the
 totals (items needing attention, messages scanned of the mailbox total),
-then one section per bucket in this order: waiting on your reply · meetings
-to decide · needs a response · needs a manual look. Give every item its own
-line with sender, subject, and age.
+then one section per bucket in this order: waiting on your reply · needs a
+response · meetings to decide · needs a manual look. That order is the one
+the items arrive in, so following it keeps the numbers below ascending.
+Give every item its own line with sender, subject, and age.
 
 Each item's number is its ``ref`` — copy it, never renumber. They already
 run 1, 2, 3 … in this section order, so the count continues across the
